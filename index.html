@@ -114,6 +114,12 @@
     font-weight: 700; font-size: 1.15rem; margin-bottom: 6px;
   }
   .storm-name-display { font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; }
+  .storm-type-classification { margin-bottom: 8px; }
+  .storm-type-label {
+    display: inline-block; padding: 5px 14px; border-radius: 8px;
+    background: rgba(99,102,241,0.25); border: 1px solid rgba(99,102,241,0.4);
+    font-size: 0.88rem; font-weight: 600; letter-spacing: 0.3px; color: #c7d2fe;
+  }
   .stats-row { display: flex; gap: 10px; margin: 16px 0; flex-wrap: wrap; }
   .stat-box {
     flex: 1; min-width: 85px; background: rgba(0,0,0,0.25);
@@ -1232,6 +1238,160 @@ function getStormClass(maxSnow) {
   return                        { label:'Impossible Winter Storm', css:'impossible' };
 }
 
+/* ---- Auto-classify Storm Type ---- */
+function classifyStormType(cityList) {
+  if (!cityList.length) return null;
+
+  // Gather stats from entered cities
+  const regions = {};
+  cityList.forEach(c => { if (c.region) regions[c.region] = (regions[c.region] || 0) + 1; });
+  const regionCodes = Object.keys(regions);
+  const totalCities = cityList.length;
+  const maxSnow = Math.max(...cityList.map(c => c.snow));
+  const avgSnow = cityList.reduce((s, c) => s + c.snow, 0) / totalCities;
+  const hasCold = cityList.some(c => c.recordCold);
+  const coldestTemp = hasCold ? Math.min(...cityList.filter(c => c.recordCold).map(c => c.coldTemp)) : null;
+  const maxWind = Math.max(...cityList.filter(c => c.windSpeed).map(c => c.windSpeed), 0);
+
+  // Precip composition across all cities
+  let totalIceAmt = 0, totalSnowAmt = 0, totalSleetAmt = 0, totalRainAmt = 0;
+  cityList.forEach(c => {
+    if (c.phases) c.phases.forEach(p => {
+      if (p.type === 'ice') totalIceAmt += p.amount;
+      else if (p.type === 'snow') totalSnowAmt += p.amount;
+      else if (p.type === 'sleet') totalSleetAmt += p.amount;
+      else if (p.type === 'rain') totalRainAmt += p.amount;
+    });
+  });
+  const totalPrecip = totalIceAmt + totalSnowAmt + totalSleetAmt + totalRainAmt;
+  const iceFrac = totalPrecip > 0 ? (totalIceAmt + totalSleetAmt) / totalPrecip : 0;
+  const snowFrac = totalPrecip > 0 ? totalSnowAmt / totalPrecip : 1;
+
+  // Score each template
+  const scores = STORM_TEMPLATES.map(tmpl => {
+    let score = 0;
+
+    // --- Region match ---
+    if (tmpl.regions === 'all-continental') {
+      // Omega: needs 4+ regions and extreme snow
+      const regionCount = regionCodes.length;
+      if (regionCount >= 4) score += 30;
+      else if (regionCount >= 3) score += 10;
+      if (maxSnow >= 80) score += 40;
+      else if (maxSnow >= 50) score += 15;
+      else score -= 30;
+    } else if (tmpl.regions === 'weighted-single') {
+      // Flurry Dud: very low snow, few cities
+      if (maxSnow <= 2 && totalCities <= 4) score += 30;
+      else score -= 20;
+      if (avgSnow <= 1) score += 15;
+    } else {
+      // Normal region matching: what fraction of entered cities are in the template's regions?
+      const matchCount = cityList.filter(c => tmpl.regions.includes(c.region)).length;
+      const matchPct = matchCount / totalCities;
+      score += matchPct * 40; // up to 40 points for perfect region match
+
+      // Penalize if many cities are outside template regions
+      if (matchPct < 0.3) score -= 20;
+    }
+
+    // --- Snow amount fit ---
+    // Find the best-fitting severity level
+    let bestSevFit = 0;
+    tmpl.severities.forEach(sev => {
+      const centerMid = (sev.centerSnow[0] + sev.centerSnow[1]) / 2;
+      const centerRange = sev.centerSnow[1] - sev.centerSnow[0];
+      // How close is maxSnow to the center range?
+      let fit = 0;
+      if (maxSnow >= sev.centerSnow[0] && maxSnow <= sev.centerSnow[1]) {
+        fit = 20; // perfect fit
+      } else {
+        const dist = maxSnow < sev.centerSnow[0]
+          ? sev.centerSnow[0] - maxSnow
+          : maxSnow - sev.centerSnow[1];
+        fit = Math.max(0, 20 - dist * 1.5);
+      }
+      bestSevFit = Math.max(bestSevFit, fit);
+    });
+    score += bestSevFit;
+
+    // --- Precipitation type match ---
+    // Calculate the template's dominant precip character from its weighted mixes
+    let tmplIceness = 0, tmplTotalWeight = 0;
+    if (tmpl.precipMix) {
+      tmpl.precipMix.forEach(mix => {
+        const iceish = mix.phases.filter(p => p.type === 'ice' || p.type === 'sleet').reduce((s, p) => s + p.pct, 0);
+        tmplIceness += iceish * mix.weight;
+        tmplTotalWeight += mix.weight;
+      });
+      tmplIceness = tmplTotalWeight > 0 ? tmplIceness / tmplTotalWeight : 0;
+    }
+    // Reward if precip character matches
+    const iceDiff = Math.abs(iceFrac - tmplIceness);
+    score += (1 - iceDiff) * 15; // up to 15 points
+
+    // --- Wind match ---
+    if (tmpl.windProfile) {
+      const tmplWindHigh = tmpl.windProfile.severe[1];
+      if (maxWind >= 25 && tmplWindHigh >= 40) score += 5; // windy storm matches windy template
+      if (maxWind < 10 && tmplWindHigh <= 25) score += 3; // calm matches calm
+    }
+
+    // --- Cold match ---
+    if (hasCold && coldestTemp !== null && coldestTemp <= 0) {
+      // Strong cold favors Polar Vortex and cold templates
+      const coldSevs = tmpl.severities.filter(s => s.coldChance >= 0.5);
+      if (coldSevs.length >= 2) score += 8;
+    }
+
+    // --- City count fit ---
+    let bestCountFit = 0;
+    tmpl.severities.forEach(sev => {
+      if (totalCities >= sev.cityCount[0] && totalCities <= sev.cityCount[1]) {
+        bestCountFit = 5;
+      } else {
+        const dist = totalCities < sev.cityCount[0]
+          ? sev.cityCount[0] - totalCities
+          : totalCities - sev.cityCount[1];
+        bestCountFit = Math.max(bestCountFit, Math.max(0, 5 - dist * 0.5));
+      }
+    });
+    score += bestCountFit;
+
+    return { type: tmpl.type, score };
+  });
+
+  // Sort by score descending
+  scores.sort((a, b) => b.score - a.score);
+
+  // Find best severity label for the winning type
+  const bestType = scores[0].type;
+  const bestTmpl = STORM_TEMPLATES.find(t => t.type === bestType);
+  let bestSevLabel = '';
+  if (bestTmpl) {
+    let bestFit = -Infinity;
+    bestTmpl.severities.forEach(sev => {
+      let fit = 0;
+      if (maxSnow >= sev.centerSnow[0] && maxSnow <= sev.centerSnow[1]) {
+        fit = 10;
+      } else {
+        const dist = maxSnow < sev.centerSnow[0]
+          ? sev.centerSnow[0] - maxSnow
+          : maxSnow - sev.centerSnow[1];
+        fit = 10 - dist;
+      }
+      if (fit > bestFit) { bestFit = fit; bestSevLabel = sev.label; }
+    });
+  }
+
+  return {
+    type: bestType,
+    severity: bestSevLabel,
+    score: scores[0].score,
+    runners: scores.slice(1, 3).map(s => s.type)
+  };
+}
+
 /* ---- Generate ---- */
 function generateProfile() {
   // Compute timelines for all cities before rendering
@@ -1245,6 +1405,7 @@ function generateProfile() {
   const coldCities = cities.filter(c => c.recordCold);
   const coldestTemp = coldCities.length ? Math.min(...coldCities.map(c => c.coldTemp)) : null;
   const stormName = document.getElementById('stormName').value.trim();
+  const classification = classifyStormType(cities);
   const rsiResult = calculateRSI();
   const rsiCat = getRSICategory(rsiResult.totalRSI);
 
@@ -1265,6 +1426,14 @@ function generateProfile() {
   const stormDurationHrs = (earliestFirst && latestLast) ? ((latestLast - earliestFirst) / 3600000).toFixed(1) : null;
 
   const nameHTML = stormName ? `<div class="storm-name-display">${esc(stormName)}</div>` : '';
+  let classHTML = '';
+  if (classification) {
+    const sevText = (classification.severity && classification.severity !== classification.type)
+      ? classification.severity + ' ' : '';
+    const runnersText = classification.runners.length
+      ? `<span style="font-size:0.72rem;opacity:0.4;margin-left:8px">Also resembles: ${classification.runners.join(', ')}</span>` : '';
+    classHTML = `<div class="storm-type-classification"><span class="storm-type-label">${esc(sevText + classification.type)}</span>${runnersText}</div>`;
+  }
 
   const rows = sorted.map(c => {
     const imp = getImpact(c.snow, c.annualSnow, c.recordCold, c.coldTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed);
@@ -1380,6 +1549,7 @@ function generateProfile() {
   profileCard.innerHTML = `
     <h2>Storm Profile</h2>
     ${nameHTML}
+    ${classHTML}
     <span class="storm-badge storm-color-${storm.css}">${storm.label}</span>
     <div class="stats-row">
       <div class="stat-box"><div class="val">${cities.length}</div><div class="lbl">${cities.length===1?'City':'Cities'} Impacted</div></div>
