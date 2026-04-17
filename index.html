@@ -2247,6 +2247,30 @@ function parseParagraphInput() {
   if (/\b(?:a|one)\s+foot\b/.test(lower)) explicitInches = Math.max(explicitInches || 0, 12);
   if (/\bhalf\s+a\s+foot\b/.test(lower)) explicitInches = Math.max(explicitInches || 0, 6);
 
+  // ---- 4a. Trace / dusting detection ----
+  let isTrace = false;
+  if (/\btrace\b|\bdusting\b|\bdusted\b|\ba few flakes\b|\bjust flakes\b|\bonly flakes\b|\bbarely (?:any )?(?:snow|measurable)\b|\bbarely a (?:few )?inch(?:es)?\b|\bskiff of snow\b/.test(lower)) {
+    isTrace = true;
+    if (explicitInches === null || explicitInches > 0.5) explicitInches = 0.1;
+  }
+
+  // ---- 4b. Scope limiters: "only", "just", "exactly", "alone" ----
+  // When present, restrict the storm to the cities/regions specifically mentioned.
+  const restrictToMentioned = /\bonly\b|\bjust\s+(?!a\b)|\bexactly\b|\bsolely\b|\balone\b|\bnowhere else\b|\bno other (?:city|cities|areas?|locations?)\b/i.test(raw);
+
+  // ---- 4c. Region constraints from natural-language phrases ----
+  // These override/narrow the template's region pool when padding.
+  const regionConstraints = new Set();
+  if (/\beast coast\b|\beastern seaboard\b|\batlantic coast\b|\bi-?95 corridor\b/.test(lower)) {
+    regionConstraints.add('NE'); regionConstraints.add('SE');
+  }
+  if (/\bnortheast\b|\bnew england\b|\bmid-?atlantic\b/.test(lower)) regionConstraints.add('NE');
+  if (/\bsoutheast\b|\bcarolinas?\b|\bdeep south\b|\bdixie\b/.test(lower)) regionConstraints.add('SE');
+  if (/\bohio valley\b|\bgreat lakes\b/.test(lower)) regionConstraints.add('OV');
+  if (/\bupper midwest\b|\bnorthern plains\b|\bdakotas?\b|\bgreat plains\b/.test(lower)) regionConstraints.add('UM');
+  if (/\bsouth central\b|\btexas\b|\boklahoma\b|\bgulf coast\b/.test(lower)) regionConstraints.add('SO');
+  if (/\brockies\b|\brocky mountain|\bfront range\b/.test(lower)) regionConstraints.add('NR');
+
   // ---- 5. Detect cold mention ----
   let coldHint = null;
   m = lower.match(/(-?\d+)\s*(?:°|degrees?|deg\b|f\b)/);
@@ -2360,35 +2384,52 @@ function parseParagraphInput() {
   cities.length = 0;
   let chosen;
   let count;
-  if (foundCities.length > 0) {
-    chosen = [...foundCities];
-    // If only a couple cities mentioned but storm scope is large, pad with regional cities
-    const targetCount = randInt(sev.cityCount[0], sev.cityCount[1]);
-    if (chosen.length < targetCount) {
-      // Determine region pool from template + detected cities
-      let pool;
-      if (template.regions === 'all-continental') {
-        pool = [...CITY_DB];
-      } else if (template.regions === 'weighted-single') {
+
+  // Helper: build the pool of candidate cities, honoring region constraints
+  function buildPool() {
+    let pool;
+    if (template.regions === 'all-continental') {
+      pool = [...CITY_DB];
+    } else if (template.regions === 'weighted-single') {
+      if (foundCities.length) {
         pool = CITY_DB.filter(c => foundCities.some(f => f.r === c.r));
       } else {
-        pool = CITY_DB.filter(c => template.regions.includes(c.r));
+        const regionCodes = ['NE','SE','OV','UM','SO','NR'];
+        pool = CITY_DB.filter(c => c.r === pick(regionCodes));
       }
-      const extras = pool.filter(c => !chosen.some(x => x.n === c.n)).sort(() => Math.random() - 0.5);
-      while (chosen.length < targetCount && extras.length) chosen.push(extras.shift());
-    }
-    count = chosen.length;
-  } else {
-    // No specific cities - use template region pool
-    let pool;
-    if (template.regions === 'all-continental') pool = [...CITY_DB];
-    else if (template.regions === 'weighted-single') {
-      const regionCodes = ['NE','SE','OV','UM','SO','NR'];
-      pool = CITY_DB.filter(c => c.r === pick(regionCodes));
     } else {
       pool = CITY_DB.filter(c => template.regions.includes(c.r));
     }
+    // Narrow by explicit region constraints from the paragraph
+    if (regionConstraints.size > 0) {
+      const narrowed = pool.filter(c => regionConstraints.has(c.r));
+      if (narrowed.length > 0) pool = narrowed;
+    }
+    return pool;
+  }
+
+  if (foundCities.length > 0) {
+    chosen = [...foundCities];
+    if (restrictToMentioned) {
+      // User explicitly limited the storm to the named cities — no padding.
+      count = chosen.length;
+    } else {
+      // Pad with regional cities to match the storm's natural scope
+      let targetCount = randInt(sev.cityCount[0], sev.cityCount[1]);
+      // For trace events, keep things small even if user didn't say "only"
+      if (isTrace) targetCount = Math.min(targetCount, Math.max(chosen.length, 3));
+      if (chosen.length < targetCount) {
+        const pool = buildPool();
+        const extras = pool.filter(c => !chosen.some(x => x.n === c.n)).sort(() => Math.random() - 0.5);
+        while (chosen.length < targetCount && extras.length) chosen.push(extras.shift());
+      }
+      count = chosen.length;
+    }
+  } else {
+    // No specific cities - use template region pool (with constraints applied)
+    const pool = buildPool();
     count = randInt(sev.cityCount[0], sev.cityCount[1]);
+    if (isTrace) count = Math.min(count, 3);
     chosen = [...pool].sort(() => Math.random() - 0.5).slice(0, Math.min(count, pool.length));
   }
 
@@ -2403,19 +2444,26 @@ function parseParagraphInput() {
     return mixArr[0].phases;
   }
 
-  // Did the paragraph specifically mention a city's amount? Light heuristic:
-  // If a single city was named and a single explicit amount given, anchor that city to that amount.
+  // Anchor specific cities to explicit amounts.
+  // - Single city + explicit amount → that city gets exactly that amount.
+  // - Trace mode: every mentioned city gets a trace amount.
   const anchorMap = {};
-  if (foundCities.length === 1 && explicitInches !== null) {
+  if (isTrace) {
+    foundCities.forEach(fc => { anchorMap[fc.n] = Math.round((0.05 + Math.random() * 0.2) * 10) / 10; });
+  } else if (foundCities.length === 1 && explicitInches !== null) {
     anchorMap[foundCities[0].n] = explicitInches;
   }
 
   chosen.forEach((c, i) => {
     let totalAmount;
+    const wasMentioned = foundCities.some(f => f.n === c.n);
     if (anchorMap[c.n] !== undefined) {
       totalAmount = anchorMap[c.n];
+    } else if (isTrace) {
+      // All cities in a trace event stay tiny
+      totalAmount = Math.round((0.05 + Math.random() * 0.25) * 10) / 10;
     } else {
-      const isCenter = i < centerCount;
+      const isCenter = i < centerCount || wasMentioned;
       totalAmount = isCenter
         ? Math.round(rand(sev.centerSnow[0], sev.centerSnow[1]) * 10) / 10
         : Math.round(rand(sev.fringe[0], sev.fringe[1]) * 10) / 10;
@@ -2546,6 +2594,9 @@ function parseParagraphInput() {
   }
   if (recordKind === 'total') parts.push(`<strong>Record:</strong> total snowfall (max severity)`);
   else if (recordKind === 'timing') parts.push(`<strong>Record:</strong> timing-based (date drives the record)`);
+  if (isTrace) parts.push(`<strong>Mode:</strong> trace event`);
+  if (restrictToMentioned && foundCities.length) parts.push(`<strong>Scope:</strong> only the named cities (no padding)`);
+  if (regionConstraints.size > 0) parts.push(`<strong>Region:</strong> ${[...regionConstraints].join(', ')} only`);
   summary.innerHTML = parts.join(' &middot; ');
   summary.classList.add('show');
 
