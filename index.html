@@ -286,6 +286,35 @@
   .wind-field { display: flex; align-items: flex-end; gap: 6px; }
   .wind-field input { width: 80px; }
   .wind-field .unit { font-size: 0.82rem; opacity: 0.6; padding-bottom: 10px; }
+
+  /* Input mode toggle & paragraph mode */
+  .mode-toggle { display: flex; gap: 8px; }
+  .mode-btn {
+    flex: 1; padding: 10px 14px; background: rgba(255,255,255,0.05); color: #fff;
+    border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; cursor: pointer;
+    font-size: 0.88rem; font-weight: 600; transition: all 0.2s;
+  }
+  .mode-btn:hover { background: rgba(255,255,255,0.1); }
+  .mode-btn.active {
+    background: linear-gradient(135deg, #5b9cf5, #6366f1);
+    border-color: transparent;
+    box-shadow: 0 0 12px rgba(91,156,245,0.4);
+  }
+  .paragraph-textarea {
+    width: 100%; min-height: 130px; padding: 12px; background: rgba(0,0,0,0.3);
+    color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px;
+    font-size: 0.92rem; font-family: inherit; line-height: 1.5; resize: vertical;
+    outline: none; box-sizing: border-box;
+  }
+  .paragraph-textarea:focus { border-color: #5b9cf5; }
+  .paragraph-hint { font-size: 0.75rem; opacity: 0.5; margin-top: 6px; font-style: italic; }
+  .parse-summary {
+    margin-top: 12px; padding: 10px 12px; background: rgba(91,156,245,0.08);
+    border: 1px solid rgba(91,156,245,0.25); border-radius: 8px;
+    font-size: 0.82rem; line-height: 1.55; display: none;
+  }
+  .parse-summary.show { display: block; }
+  .parse-summary strong { color: #93c5fd; }
 </style>
 </head>
 <body>
@@ -301,6 +330,26 @@
   </div>
 
   <div class="card">
+    <h2>Input Mode</h2>
+    <div class="mode-toggle">
+      <button type="button" class="mode-btn active" data-mode="detailed">Detailed Input</button>
+      <button type="button" class="mode-btn" data-mode="paragraph">Paragraph Mode</button>
+    </div>
+  </div>
+
+  <div class="card" id="paragraphCard" style="display:none">
+    <h2>Describe the Storm</h2>
+    <label for="paragraphInput">Write a short paragraph &mdash; we'll figure out the rest</label>
+    <textarea id="paragraphInput" class="paragraph-textarea" placeholder="e.g. A historic blizzard slammed the Northeast last night, dumping over a foot of snow on Boston and burying New York City. Bitter cold and high winds made conditions brutal."></textarea>
+    <p class="paragraph-hint">Mention cities, regions, storm types, severity, snow amounts &mdash; whatever feels natural.</p>
+    <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
+      <button class="btn-generate" id="parseParagraphBtn" style="opacity:1">Generate from Paragraph</button>
+      <button class="btn-clear" id="clearParagraphBtn">Clear</button>
+    </div>
+    <div class="parse-summary" id="parseSummary"></div>
+  </div>
+
+  <div class="card" id="detailedCard">
     <h2>Add Cities</h2>
     <div class="row">
       <div class="city-field">
@@ -1600,165 +1649,154 @@ function generateProfile() {
 /* ---- Random Storm Generator ---- */
 const STORM_TEMPLATES = [
   { type:"Northeast Nor'easter", regions:['NE'], typicalDirections:['SW_NE','S_N'], windProfile:{base:[10,25],severe:[25,50],gustAdd:[10,25],chance:0.7}, precipMix:[
-    { phases:[{type:'snow',pct:1.0}], weight:5 },
-    { phases:[{type:'snow',pct:0.8},{type:'rain',pct:0.2}], weight:2 },
-    { phases:[{type:'rain',pct:0.1},{type:'snow',pct:0.8},{type:'rain',pct:0.1}], weight:1 },
-    { phases:[{type:'snow',pct:0.7},{type:'sleet',pct:0.15},{type:'rain',pct:0.15}], weight:1 },
+    { phases:[{type:'snow',pct:1.0}], weight:10 },
+    { phases:[{type:'snow',pct:0.9},{type:'sleet',pct:0.1}], weight:1 },
+    { phases:[{type:'snow',pct:0.92},{type:'ice',pct:0.08}], weight:1 },
   ], severities:[
-    { label:'Minor',       centerSnow:[2,5],   fringe:[0.5,2],  cityCount:[2,5],   coldChance:0.1,  coldRange:[18,28] },
-    { label:'Moderate',    centerSnow:[5,12],  fringe:[1,5],    cityCount:[4,9],   coldChance:0.25, coldRange:[8,22] },
-    { label:'Significant', centerSnow:[10,18], fringe:[3,8],    cityCount:[6,13],  coldChance:0.4,  coldRange:[0,18] },
-    { label:'Major',       centerSnow:[16,26], fringe:[5,12],   cityCount:[9,17],  coldChance:0.55, coldRange:[-8,12] },
-    { label:'Extreme',     centerSnow:[24,36], fringe:[8,18],   cityCount:[13,22], coldChance:0.7,  coldRange:[-20,5] },
+    { label:'Minor',       centerSnow:[1,3],   fringe:[0.2,1],  cityCount:[1,3],  coldChance:0.1,  coldRange:[18,28] },
+    { label:'Moderate',    centerSnow:[3,7],   fringe:[0.5,3],  cityCount:[2,5],  coldChance:0.25, coldRange:[8,22] },
+    { label:'Significant', centerSnow:[6,11],  fringe:[1.5,5],  cityCount:[3,7],  coldChance:0.4,  coldRange:[0,18] },
+    { label:'Major',       centerSnow:[10,16], fringe:[3,7],    cityCount:[5,10], coldChance:0.55, coldRange:[-8,12] },
+    { label:'Extreme',     centerSnow:[14,22], fringe:[5,11],   cityCount:[7,13], coldChance:0.7,  coldRange:[-20,5] },
   ]},
   { type:'Deep South Ice Storm', regions:['SO','SE'], typicalDirections:['N_S','NW_SE'], windProfile:{base:[5,15],severe:[10,30],gustAdd:[10,20],chance:0.5}, precipMix:[
-    { phases:[{type:'snow',pct:0.2},{type:'ice',pct:0.5},{type:'rain',pct:0.3}], weight:3 },
-    { phases:[{type:'ice',pct:0.6},{type:'rain',pct:0.4}], weight:3 },
-    { phases:[{type:'sleet',pct:0.3},{type:'ice',pct:0.5},{type:'rain',pct:0.2}], weight:2 },
-    { phases:[{type:'snow',pct:0.1},{type:'ice',pct:0.4},{type:'sleet',pct:0.2},{type:'rain',pct:0.3}], weight:2 },
+    { phases:[{type:'snow',pct:0.15},{type:'ice',pct:0.7},{type:'rain',pct:0.15}], weight:3 },
+    { phases:[{type:'ice',pct:0.85},{type:'rain',pct:0.15}], weight:3 },
+    { phases:[{type:'sleet',pct:0.2},{type:'ice',pct:0.7},{type:'rain',pct:0.1}], weight:2 },
+    { phases:[{type:'snow',pct:0.1},{type:'ice',pct:0.6},{type:'sleet',pct:0.15},{type:'rain',pct:0.15}], weight:2 },
   ], severities:[
-    { label:'Minor',       centerSnow:[1,3],   fringe:[0,1],    cityCount:[3,7],   coldChance:0.5,  coldRange:[20,30] },
-    { label:'Moderate',    centerSnow:[1,4],   fringe:[0,1.5],  cityCount:[5,12],  coldChance:0.65, coldRange:[10,25] },
-    { label:'Significant', centerSnow:[2,6],   fringe:[0.5,2],  cityCount:[8,16],  coldChance:0.8,  coldRange:[0,20] },
-    { label:'Major',       centerSnow:[4,10],  fringe:[1,4],    cityCount:[12,20], coldChance:0.9,  coldRange:[-10,15] },
-    { label:'Extreme',     centerSnow:[6,15],  fringe:[2,6],    cityCount:[16,26], coldChance:0.95, coldRange:[-15,5] },
+    { label:'Minor',       centerSnow:[0.5,1.5], fringe:[0,0.5],  cityCount:[2,4],  coldChance:0.5,  coldRange:[20,30] },
+    { label:'Moderate',    centerSnow:[0.5,2],   fringe:[0,0.7],  cityCount:[3,7],  coldChance:0.65, coldRange:[10,25] },
+    { label:'Significant', centerSnow:[1,3],     fringe:[0.2,1],  cityCount:[4,9],  coldChance:0.8,  coldRange:[0,20] },
+    { label:'Major',       centerSnow:[2,5],     fringe:[0.5,2],  cityCount:[6,12], coldChance:0.9,  coldRange:[-10,15] },
+    { label:'Extreme',     centerSnow:[3,8],     fringe:[1,3],    cityCount:[9,15], coldChance:0.95, coldRange:[-15,5] },
   ]},
   { type:'Midwest Blizzard', regions:['UM','OV'], typicalDirections:['NW_SE','W_E'], windProfile:{base:[15,35],severe:[30,55],gustAdd:[10,30],chance:0.8}, precipMix:[
-    { phases:[{type:'snow',pct:1.0}], weight:7 },
-    { phases:[{type:'snow',pct:0.9},{type:'sleet',pct:0.1}], weight:2 },
-    { phases:[{type:'sleet',pct:0.1},{type:'snow',pct:0.9}], weight:1 },
+    { phases:[{type:'snow',pct:1.0}], weight:1 },
   ], severities:[
-    { label:'Minor',       centerSnow:[3,7],   fringe:[1,3],    cityCount:[3,7],   coldChance:0.2,  coldRange:[5,20] },
-    { label:'Moderate',    centerSnow:[6,13],  fringe:[2,6],    cityCount:[6,12],  coldChance:0.4,  coldRange:[-5,15] },
-    { label:'Significant', centerSnow:[10,18], fringe:[3,8],    cityCount:[8,16],  coldChance:0.6,  coldRange:[-15,5] },
-    { label:'Major',       centerSnow:[16,26], fringe:[5,12],   cityCount:[12,20], coldChance:0.75, coldRange:[-25,0] },
-    { label:'Extreme',     centerSnow:[22,36], fringe:[8,16],   cityCount:[16,26], coldChance:0.85, coldRange:[-35,-10] },
+    { label:'Minor',       centerSnow:[1.5,4],  fringe:[0.5,1.5], cityCount:[1,4],  coldChance:0.2,  coldRange:[5,20] },
+    { label:'Moderate',    centerSnow:[3,7],    fringe:[1,3],     cityCount:[3,7],  coldChance:0.4,  coldRange:[-5,15] },
+    { label:'Significant', centerSnow:[6,11],   fringe:[1.5,5],   cityCount:[5,10], coldChance:0.6,  coldRange:[-15,5] },
+    { label:'Major',       centerSnow:[10,16],  fringe:[3,7],     cityCount:[7,12], coldChance:0.75, coldRange:[-25,0] },
+    { label:'Extreme',     centerSnow:[14,22],  fringe:[5,10],    cityCount:[10,16],coldChance:0.85, coldRange:[-35,-10] },
   ]},
   { type:'Ohio Valley Wallop', regions:['OV'], typicalDirections:['SW_NE','W_E'], windProfile:{base:[8,20],severe:[20,40],gustAdd:[10,20],chance:0.6}, precipMix:[
-    { phases:[{type:'snow',pct:1.0}], weight:4 },
-    { phases:[{type:'snow',pct:0.7},{type:'sleet',pct:0.2},{type:'rain',pct:0.1}], weight:2 },
-    { phases:[{type:'snow',pct:0.8},{type:'ice',pct:0.1},{type:'rain',pct:0.1}], weight:2 },
-    { phases:[{type:'rain',pct:0.1},{type:'snow',pct:0.9}], weight:1 },
+    { phases:[{type:'snow',pct:1.0}], weight:8 },
+    { phases:[{type:'snow',pct:0.88},{type:'sleet',pct:0.12}], weight:1 },
+    { phases:[{type:'snow',pct:0.9},{type:'ice',pct:0.1}], weight:1 },
   ], severities:[
-    { label:'Minor',       centerSnow:[2,5],   fringe:[0.5,2],  cityCount:[2,5],   coldChance:0.1,  coldRange:[15,25] },
-    { label:'Moderate',    centerSnow:[5,10],  fringe:[1.5,4],  cityCount:[4,8],   coldChance:0.2,  coldRange:[5,20] },
-    { label:'Significant', centerSnow:[8,15],  fringe:[3,6],    cityCount:[5,11],  coldChance:0.35, coldRange:[0,18] },
-    { label:'Major',       centerSnow:[14,22], fringe:[5,10],   cityCount:[8,14],  coldChance:0.5,  coldRange:[-10,10] },
-    { label:'Extreme',     centerSnow:[20,30], fringe:[8,16],   cityCount:[10,18], coldChance:0.65, coldRange:[-20,0] },
+    { label:'Minor',       centerSnow:[1,3],    fringe:[0.2,1],  cityCount:[1,3], coldChance:0.1,  coldRange:[15,25] },
+    { label:'Moderate',    centerSnow:[3,6],    fringe:[1,2.5],  cityCount:[2,5], coldChance:0.2,  coldRange:[5,20] },
+    { label:'Significant', centerSnow:[5,9],    fringe:[1.5,4],  cityCount:[3,7], coldChance:0.35, coldRange:[0,18] },
+    { label:'Major',       centerSnow:[8,13],   fringe:[3,6],    cityCount:[5,9], coldChance:0.5,  coldRange:[-10,10] },
+    { label:'Extreme',     centerSnow:[12,18],  fringe:[5,10],   cityCount:[6,11],coldChance:0.65, coldRange:[-20,0] },
   ]},
   { type:'Southern Snowpocalypse', regions:['SO'], typicalDirections:['N_S','NW_SE'], windProfile:{base:[5,15],severe:[15,35],gustAdd:[10,20],chance:0.5}, precipMix:[
-    { phases:[{type:'snow',pct:1.0}], weight:3 },
-    { phases:[{type:'snow',pct:0.6},{type:'sleet',pct:0.2},{type:'rain',pct:0.2}], weight:3 },
-    { phases:[{type:'snow',pct:0.5},{type:'ice',pct:0.3},{type:'rain',pct:0.2}], weight:2 },
-    { phases:[{type:'sleet',pct:0.2},{type:'snow',pct:0.6},{type:'rain',pct:0.2}], weight:2 },
+    { phases:[{type:'snow',pct:1.0}], weight:7 },
+    { phases:[{type:'snow',pct:0.85},{type:'sleet',pct:0.15}], weight:2 },
+    { phases:[{type:'snow',pct:0.85},{type:'ice',pct:0.15}], weight:1 },
   ], severities:[
-    { label:'Minor',       centerSnow:[1.5,4], fringe:[0.5,1.5],cityCount:[3,8],   coldChance:0.15, coldRange:[18,28] },
-    { label:'Moderate',    centerSnow:[2,6],   fringe:[0.5,2],  cityCount:[6,13],  coldChance:0.3,  coldRange:[10,24] },
-    { label:'Significant', centerSnow:[4,10],  fringe:[1,4],    cityCount:[8,18],  coldChance:0.5,  coldRange:[0,20] },
-    { label:'Major',       centerSnow:[8,16],  fringe:[2,7],    cityCount:[14,22], coldChance:0.65, coldRange:[-5,15] },
-    { label:'Extreme',     centerSnow:[14,24], fringe:[4,10],   cityCount:[18,30], coldChance:0.8,  coldRange:[-15,5] },
+    { label:'Minor',       centerSnow:[0.8,2],  fringe:[0.2,0.8], cityCount:[2,5],  coldChance:0.15, coldRange:[18,28] },
+    { label:'Moderate',    centerSnow:[1,3.5],  fringe:[0.3,1.2], cityCount:[3,8],  coldChance:0.3,  coldRange:[10,24] },
+    { label:'Significant', centerSnow:[2.5,6],  fringe:[0.5,2.5], cityCount:[5,11], coldChance:0.5,  coldRange:[0,20] },
+    { label:'Major',       centerSnow:[5,10],   fringe:[1,4],     cityCount:[8,14], coldChance:0.65, coldRange:[-5,15] },
+    { label:'Extreme',     centerSnow:[8,15],   fringe:[2,6],     cityCount:[11,18],coldChance:0.8,  coldRange:[-15,5] },
   ]},
   { type:'Gulf Coast Freeze', regions:['SO','SE'], typicalDirections:['N_S','NW_SE'], windProfile:{base:[5,15],severe:[10,25],gustAdd:[5,15],chance:0.4}, precipMix:[
-    { phases:[{type:'ice',pct:0.6},{type:'rain',pct:0.4}], weight:4 },
-    { phases:[{type:'sleet',pct:0.3},{type:'ice',pct:0.4},{type:'rain',pct:0.3}], weight:3 },
-    { phases:[{type:'ice',pct:0.8},{type:'sleet',pct:0.2}], weight:2 },
-    { phases:[{type:'rain',pct:0.2},{type:'ice',pct:0.6},{type:'rain',pct:0.2}], weight:1 },
+    { phases:[{type:'snow',pct:0.55},{type:'ice',pct:0.4},{type:'rain',pct:0.05}], weight:4 },
+    { phases:[{type:'snow',pct:0.5},{type:'sleet',pct:0.15},{type:'ice',pct:0.3},{type:'rain',pct:0.05}], weight:3 },
+    { phases:[{type:'snow',pct:0.45},{type:'ice',pct:0.5},{type:'sleet',pct:0.05}], weight:2 },
+    { phases:[{type:'snow',pct:0.6},{type:'ice',pct:0.35},{type:'rain',pct:0.05}], weight:1 },
   ], severities:[
-    { label:'Minor',       centerSnow:[0,1],   fringe:[0,0.3],  cityCount:[3,6],   coldChance:0.7,  coldRange:[22,29] },
-    { label:'Moderate',    centerSnow:[0,1],   fringe:[0,0.3],  cityCount:[4,10],  coldChance:0.85, coldRange:[15,27] },
-    { label:'Significant', centerSnow:[0,2],   fringe:[0,0.5],  cityCount:[6,13],  coldChance:0.9,  coldRange:[5,22] },
-    { label:'Major',       centerSnow:[0.5,3], fringe:[0,1],    cityCount:[8,16],  coldChance:0.95, coldRange:[-5,15] },
-    { label:'Extreme',     centerSnow:[1,5],   fringe:[0,2],    cityCount:[12,20], coldChance:0.98, coldRange:[-15,5] },
+    { label:'Minor',       centerSnow:[0,0.5],  fringe:[0,0.1],  cityCount:[2,4],  coldChance:0.7,  coldRange:[22,29] },
+    { label:'Moderate',    centerSnow:[0,0.5],  fringe:[0,0.1],  cityCount:[3,7],  coldChance:0.85, coldRange:[15,27] },
+    { label:'Significant', centerSnow:[0,1],    fringe:[0,0.2],  cityCount:[4,9],  coldChance:0.9,  coldRange:[5,22] },
+    { label:'Major',       centerSnow:[0.2,1.5],fringe:[0,0.5],  cityCount:[5,11], coldChance:0.95, coldRange:[-5,15] },
+    { label:'Extreme',     centerSnow:[0.5,2.5],fringe:[0,1],    cityCount:[8,14], coldChance:0.98, coldRange:[-15,5] },
   ]},
   { type:'Southeast Surprise', regions:['SE'], typicalDirections:['SW_NE','W_E'], windProfile:{base:[5,15],severe:[15,30],gustAdd:[10,20],chance:0.4}, precipMix:[
-    { phases:[{type:'snow',pct:1.0}], weight:3 },
-    { phases:[{type:'snow',pct:0.6},{type:'rain',pct:0.4}], weight:3 },
-    { phases:[{type:'snow',pct:0.5},{type:'sleet',pct:0.3},{type:'rain',pct:0.2}], weight:2 },
-    { phases:[{type:'rain',pct:0.15},{type:'snow',pct:0.7},{type:'rain',pct:0.15}], weight:2 },
+    { phases:[{type:'snow',pct:1.0}], weight:7 },
+    { phases:[{type:'snow',pct:0.82},{type:'sleet',pct:0.18}], weight:2 },
+    { phases:[{type:'snow',pct:0.85},{type:'ice',pct:0.15}], weight:1 },
   ], severities:[
-    { label:'Minor',       centerSnow:[1.5,4], fringe:[0.5,1.5],cityCount:[2,5],   coldChance:0.1,  coldRange:[18,28] },
-    { label:'Moderate',    centerSnow:[3,7],   fringe:[0.5,3],  cityCount:[4,9],   coldChance:0.2,  coldRange:[10,24] },
-    { label:'Significant', centerSnow:[5,10],  fringe:[1,4],    cityCount:[6,13],  coldChance:0.35, coldRange:[5,20] },
-    { label:'Major',       centerSnow:[8,16],  fringe:[3,7],    cityCount:[9,16],  coldChance:0.5,  coldRange:[-2,15] },
-    { label:'Extreme',     centerSnow:[14,24], fringe:[5,12],   cityCount:[12,20], coldChance:0.65, coldRange:[-10,8] },
+    { label:'Minor',       centerSnow:[0.8,2],  fringe:[0.2,0.8], cityCount:[1,3],  coldChance:0.1,  coldRange:[18,28] },
+    { label:'Moderate',    centerSnow:[1.5,4],  fringe:[0.3,1.5], cityCount:[2,5],  coldChance:0.2,  coldRange:[10,24] },
+    { label:'Significant', centerSnow:[3,6],    fringe:[0.5,2.5], cityCount:[3,7],  coldChance:0.35, coldRange:[5,20] },
+    { label:'Major',       centerSnow:[5,10],   fringe:[1.5,4],   cityCount:[5,9],  coldChance:0.5,  coldRange:[-2,15] },
+    { label:'Extreme',     centerSnow:[8,15],   fringe:[3,7],     cityCount:[7,12], coldChance:0.65, coldRange:[-10,8] },
   ]},
   { type:'Northern Rockies Dump', regions:['NR'], typicalDirections:['W_E','NW_SE'], windProfile:{base:[10,25],severe:[25,50],gustAdd:[10,25],chance:0.6}, precipMix:[
-    { phases:[{type:'snow',pct:1.0}], weight:8 },
-    { phases:[{type:'snow',pct:0.95},{type:'sleet',pct:0.05}], weight:1 },
+    { phases:[{type:'snow',pct:1.0}], weight:1 },
   ], severities:[
-    { label:'Minor',       centerSnow:[3,8],   fringe:[1,3],    cityCount:[2,4],   coldChance:0.2,  coldRange:[5,20] },
-    { label:'Moderate',    centerSnow:[7,15],  fringe:[2,6],    cityCount:[3,7],   coldChance:0.35, coldRange:[-5,15] },
-    { label:'Significant', centerSnow:[12,22], fringe:[4,10],   cityCount:[5,9],   coldChance:0.5,  coldRange:[-15,8] },
-    { label:'Major',       centerSnow:[20,32], fringe:[6,14],   cityCount:[6,11],  coldChance:0.65, coldRange:[-25,0] },
-    { label:'Extreme',     centerSnow:[28,48], fringe:[10,20],  cityCount:[8,14],  coldChance:0.8,  coldRange:[-35,-10] },
+    { label:'Minor',       centerSnow:[1.5,5],  fringe:[0.5,1.5], cityCount:[1,3], coldChance:0.2,  coldRange:[5,20] },
+    { label:'Moderate',    centerSnow:[4,9],    fringe:[1,3.5],   cityCount:[2,4], coldChance:0.35, coldRange:[-5,15] },
+    { label:'Significant', centerSnow:[7,13],   fringe:[2.5,6],   cityCount:[3,5], coldChance:0.5,  coldRange:[-15,8] },
+    { label:'Major',       centerSnow:[12,20],  fringe:[3.5,8],   cityCount:[4,7], coldChance:0.65, coldRange:[-25,0] },
+    { label:'Extreme',     centerSnow:[17,28],  fringe:[6,12],    cityCount:[5,9], coldChance:0.8,  coldRange:[-35,-10] },
   ]},
   { type:'Clipper System', regions:['UM','OV','NE'], typicalDirections:['W_E','NW_SE'], windProfile:{base:[10,25],severe:[20,40],gustAdd:[10,20],chance:0.6}, precipMix:[
-    { phases:[{type:'snow',pct:1.0}], weight:6 },
-    { phases:[{type:'snow',pct:0.85},{type:'sleet',pct:0.15}], weight:2 },
-    { phases:[{type:'snow',pct:0.7},{type:'rain',pct:0.3}], weight:1 },
+    { phases:[{type:'snow',pct:1.0}], weight:9 },
+    { phases:[{type:'snow',pct:0.9},{type:'sleet',pct:0.1}], weight:1 },
   ], severities:[
-    { label:'Minor',       centerSnow:[1.5,4], fringe:[0.5,1.5],cityCount:[3,7],   coldChance:0.1,  coldRange:[12,25] },
-    { label:'Moderate',    centerSnow:[2,5],   fringe:[0.5,2],  cityCount:[5,12],  coldChance:0.2,  coldRange:[5,20] },
-    { label:'Significant', centerSnow:[4,8],   fringe:[1,3],    cityCount:[8,16],  coldChance:0.3,  coldRange:[0,15] },
-    { label:'Major',       centerSnow:[6,12],  fringe:[2,5],    cityCount:[12,20], coldChance:0.45, coldRange:[-10,10] },
-    { label:'Extreme',     centerSnow:[10,18], fringe:[3,8],    cityCount:[16,26], coldChance:0.6,  coldRange:[-20,0] },
+    { label:'Minor',       centerSnow:[0.8,2],   fringe:[0.2,0.8], cityCount:[2,4], coldChance:0.1,  coldRange:[12,25] },
+    { label:'Moderate',    centerSnow:[1.2,3],   fringe:[0.3,1.2], cityCount:[3,7], coldChance:0.2,  coldRange:[5,20] },
+    { label:'Significant', centerSnow:[2.5,5],   fringe:[0.5,2],   cityCount:[5,10],coldChance:0.3,  coldRange:[0,15] },
+    { label:'Major',       centerSnow:[4,7],     fringe:[1.5,3],   cityCount:[7,12],coldChance:0.45, coldRange:[-10,10] },
+    { label:'Extreme',     centerSnow:[6,11],    fringe:[2,5],     cityCount:[10,16],coldChance:0.6,  coldRange:[-20,0] },
   ]},
   { type:'Historic East Coast Storm', regions:['NE','SE','OV'], typicalDirections:['SW_NE','S_N'], windProfile:{base:[15,30],severe:[30,55],gustAdd:[10,30],chance:0.75}, precipMix:[
-    { phases:[{type:'snow',pct:1.0}], weight:4 },
-    { phases:[{type:'snow',pct:0.75},{type:'sleet',pct:0.15},{type:'rain',pct:0.1}], weight:2 },
-    { phases:[{type:'rain',pct:0.05},{type:'snow',pct:0.85},{type:'rain',pct:0.1}], weight:2 },
-    { phases:[{type:'snow',pct:0.6},{type:'ice',pct:0.2},{type:'rain',pct:0.2}], weight:1 },
+    { phases:[{type:'snow',pct:1.0}], weight:8 },
+    { phases:[{type:'snow',pct:0.88},{type:'sleet',pct:0.12}], weight:1 },
+    { phases:[{type:'snow',pct:0.9},{type:'ice',pct:0.1}], weight:1 },
   ], severities:[
-    { label:'Minor',       centerSnow:[4,9],   fringe:[1,4],    cityCount:[5,10],  coldChance:0.15, coldRange:[15,25] },
-    { label:'Moderate',    centerSnow:[8,16],  fringe:[2,7],    cityCount:[8,16],  coldChance:0.3,  coldRange:[5,20] },
-    { label:'Significant', centerSnow:[14,22], fringe:[4,10],   cityCount:[12,22], coldChance:0.5,  coldRange:[-2,15] },
-    { label:'Major',       centerSnow:[20,30], fringe:[6,14],   cityCount:[18,28], coldChance:0.6,  coldRange:[-10,10] },
-    { label:'Extreme',     centerSnow:[26,40], fringe:[10,20],  cityCount:[22,36], coldChance:0.75, coldRange:[-20,0] },
+    { label:'Minor',       centerSnow:[2.5,5.5],fringe:[0.5,2.5], cityCount:[3,6],  coldChance:0.15, coldRange:[15,25] },
+    { label:'Moderate',    centerSnow:[5,10],   fringe:[1.5,4.5], cityCount:[5,10], coldChance:0.3,  coldRange:[5,20] },
+    { label:'Significant', centerSnow:[8,14],   fringe:[2.5,6],   cityCount:[7,13], coldChance:0.5,  coldRange:[-2,15] },
+    { label:'Major',       centerSnow:[12,18],  fringe:[4,9],     cityCount:[11,17],coldChance:0.6,  coldRange:[-10,10] },
+    { label:'Extreme',     centerSnow:[16,25],  fringe:[6,12],    cityCount:[13,22],coldChance:0.75, coldRange:[-20,0] },
   ]},
   { type:'Polar Vortex Outbreak', regions:['UM','OV','SO','NE'], typicalDirections:['N_S','NW_SE'], windProfile:{base:[10,25],severe:[25,50],gustAdd:[10,25],chance:0.7}, precipMix:[
-    { phases:[{type:'snow',pct:0.7},{type:'ice',pct:0.2},{type:'sleet',pct:0.1}], weight:3 },
-    { phases:[{type:'snow',pct:1.0}], weight:3 },
-    { phases:[{type:'ice',pct:0.4},{type:'snow',pct:0.4},{type:'sleet',pct:0.2}], weight:2 },
-    { phases:[{type:'snow',pct:0.5},{type:'ice',pct:0.3},{type:'rain',pct:0.2}], weight:2 },
+    { phases:[{type:'snow',pct:1.0}], weight:8 },
+    { phases:[{type:'snow',pct:0.9},{type:'sleet',pct:0.1}], weight:1 },
+    { phases:[{type:'snow',pct:0.92},{type:'ice',pct:0.08}], weight:1 },
   ], severities:[
-    { label:'Minor',       centerSnow:[1,4],   fringe:[0.5,1.5],cityCount:[5,10],  coldChance:0.6,  coldRange:[0,15] },
-    { label:'Moderate',    centerSnow:[2,6],   fringe:[0,2],    cityCount:[8,16],  coldChance:0.75, coldRange:[-10,5] },
-    { label:'Significant', centerSnow:[4,10],  fringe:[0.5,4],  cityCount:[12,22], coldChance:0.85, coldRange:[-20,-2] },
-    { label:'Major',       centerSnow:[6,14],  fringe:[1,5],    cityCount:[16,26], coldChance:0.92, coldRange:[-30,-8] },
-    { label:'Extreme',     centerSnow:[10,20], fringe:[2,8],    cityCount:[22,34], coldChance:0.97, coldRange:[-45,-15] },
+    { label:'Minor',       centerSnow:[0.5,2],  fringe:[0.2,0.8], cityCount:[3,6],  coldChance:0.6,  coldRange:[0,15] },
+    { label:'Moderate',    centerSnow:[1,3.5],  fringe:[0.3,1.2], cityCount:[5,10], coldChance:0.75, coldRange:[-10,5] },
+    { label:'Significant', centerSnow:[2.5,6],  fringe:[0.5,2.5], cityCount:[7,13], coldChance:0.85, coldRange:[-20,-2] },
+    { label:'Major',       centerSnow:[4,9],    fringe:[1,3.5],   cityCount:[10,16],coldChance:0.92, coldRange:[-30,-8] },
+    { label:'Extreme',     centerSnow:[6,12],   fringe:[2,5],     cityCount:[13,21],coldChance:0.97, coldRange:[-45,-15] },
   ]},
   { type:'Texas Winter Emergency', regions:['SO'], typicalDirections:['N_S','NW_SE'], windProfile:{base:[5,15],severe:[15,35],gustAdd:[10,20],chance:0.5}, precipMix:[
-    { phases:[{type:'ice',pct:0.5},{type:'rain',pct:0.3},{type:'sleet',pct:0.2}], weight:3 },
-    { phases:[{type:'snow',pct:0.3},{type:'ice',pct:0.5},{type:'rain',pct:0.2}], weight:3 },
-    { phases:[{type:'ice',pct:0.7},{type:'rain',pct:0.3}], weight:2 },
-    { phases:[{type:'sleet',pct:0.2},{type:'ice',pct:0.4},{type:'snow',pct:0.2},{type:'rain',pct:0.2}], weight:2 },
+    { phases:[{type:'snow',pct:0.55},{type:'ice',pct:0.35},{type:'sleet',pct:0.1}], weight:3 },
+    { phases:[{type:'snow',pct:0.6},{type:'ice',pct:0.35},{type:'rain',pct:0.05}], weight:3 },
+    { phases:[{type:'snow',pct:0.5},{type:'ice',pct:0.45},{type:'rain',pct:0.05}], weight:2 },
+    { phases:[{type:'snow',pct:0.55},{type:'sleet',pct:0.15},{type:'ice',pct:0.25},{type:'rain',pct:0.05}], weight:2 },
   ], severities:[
-    { label:'Minor',       centerSnow:[1,3],   fringe:[0,1],    cityCount:[3,7],   coldChance:0.5,  coldRange:[15,28] },
-    { label:'Moderate',    centerSnow:[1,4],   fringe:[0,1.5],  cityCount:[5,11],  coldChance:0.7,  coldRange:[5,22] },
-    { label:'Significant', centerSnow:[3,7],   fringe:[0.5,3],  cityCount:[8,15],  coldChance:0.85, coldRange:[-5,15] },
-    { label:'Major',       centerSnow:[5,12],  fringe:[1,5],    cityCount:[10,18], coldChance:0.9,  coldRange:[-15,8] },
-    { label:'Extreme',     centerSnow:[8,18],  fringe:[2,8],    cityCount:[14,22], coldChance:0.95, coldRange:[-25,0] },
+    { label:'Minor',       centerSnow:[0.5,1.5],fringe:[0,0.5],  cityCount:[2,4],  coldChance:0.5,  coldRange:[15,28] },
+    { label:'Moderate',    centerSnow:[0.5,2],  fringe:[0,0.7],  cityCount:[3,7],  coldChance:0.7,  coldRange:[5,22] },
+    { label:'Significant', centerSnow:[1.5,4],  fringe:[0.2,1.5],cityCount:[5,9],  coldChance:0.85, coldRange:[-5,15] },
+    { label:'Major',       centerSnow:[2.5,6],  fringe:[0.5,2.5],cityCount:[6,11], coldChance:0.9,  coldRange:[-15,8] },
+    { label:'Extreme',     centerSnow:[4,9],    fringe:[1,4],    cityCount:[9,14], coldChance:0.95, coldRange:[-25,0] },
   ]},
-  { type:'Flurry Dud', regions:'weighted-single', typicalDirections:['W_E','NW_SE','SW_NE'], windProfile:{base:[0,10],severe:[5,15],gustAdd:[0,10],chance:0.2}, precipMix:[
+  { type:'Flurry Dud', regions:'weighted-single', typicalDirections:['W_E','NW_SE','SW_NE'], windProfile:{base:[0,5],severe:[0,8],gustAdd:[0,5],chance:0.1}, precipMix:[
+    { phases:[{type:'snow',pct:1.0}], weight:1 },
+  ], severities:[
+    { label:'Flurry Dud', centerSnow:[0.05,0.3], fringe:[0,0.1],  cityCount:[1,1],  coldChance:0.05, coldRange:[26,32] },
+    { label:'Flurry Dud', centerSnow:[0.05,0.3], fringe:[0,0.1],  cityCount:[1,1],  coldChance:0.05, coldRange:[25,32] },
+    { label:'Flurry Dud', centerSnow:[0.1,0.4],  fringe:[0,0.15], cityCount:[1,2],  coldChance:0.08, coldRange:[24,31] },
+    { label:'Flurry Dud', centerSnow:[0.1,0.5],  fringe:[0,0.15], cityCount:[1,2],  coldChance:0.08, coldRange:[22,30] },
+    { label:'Flurry Dud', centerSnow:[0.15,0.6], fringe:[0,0.2],  cityCount:[1,2],  coldChance:0.1,  coldRange:[20,30] },
+  ]},
+  { type:'Omega Continental Blizzard Outbreak', regions:'all-continental', typicalDirections:['W_E','SW_NE'], windProfile:{base:[40,80],severe:[70,130],gustAdd:[25,55],chance:0.98}, precipMix:[
     { phases:[{type:'snow',pct:1.0}], weight:8 },
-    { phases:[{type:'snow',pct:0.8},{type:'rain',pct:0.2}], weight:2 },
+    { phases:[{type:'snow',pct:0.92},{type:'sleet',pct:0.08}], weight:1 },
+    { phases:[{type:'snow',pct:0.93},{type:'ice',pct:0.07}], weight:1 },
   ], severities:[
-    { label:'Flurry Dud', centerSnow:[0.3,1],   fringe:[0,0.3],  cityCount:[1,2],   coldChance:0.05, coldRange:[26,32] },
-    { label:'Flurry Dud', centerSnow:[0.3,1.2], fringe:[0,0.3],  cityCount:[1,2],   coldChance:0.05, coldRange:[25,32] },
-    { label:'Flurry Dud', centerSnow:[0.5,1.5], fringe:[0,0.5],  cityCount:[1,3],   coldChance:0.08, coldRange:[24,31] },
-    { label:'Flurry Dud', centerSnow:[0.5,1.5], fringe:[0,0.5],  cityCount:[2,3],   coldChance:0.08, coldRange:[22,30] },
-    { label:'Flurry Dud', centerSnow:[0.5,2],   fringe:[0,0.5],  cityCount:[2,4],   coldChance:0.1,  coldRange:[20,30] },
-  ]},
-  { type:'Omega Continental Blizzard Outbreak', regions:'all-continental', typicalDirections:['W_E','SW_NE'], windProfile:{base:[25,50],severe:[45,80],gustAdd:[15,35],chance:0.9}, precipMix:[
-    { phases:[{type:'snow',pct:0.8},{type:'ice',pct:0.1},{type:'sleet',pct:0.1}], weight:4 },
-    { phases:[{type:'snow',pct:1.0}], weight:3 },
-    { phases:[{type:'ice',pct:0.2},{type:'snow',pct:0.6},{type:'ice',pct:0.2}], weight:2 },
-  ], severities:[
-    { label:'Omega Continental Blizzard Outbreak', centerSnow:[120,180], fringe:[60,100], cityCount:[150,220], coldChance:0.95, coldRange:[-60,-20] },
-    { label:'Omega Continental Blizzard Outbreak', centerSnow:[140,210], fringe:[70,120], cityCount:[180,260], coldChance:0.96, coldRange:[-70,-25] },
-    { label:'Omega Continental Blizzard Outbreak', centerSnow:[160,240], fringe:[80,140], cityCount:[220,300], coldChance:0.97, coldRange:[-80,-30] },
-    { label:'Omega Continental Blizzard Outbreak', centerSnow:[180,280], fringe:[100,160],cityCount:[260,340], coldChance:0.98, coldRange:[-90,-40] },
-    { label:'Omega Continental Blizzard Outbreak', centerSnow:[200,320], fringe:[120,200],cityCount:[300,371], coldChance:0.99, coldRange:[-120,-50] },
+    { label:'Omega Continental Blizzard Outbreak', centerSnow:[240,360], fringe:[120,200], cityCount:[300,400], coldChance:0.97, coldRange:[-100,-30] },
+    { label:'Omega Continental Blizzard Outbreak', centerSnow:[280,420], fringe:[140,240], cityCount:[360,470], coldChance:0.98, coldRange:[-120,-40] },
+    { label:'Omega Continental Blizzard Outbreak', centerSnow:[320,500], fringe:[160,280], cityCount:[430,540], coldChance:0.99, coldRange:[-140,-50] },
+    { label:'Omega Continental Blizzard Outbreak', centerSnow:[360,580], fringe:[200,320], cityCount:[500,600], coldChance:0.99, coldRange:[-160,-65] },
+    { label:'Omega Continental Blizzard Outbreak', centerSnow:[400,700], fringe:[240,400], cityCount:[560,700], coldChance:1.0,  coldRange:[-200,-80] },
   ]},
 ];
 
@@ -2104,6 +2142,440 @@ function generateRandomStorm() {
   renderCityList();
   generateProfile();
 }
+
+/* ======================================================================
+   PARAGRAPH MODE — parse free-text description into a storm profile
+   ====================================================================== */
+const PARAGRAPH_TYPE_KEYWORDS = [
+  { type: 'Omega Continental Blizzard Outbreak', words: ['omega','snowmageddon','snowpocalypse omega','apocalyptic','world-ending','planet-wide','continent-wide','continental blizzard','unprecedented blizzard','end of the world','civilization-ending'] },
+  { type: 'Polar Vortex Outbreak', words: ['polar vortex','arctic blast','arctic outbreak','arctic air','siberian','deep freeze','bitter cold outbreak'] },
+  { type: 'Historic East Coast Storm', words: ['historic east coast','east coast storm','megastorm','superstorm','historic storm'] },
+  { type: 'Northeast Nor\'easter', words: ['nor\'easter','noreaster','nor easter','coastal storm','new england storm'] },
+  { type: 'Midwest Blizzard', words: ['midwest blizzard','great plains blizzard','plains blizzard','prairie blizzard','midwestern blizzard'] },
+  { type: 'Northern Rockies Dump', words: ['rockies dump','rocky mountain','northern rockies','mountain dump','cascade','wasatch','front range'] },
+  { type: 'Ohio Valley Wallop', words: ['ohio valley','ohio river valley','indiana','kentucky storm','ohio storm'] },
+  { type: 'Clipper System', words: ['clipper','alberta clipper','fast-moving clipper','quick clipper'] },
+  { type: 'Deep South Ice Storm', words: ['deep south ice','southern ice storm','dixie ice','carolina ice','georgia ice'] },
+  { type: 'Gulf Coast Freeze', words: ['gulf coast freeze','gulf freeze','louisiana freeze','florida freeze','gulf ice'] },
+  { type: 'Texas Winter Emergency', words: ['texas winter','texas freeze','lone star freeze','texas ice','dallas freeze','houston freeze'] },
+  { type: 'Southern Snowpocalypse', words: ['southern snowpocalypse','dixie snowstorm','southern snowstorm','south snowstorm'] },
+  { type: 'Southeast Surprise', words: ['southeast surprise','carolina surprise','georgia snow','rare southeast snow'] },
+  { type: 'Flurry Dud', words: ['flurry','dud','disappointing','underwhelming','barely a dusting','fizzle','fizzled'] },
+];
+
+const SEVERITY_KEYWORDS = [
+  { idx: 4, words: ['extreme','historic','catastrophic','epic','monster','devastating','crippling','paralyzing','record-breaking','record breaking','unprecedented','massive','enormous','colossal','biblical','generational','once-in-a-lifetime','foot of snow','feet of snow','two feet','three feet','4 feet','five feet'] },
+  { idx: 3, words: ['major','severe','heavy','significant snowstorm','dangerous','powerful','intense','crushing','brutal','blockbuster','big storm'] },
+  { idx: 2, words: ['significant','notable','substantial','solid','meaningful','impactful'] },
+  { idx: 1, words: ['moderate','modest','decent','noticeable'] },
+  { idx: 0, words: ['minor','small','light','mild','weak','minimal','dusting','flurries','barely','few inches','a couple inches'] },
+];
+
+const REGION_KEYWORDS = {
+  NE: ['northeast','new england','mid-atlantic','mid atlantic','i-95 corridor'],
+  SE: ['southeast','carolinas','deep south','dixie','florida','georgia','south carolina','north carolina','virginia'],
+  OV: ['ohio valley','great lakes','midwest east','indiana','ohio','kentucky','michigan','tennessee'],
+  UM: ['upper midwest','northern plains','dakotas','minnesota','iowa','wisconsin','great plains'],
+  SO: ['south central','texas','oklahoma','arkansas','louisiana','gulf coast','deep south'],
+  NR: ['rockies','northern rockies','rocky mountain','colorado','wyoming','montana','idaho','utah'],
+};
+
+// Word-to-number for "two feet of snow" etc.
+const NUM_WORDS = { one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9, ten:10, eleven:11, twelve:12, fifteen:15, twenty:20, thirty:30 };
+
+function parseParagraphInput() {
+  const raw = document.getElementById('paragraphInput').value.trim();
+  if (!raw) return;
+  const lower = raw.toLowerCase();
+
+  // ---- 1. Detect mentioned cities (longest match first) ----
+  const sortedCities = [...CITY_DB].sort((a,b) => b.n.length - a.n.length);
+  const seen = new Set();
+  const foundCities = [];
+  for (const c of sortedCities) {
+    const fullLow = c.n.toLowerCase();
+    const baseLow = c.n.split(',')[0].toLowerCase();
+    // Use word-boundary check to avoid false positives like "Erie" inside "series"
+    const re = new RegExp('\\b' + baseLow.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i');
+    if ((lower.includes(fullLow) || re.test(lower)) && !seen.has(c.n)) {
+      foundCities.push(c);
+      seen.add(c.n);
+    }
+  }
+
+  // ---- 2. Detect storm type ----
+  let detectedType = null;
+  let typeScore = 0;
+  for (const tk of PARAGRAPH_TYPE_KEYWORDS) {
+    let s = 0;
+    for (const w of tk.words) if (lower.includes(w)) s += w.length;
+    if (s > typeScore) { typeScore = s; detectedType = tk.type; }
+  }
+
+  // ---- 3. Detect severity ----
+  let detectedSev = null;
+  let sevScore = 0;
+  for (const sk of SEVERITY_KEYWORDS) {
+    for (const w of sk.words) {
+      if (lower.includes(w)) {
+        const score = w.length;
+        if (score > sevScore) { sevScore = score; detectedSev = sk.idx; }
+      }
+    }
+  }
+
+  // ---- 4. Detect explicit snow amounts ----
+  // "12 inches", "2 feet", "two feet", "a foot", "half a foot"
+  let explicitInches = null;
+  // Numeric inches
+  let m = lower.match(/(\d+(?:\.\d+)?)\s*(?:inch|inches|in\b|")/);
+  if (m) explicitInches = parseFloat(m[1]);
+  // Numeric feet
+  m = lower.match(/(\d+(?:\.\d+)?)\s*(?:foot|feet|ft\b|')/);
+  if (m) explicitInches = Math.max(explicitInches || 0, parseFloat(m[1]) * 12);
+  // Word feet ("two feet")
+  for (const [w,n] of Object.entries(NUM_WORDS)) {
+    const re = new RegExp('\\b' + w + '\\s+(?:foot|feet)\\b');
+    if (re.test(lower)) explicitInches = Math.max(explicitInches || 0, n * 12);
+  }
+  // Word inches ("twelve inches")
+  for (const [w,n] of Object.entries(NUM_WORDS)) {
+    const re = new RegExp('\\b' + w + '\\s+(?:inch|inches)\\b');
+    if (re.test(lower)) explicitInches = Math.max(explicitInches || 0, n);
+  }
+  // "a foot"
+  if (/\b(?:a|one)\s+foot\b/.test(lower)) explicitInches = Math.max(explicitInches || 0, 12);
+  if (/\bhalf\s+a\s+foot\b/.test(lower)) explicitInches = Math.max(explicitInches || 0, 6);
+
+  // ---- 5. Detect cold mention ----
+  let coldHint = null;
+  m = lower.match(/(-?\d+)\s*(?:°|degrees?|deg\b|f\b)/);
+  if (m) coldHint = parseInt(m[1]);
+  if (/bitter cold|brutal cold|deep freeze|frigid|sub-zero|subzero|below zero/.test(lower)) coldHint = coldHint ?? -10;
+  if (/very cold|bitterly cold|arctic/.test(lower)) coldHint = coldHint ?? 0;
+
+  // ---- 6. Detect wind mention ----
+  let windHint = null;
+  m = lower.match(/(\d+)\s*(?:mph|mile|miles per hour)/);
+  if (m) windHint = parseInt(m[1]);
+  if (/blizzard|whiteout|white-out|hurricane.force/.test(lower)) windHint = windHint ?? 45;
+  if (/howling wind|gusty|high winds|fierce wind|strong winds/.test(lower)) windHint = windHint ?? 30;
+  if (/windy|breezy/.test(lower)) windHint = windHint ?? 15;
+
+  // ---- 6a. Detect date mention ----
+  // Supports: "September 14", "Sept 14", "Sep 14th", "January 5, 2024",
+  //          "12/4", "12-4-2024", "9/14/24", "the 14th of September"
+  let parsedDate = null;
+  const MONTHS = {
+    january:0, jan:0, february:1, feb:1, march:2, mar:2, april:3, apr:3, may:4,
+    june:5, jun:5, july:6, jul:6, august:7, aug:7, september:8, sept:8, sep:8,
+    october:9, oct:9, november:10, nov:10, december:11, dec:11
+  };
+  // "Month Day[, Year]"  e.g. "September 14", "Sept 14th, 2024"
+  const monthNames = Object.keys(MONTHS).join('|');
+  const md1 = new RegExp(`\\b(${monthNames})\\.?\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:\\s*,?\\s*(\\d{2,4}))?`, 'i');
+  let dm = lower.match(md1);
+  if (dm) {
+    const mo = MONTHS[dm[1].toLowerCase()];
+    const day = parseInt(dm[2]);
+    const yr = dm[3] ? (parseInt(dm[3]) < 100 ? 2000 + parseInt(dm[3]) : parseInt(dm[3])) : null;
+    parsedDate = { month: mo, day, year: yr };
+  }
+  // "the 14th of September"
+  if (!parsedDate) {
+    const md2 = new RegExp(`\\bthe\\s+(\\d{1,2})(?:st|nd|rd|th)?\\s+of\\s+(${monthNames})`, 'i');
+    dm = lower.match(md2);
+    if (dm) parsedDate = { month: MONTHS[dm[2].toLowerCase()], day: parseInt(dm[1]), year: null };
+  }
+  // Numeric: M/D, M-D, M/D/YY[YY]
+  if (!parsedDate) {
+    const md3 = lower.match(/\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\b/);
+    if (md3) {
+      const mo = parseInt(md3[1]) - 1;
+      const day = parseInt(md3[2]);
+      if (mo >= 0 && mo <= 11 && day >= 1 && day <= 31) {
+        const yr = md3[3] ? (parseInt(md3[3]) < 100 ? 2000 + parseInt(md3[3]) : parseInt(md3[3])) : null;
+        parsedDate = { month: mo, day, year: yr };
+      }
+    }
+  }
+
+  // ---- 6b. Detect record mention & classify ----
+  // Timing-based: earliest, latest, first snow, off-season, in [warm month]
+  // Total-based: most snow, biggest, deepest, snowiest, highest total
+  const mentionsRecord = /\brecord\b|\brecord-?breaking\b|\brecord-?setting\b|\bbroke (?:a|the|all|every) record|set (?:a |the )?record|all-time/.test(lower);
+  let recordKind = null; // 'timing' | 'total' | null
+  if (mentionsRecord) {
+    const timingHints = /\bearliest\b|\blatest\b|\bfirst snow\b|\bfirst snowfall\b|\boff-?season\b|\bout of season\b|\bunseasonable\b|\bunseasonably\b|\btoo early\b|\btoo late\b|\bso early\b|\bso late\b|\bnever (?:before )?(?:this early|this late|in [a-z]+)\b/.test(lower);
+    const totalHints = /\bmost snow\b|\bbiggest\b|\bdeepest\b|\bsnowiest\b|\bhighest total\b|\blargest\b|\bgreatest amount\b|\bmost snowfall\b|\bsingle.day\b|\b24.hour record\b|\bhighest snowfall\b|\bdumped\b/.test(lower);
+    // If a parsed date falls in a non-winter month (Apr–Oct), bias toward timing
+    const inWarmMonth = parsedDate && (parsedDate.month >= 3 && parsedDate.month <= 9);
+    if (timingHints || (inWarmMonth && !totalHints)) recordKind = 'timing';
+    else if (totalHints) recordKind = 'total';
+    else recordKind = inWarmMonth ? 'timing' : 'total';
+  }
+
+  // ---- 7. Choose final template ----
+  let typeIdx = STORM_TEMPLATES.findIndex(t => t.type === detectedType);
+  if (typeIdx < 0) {
+    // Fallback: infer from detected cities' regions or severity scale
+    if (foundCities.length) {
+      const regionTally = {};
+      foundCities.forEach(c => { if (c.r) regionTally[c.r] = (regionTally[c.r]||0)+1; });
+      const topRegion = Object.entries(regionTally).sort((a,b) => b[1]-a[1])[0]?.[0];
+      // Map region → reasonable default storm type
+      const regionDefault = { NE:"Northeast Nor'easter", SE:'Southeast Surprise', OV:'Ohio Valley Wallop', UM:'Midwest Blizzard', SO:'Southern Snowpocalypse', NR:'Northern Rockies Dump' };
+      const t = regionDefault[topRegion] || 'Historic East Coast Storm';
+      typeIdx = STORM_TEMPLATES.findIndex(x => x.type === t);
+    } else {
+      typeIdx = STORM_TEMPLATES.findIndex(t => t.type === 'Historic East Coast Storm');
+    }
+  }
+
+  // ---- 8. Choose severity ----
+  let sevIdx;
+  if (detectedSev !== null) {
+    sevIdx = detectedSev;
+  } else if (explicitInches !== null) {
+    if (explicitInches >= 36) sevIdx = 4;
+    else if (explicitInches >= 18) sevIdx = 3;
+    else if (explicitInches >= 9) sevIdx = 2;
+    else if (explicitInches >= 4) sevIdx = 1;
+    else sevIdx = 0;
+  } else {
+    sevIdx = 2; // default Significant
+  }
+  // Record adjustments: total records → max out severity; timing records → keep
+  // amounts modest (the "record" is the WHEN, not the HOW MUCH).
+  if (recordKind === 'total') {
+    sevIdx = 4;
+  } else if (recordKind === 'timing') {
+    if (explicitInches === null && detectedSev === null) sevIdx = Math.min(sevIdx, 1);
+  }
+
+  const template = STORM_TEMPLATES[typeIdx];
+  const sev = template.severities[sevIdx];
+
+  // ---- 9. Build city list ----
+  cities.length = 0;
+  let chosen;
+  let count;
+  if (foundCities.length > 0) {
+    chosen = [...foundCities];
+    // If only a couple cities mentioned but storm scope is large, pad with regional cities
+    const targetCount = randInt(sev.cityCount[0], sev.cityCount[1]);
+    if (chosen.length < targetCount) {
+      // Determine region pool from template + detected cities
+      let pool;
+      if (template.regions === 'all-continental') {
+        pool = [...CITY_DB];
+      } else if (template.regions === 'weighted-single') {
+        pool = CITY_DB.filter(c => foundCities.some(f => f.r === c.r));
+      } else {
+        pool = CITY_DB.filter(c => template.regions.includes(c.r));
+      }
+      const extras = pool.filter(c => !chosen.some(x => x.n === c.n)).sort(() => Math.random() - 0.5);
+      while (chosen.length < targetCount && extras.length) chosen.push(extras.shift());
+    }
+    count = chosen.length;
+  } else {
+    // No specific cities - use template region pool
+    let pool;
+    if (template.regions === 'all-continental') pool = [...CITY_DB];
+    else if (template.regions === 'weighted-single') {
+      const regionCodes = ['NE','SE','OV','UM','SO','NR'];
+      pool = CITY_DB.filter(c => c.r === pick(regionCodes));
+    } else {
+      pool = CITY_DB.filter(c => template.regions.includes(c.r));
+    }
+    count = randInt(sev.cityCount[0], sev.cityCount[1]);
+    chosen = [...pool].sort(() => Math.random() - 0.5).slice(0, Math.min(count, pool.length));
+  }
+
+  const isAllCont = template.regions === 'all-continental';
+  const centerCount = Math.max(1, Math.round(chosen.length * 0.35));
+
+  function pickPrecipMix(mixArr) {
+    if (!mixArr || !mixArr.length) return [{ type:'snow', pct:1.0 }];
+    const totalW = mixArr.reduce((s,m) => s + m.weight, 0);
+    let roll = Math.random() * totalW;
+    for (const m of mixArr) { roll -= m.weight; if (roll <= 0) return m.phases; }
+    return mixArr[0].phases;
+  }
+
+  // Did the paragraph specifically mention a city's amount? Light heuristic:
+  // If a single city was named and a single explicit amount given, anchor that city to that amount.
+  const anchorMap = {};
+  if (foundCities.length === 1 && explicitInches !== null) {
+    anchorMap[foundCities[0].n] = explicitInches;
+  }
+
+  chosen.forEach((c, i) => {
+    let totalAmount;
+    if (anchorMap[c.n] !== undefined) {
+      totalAmount = anchorMap[c.n];
+    } else {
+      const isCenter = i < centerCount;
+      totalAmount = isCenter
+        ? Math.round(rand(sev.centerSnow[0], sev.centerSnow[1]) * 10) / 10
+        : Math.round(rand(sev.fringe[0], sev.fringe[1]) * 10) / 10;
+      // If explicit total exists, bias center cities toward that value
+      if (explicitInches !== null && isCenter) {
+        totalAmount = Math.round(((totalAmount + explicitInches) / 2) * 10) / 10;
+      }
+      if (isAllCont) {
+        const resFactor = getResilienceFactor(c.snow);
+        const resScale = 0.15 + (resFactor / 2.2) * 1.15;
+        totalAmount = Math.round(totalAmount * resScale * 10) / 10;
+      }
+    }
+    if (totalAmount > 0 && totalAmount < 0.3 && Math.random() < 0.4) totalAmount = 0.05;
+    if (totalAmount < 0) totalAmount = 0;
+
+    const mixTemplate = pickPrecipMix(template.precipMix);
+    let phases;
+    if (totalAmount <= 0.05) {
+      phases = [{ type:'snow', amount: totalAmount }];
+    } else {
+      phases = mixTemplate.map(mp => ({
+        type: mp.type,
+        amount: Math.max(0.05, Math.round(totalAmount * mp.pct * (0.85 + Math.random() * 0.3) * 10) / 10)
+      }));
+      phases = phases.filter(p => p.amount >= 0.05 || p.type !== 'rain');
+    }
+    const derived = computeDerivedPrecip(phases);
+
+    // Cold
+    let recordCold = false, coldTemp = null;
+    if (coldHint !== null) {
+      recordCold = true;
+      coldTemp = coldHint + randInt(-3, 3);
+    } else if (Math.random() < sev.coldChance) {
+      recordCold = true;
+      coldTemp = randInt(sev.coldRange[0], sev.coldRange[1]);
+    }
+
+    // Wind
+    let windSpeed = null, gustSpeedVal = null;
+    const wp = template.windProfile;
+    const useWind = windHint !== null || (wp && Math.random() < wp.chance);
+    if (useWind) {
+      if (windHint !== null) {
+        windSpeed = windHint + randInt(-5, 5);
+      } else {
+        const sevPct = sevIdx / 4;
+        const wsMin = Math.round(wp.base[0] + (wp.severe[0] - wp.base[0]) * sevPct);
+        const wsMax = Math.round(wp.base[1] + (wp.severe[1] - wp.base[1]) * sevPct);
+        windSpeed = randInt(wsMin, wsMax);
+      }
+      const isCenter = i < centerCount;
+      if (!isCenter) windSpeed = Math.max(0, Math.round(windSpeed * rand(0.5, 0.85)));
+      if (windSpeed > 0 && Math.random() < 0.7) {
+        gustSpeedVal = windSpeed + randInt(wp.gustAdd[0], wp.gustAdd[1]);
+      }
+      if (windSpeed <= 0) { windSpeed = null; gustSpeedVal = null; }
+    }
+
+    cities.push({
+      name: c.n, phases,
+      snow: derived.snow, snowEquivalent: derived.snowEquivalent,
+      pop: c.pop, region: c.r, annualSnow: c.snow,
+      recordCold, coldTemp, windSpeed, gustSpeed: gustSpeedVal
+    });
+  });
+
+  // Date — use parsed date if available, otherwise pick a winter date
+  const dateInput = document.getElementById('stormDate');
+  const pad = n => String(n).padStart(2, '0');
+  if (parsedDate) {
+    let yr = parsedDate.year;
+    if (!yr) {
+      // Pick year intelligently: if winter month (Nov–Mar), use current/next-year crossover;
+      // for off-season months, just use current year
+      const now = new Date();
+      yr = now.getFullYear();
+      if (parsedDate.month <= 2 && now.getMonth() >= 6) yr = now.getFullYear() + 1;
+      if (parsedDate.month >= 10 && now.getMonth() <= 2) yr = now.getFullYear() - 1;
+    }
+    const hour = randInt(0, 23);
+    const min = randInt(0, 59);
+    const d = new Date(yr, parsedDate.month, parsedDate.day, hour, min);
+    dateInput.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } else if (!dateInput.value) {
+    const winterMonths = [10, 11, 0, 1, 2];
+    const winterMonth = pick(winterMonths);
+    const day = randInt(1, 28);
+    const hour = randInt(0, 23);
+    const min = randInt(0, 59);
+    const winterYear = winterMonth >= 10 ? new Date().getFullYear() : new Date().getFullYear() + 1;
+    const d = new Date(winterYear, winterMonth, day, hour, min);
+    dateInput.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  // Direction & speed
+  const dirSelect = document.getElementById('stormDirection');
+  const typDirs = template.typicalDirections || ['SW_NE'];
+  const chosenDir = pick(typDirs);
+  const dirOptionIdx = STORM_DIRECTIONS.findIndex(d => d.code === chosenDir);
+  if (dirOptionIdx >= 0) dirSelect.value = dirOptionIdx;
+  const speedSelect = document.getElementById('stormSpeed');
+  speedSelect.value = sevIdx <= 1 ? 'fast' : sevIdx >= 3 ? 'slow' : 'medium';
+
+  // Auto-name storm if blank
+  const stormNameInput = document.getElementById('stormName');
+  if (!stormNameInput.value.trim()) {
+    // Pull a leading proper-noun-looking phrase from the paragraph
+    const nameMatch = raw.match(/(?:Winter Storm|Storm)\s+([A-Z][a-zA-Z]+)/);
+    if (nameMatch) stormNameInput.value = nameMatch[0];
+  }
+
+  // Show summary of what was parsed
+  const summary = document.getElementById('parseSummary');
+  const sevLabels = ['Minor','Moderate','Significant','Major','Extreme'];
+  const parts = [
+    `<strong>Storm type:</strong> ${template.type}`,
+    `<strong>Severity:</strong> ${sevLabels[sevIdx]}`,
+    `<strong>Cities:</strong> ${chosen.length}` + (foundCities.length ? ` (${foundCities.length} from your text)` : ''),
+  ];
+  if (explicitInches !== null) parts.push(`<strong>Snow hint:</strong> ~${explicitInches}"`);
+  if (coldHint !== null) parts.push(`<strong>Cold hint:</strong> ${coldHint}°F`);
+  if (windHint !== null) parts.push(`<strong>Wind hint:</strong> ${windHint} mph`);
+  if (parsedDate) {
+    const monthShort = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parsedDate.month];
+    parts.push(`<strong>Date:</strong> ${monthShort} ${parsedDate.day}${parsedDate.year ? ', ' + parsedDate.year : ''}`);
+  }
+  if (recordKind === 'total') parts.push(`<strong>Record:</strong> total snowfall (max severity)`);
+  else if (recordKind === 'timing') parts.push(`<strong>Record:</strong> timing-based (date drives the record)`);
+  summary.innerHTML = parts.join(' &middot; ');
+  summary.classList.add('show');
+
+  renderCityList();
+  generateProfile();
+}
+
+/* ---- Mode toggle ---- */
+function setInputMode(mode) {
+  document.querySelectorAll('.mode-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+  const detailed = document.getElementById('detailedCard');
+  const para = document.getElementById('paragraphCard');
+  if (mode === 'paragraph') {
+    detailed.style.display = 'none';
+    para.style.display = '';
+  } else {
+    detailed.style.display = '';
+    para.style.display = 'none';
+  }
+}
+document.querySelectorAll('.mode-btn').forEach(b => {
+  b.addEventListener('click', () => setInputMode(b.dataset.mode));
+});
+document.getElementById('parseParagraphBtn').addEventListener('click', parseParagraphInput);
+document.getElementById('clearParagraphBtn').addEventListener('click', () => {
+  document.getElementById('paragraphInput').value = '';
+  document.getElementById('parseSummary').classList.remove('show');
+});
 
 /* ---- Events ---- */
 addBtn.addEventListener('click', addCity);
