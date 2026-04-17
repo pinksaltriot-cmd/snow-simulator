@@ -2268,8 +2268,29 @@ function parseParagraphInput() {
   if (/\bsoutheast\b|\bcarolinas?\b|\bdeep south\b|\bdixie\b/.test(lower)) regionConstraints.add('SE');
   if (/\bohio valley\b|\bgreat lakes\b/.test(lower)) regionConstraints.add('OV');
   if (/\bupper midwest\b|\bnorthern plains\b|\bdakotas?\b|\bgreat plains\b/.test(lower)) regionConstraints.add('UM');
-  if (/\bsouth central\b|\btexas\b|\boklahoma\b|\bgulf coast\b/.test(lower)) regionConstraints.add('SO');
+  if (/\bsouth central\b|\bgulf coast\b/.test(lower)) regionConstraints.add('SO');
   if (/\brockies\b|\brocky mountain|\bfront range\b/.test(lower)) regionConstraints.add('NR');
+
+  // State-name detection: a single state mention should pin the storm to that
+  // state's RSI region (e.g. "Oklahoma event" → SO only, never NE/OV/SE).
+  const STATE_TO_REGION = {
+    // Northeast
+    'new york':'NE','pennsylvania':'NE','new jersey':'NE','connecticut':'NE','massachusetts':'NE',
+    'rhode island':'NE','vermont':'NE','new hampshire':'NE','maine':'NE','maryland':'NE','delaware':'NE',
+    // Southeast
+    'virginia':'SE','north carolina':'SE','south carolina':'SE','georgia':'SE','florida':'SE','alabama':'SE',
+    // Ohio Valley
+    'ohio':'OV','michigan':'OV','indiana':'OV','illinois':'OV','wisconsin':'OV','kentucky':'OV','tennessee':'OV',
+    // Upper Midwest
+    'minnesota':'UM','iowa':'UM','north dakota':'UM','south dakota':'UM','nebraska':'UM',
+    // South Central
+    'texas':'SO','oklahoma':'SO','arkansas':'SO','louisiana':'SO','mississippi':'SO','kansas':'SO','missouri':'SO','new mexico':'SO',
+    // Northern Rockies / Mountain West
+    'colorado':'NR','wyoming':'NR','montana':'NR','idaho':'NR','utah':'NR',
+  };
+  for (const [name, region] of Object.entries(STATE_TO_REGION)) {
+    if (new RegExp('\\b' + name + '\\b', 'i').test(raw)) regionConstraints.add(region);
+  }
 
   // ---- 5. Detect cold mention ----
   let coldHint = null;
@@ -2341,18 +2362,39 @@ function parseParagraphInput() {
 
   // ---- 7. Choose final template ----
   let typeIdx = STORM_TEMPLATES.findIndex(t => t.type === detectedType);
+  const regionDefault = { NE:"Northeast Nor'easter", SE:'Southeast Surprise', OV:'Ohio Valley Wallop', UM:'Midwest Blizzard', SO:'Southern Snowpocalypse', NR:'Northern Rockies Dump' };
   if (typeIdx < 0) {
-    // Fallback: infer from detected cities' regions or severity scale
-    if (foundCities.length) {
+    // Fallback priority:
+    //   1. Region constraints (e.g. "Oklahoma" → SO → Southern Snowpocalypse)
+    //   2. Detected cities' dominant region
+    //   3. Generic catch-all
+    if (regionConstraints.size > 0) {
+      const constraintRegions = [...regionConstraints];
+      // Pick the region with the most-specific match
+      const r = constraintRegions[0];
+      const t = regionDefault[r] || 'Historic East Coast Storm';
+      typeIdx = STORM_TEMPLATES.findIndex(x => x.type === t);
+    } else if (foundCities.length) {
       const regionTally = {};
       foundCities.forEach(c => { if (c.r) regionTally[c.r] = (regionTally[c.r]||0)+1; });
       const topRegion = Object.entries(regionTally).sort((a,b) => b[1]-a[1])[0]?.[0];
-      // Map region → reasonable default storm type
-      const regionDefault = { NE:"Northeast Nor'easter", SE:'Southeast Surprise', OV:'Ohio Valley Wallop', UM:'Midwest Blizzard', SO:'Southern Snowpocalypse', NR:'Northern Rockies Dump' };
       const t = regionDefault[topRegion] || 'Historic East Coast Storm';
       typeIdx = STORM_TEMPLATES.findIndex(x => x.type === t);
     } else {
       typeIdx = STORM_TEMPLATES.findIndex(t => t.type === 'Historic East Coast Storm');
+    }
+  } else if (regionConstraints.size > 0) {
+    // Detected type was found, but if its regions don't overlap the constraints,
+    // override with a region-appropriate template (constraint wins).
+    const detectedTpl = STORM_TEMPLATES[typeIdx];
+    const tplRegions = Array.isArray(detectedTpl.regions) ? detectedTpl.regions : [];
+    const overlap = tplRegions.some(r => regionConstraints.has(r));
+    const isOmega = detectedTpl.regions === 'all-continental';
+    if (!overlap && !isOmega) {
+      const r = [...regionConstraints][0];
+      const t = regionDefault[r] || detectedTpl.type;
+      const newIdx = STORM_TEMPLATES.findIndex(x => x.type === t);
+      if (newIdx >= 0) typeIdx = newIdx;
     }
   }
 
@@ -2387,25 +2429,23 @@ function parseParagraphInput() {
 
   // Helper: build the pool of candidate cities, honoring region constraints
   function buildPool() {
-    let pool;
+    // Region constraints take precedence — if the user said "Oklahoma" or
+    // "east coast", that wins over the template's default region list.
+    if (regionConstraints.size > 0 && template.regions !== 'all-continental') {
+      const constrained = CITY_DB.filter(c => regionConstraints.has(c.r));
+      if (constrained.length > 0) return constrained;
+    }
     if (template.regions === 'all-continental') {
-      pool = [...CITY_DB];
-    } else if (template.regions === 'weighted-single') {
+      return [...CITY_DB];
+    }
+    if (template.regions === 'weighted-single') {
       if (foundCities.length) {
-        pool = CITY_DB.filter(c => foundCities.some(f => f.r === c.r));
-      } else {
-        const regionCodes = ['NE','SE','OV','UM','SO','NR'];
-        pool = CITY_DB.filter(c => c.r === pick(regionCodes));
+        return CITY_DB.filter(c => foundCities.some(f => f.r === c.r));
       }
-    } else {
-      pool = CITY_DB.filter(c => template.regions.includes(c.r));
+      const regionCodes = ['NE','SE','OV','UM','SO','NR'];
+      return CITY_DB.filter(c => c.r === pick(regionCodes));
     }
-    // Narrow by explicit region constraints from the paragraph
-    if (regionConstraints.size > 0) {
-      const narrowed = pool.filter(c => regionConstraints.has(c.r));
-      if (narrowed.length > 0) pool = narrowed;
-    }
-    return pool;
+    return CITY_DB.filter(c => template.regions.includes(c.r));
   }
 
   if (foundCities.length > 0) {
