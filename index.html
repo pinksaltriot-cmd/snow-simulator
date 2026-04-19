@@ -2225,13 +2225,42 @@ function parseParagraphInput() {
   }
 
   // ---- 4. Detect explicit snow amounts ----
-  // "12 inches", "2 feet", "two feet", "a foot", "half a foot"
+  // "12 inches", "2 feet", "two feet", "a foot", "half a foot", "1/4 inch", "quarter inch"
   let explicitInches = null;
-  // Numeric inches
-  let m = lower.match(/(\d+(?:\.\d+)?)\s*(?:inch|inches|in\b|")/);
-  if (m) explicitInches = parseFloat(m[1]);
+  // Helper: convert a "1/4" or "3.5" to number
+  const toNum = (s) => {
+    if (!s) return null;
+    s = String(s).trim();
+    if (s.includes('/')) {
+      const [a, b] = s.split('/').map(x => parseFloat(x));
+      return (isFinite(a) && isFinite(b) && b > 0) ? a / b : null;
+    }
+    const n = parseFloat(s);
+    return isFinite(n) ? n : null;
+  };
+  // Fractional inches first: "1/4 inch", "3/4 inches", "1 1/2 inches"
+  let m = lower.match(/(\d+\s+\d+\s*\/\s*\d+|\d+\s*\/\s*\d+)\s*(?:inch|inches|in\b|")/);
+  if (m) {
+    let v;
+    const s = m[1].replace(/\s+/g, ' ').trim();
+    const mixed = s.match(/^(\d+)\s+(\d+)\s*\/\s*(\d+)$/);
+    if (mixed) v = parseInt(mixed[1]) + parseInt(mixed[2]) / parseInt(mixed[3]);
+    else v = toNum(s.replace(/\s+/g,''));
+    if (v !== null && v >= 0) explicitInches = (explicitInches === null) ? v : Math.max(explicitInches, v);
+  }
+  // Fractional feet
+  m = lower.match(/(\d+\s+\d+\s*\/\s*\d+|\d+\s*\/\s*\d+)\s*(?:foot|feet|ft\b|')/);
+  if (m) {
+    const s = m[1].replace(/\s+/g, ' ').trim();
+    const mixed = s.match(/^(\d+)\s+(\d+)\s*\/\s*(\d+)$/);
+    const v = mixed ? parseInt(mixed[1]) + parseInt(mixed[2]) / parseInt(mixed[3]) : toNum(s.replace(/\s+/g,''));
+    if (v !== null && v >= 0) explicitInches = Math.max(explicitInches || 0, v * 12);
+  }
+  // Numeric inches (must not be a fraction — fractions handled above)
+  m = lower.match(/(?<!\d\/)(?<!\d\s)(\d+(?:\.\d+)?)\s*(?:inch|inches|in\b|")(?!\s*\/)/);
+  if (m) explicitInches = (explicitInches === null) ? parseFloat(m[1]) : Math.max(explicitInches, parseFloat(m[1]));
   // Numeric feet
-  m = lower.match(/(\d+(?:\.\d+)?)\s*(?:foot|feet|ft\b|')/);
+  m = lower.match(/(?<!\d\/)(?<!\d\s)(\d+(?:\.\d+)?)\s*(?:foot|feet|ft\b|')(?!\s*\/)/);
   if (m) explicitInches = Math.max(explicitInches || 0, parseFloat(m[1]) * 12);
   // Word feet ("two feet")
   for (const [w,n] of Object.entries(NUM_WORDS)) {
@@ -2242,6 +2271,20 @@ function parseParagraphInput() {
   for (const [w,n] of Object.entries(NUM_WORDS)) {
     const re = new RegExp('\\b' + w + '\\s+(?:inch|inches)\\b');
     if (re.test(lower)) explicitInches = Math.max(explicitInches || 0, n);
+  }
+  // Word fractions: "quarter inch", "a quarter of an inch", "half inch", "three-quarter inch"
+  const WORD_FRAC = {
+    'three[-\\s]quarters?': 0.75, 'three[-\\s]fourths?': 0.75,
+    '(?:a |one )?quarter': 0.25, '(?:a |one )?fourth': 0.25,
+    '(?:a |one )?half': 0.5, 'one[-\\s]half': 0.5,
+    '(?:a |one )?third': 0.333, 'two[-\\s]thirds?': 0.667,
+    '(?:a |one )?eighth': 0.125,
+  };
+  for (const [w, n] of Object.entries(WORD_FRAC)) {
+    const ri = new RegExp('\\b' + w + '(?:[-\\s]+of\\s+an?)?[-\\s]+(?:inch|inches|in\\b)', 'i');
+    if (ri.test(lower)) explicitInches = (explicitInches === null) ? n : Math.max(explicitInches, n);
+    const rf = new RegExp('\\b' + w + '(?:[-\\s]+of\\s+a)?[-\\s]+(?:foot|feet|ft\\b)', 'i');
+    if (rf.test(lower)) explicitInches = Math.max(explicitInches || 0, n * 12);
   }
   // "a foot"
   if (/\b(?:a|one)\s+foot\b/.test(lower)) explicitInches = Math.max(explicitInches || 0, 12);
@@ -2256,7 +2299,83 @@ function parseParagraphInput() {
 
   // ---- 4b. Scope limiters: "only", "just", "exactly", "alone" ----
   // When present, restrict the storm to the cities/regions specifically mentioned.
-  const restrictToMentioned = /\bonly\b|\bjust\s+(?!a\b)|\bexactly\b|\bsolely\b|\balone\b|\bnowhere else\b|\bno other (?:city|cities|areas?|locations?)\b/i.test(raw);
+  let restrictToMentioned = /\bonly\b|\bjust\s+(?!a\b)|\bexactly\b|\bsolely\b|\balone\b|\bnowhere else\b|\bno other (?:city|cities|areas?|locations?)\b/i.test(raw);
+
+  // ---- 4b-i. "Everywhere else" precipitation directive ----
+  // e.g. "1/4" of snow in Minneapolis and sleet everywhere else" → non-anchor cities
+  // should receive sleet (or ice / rain / snow) instead of the template's default mix.
+  let elsewherePrecip = null;
+  const elsewhereRegexes = [
+    /\b(snow|sleet|ice|freezing\s+rain|rain)\b[^.]{0,40}?\b(?:everywhere|anywhere|everybody|everyone|all)\s+else\b/i,
+    /\b(?:everywhere|anywhere|everybody|everyone|all)\s+else\b[^.]{0,40}?\b(snow|sleet|ice|freezing\s+rain|rain)\b/i,
+    /\b(?:elsewhere|surrounding areas?|other (?:cities|areas|places|locations|spots)|rest of (?:the|them)|rest (?:was|were|got|saw|received))\b[^.]{0,40}?\b(snow|sleet|ice|freezing\s+rain|rain)\b/i,
+    /\b(snow|sleet|ice|freezing\s+rain|rain)\b[^.]{0,40}?\b(?:elsewhere|surrounding areas?|other (?:cities|areas|places|locations|spots))\b/i,
+    /\b(snow|sleet|ice|freezing\s+rain|rain)\b[^.]{0,60}?\b(?:farther|further)\s+(?:south|north|east|west|out|away|inland)\b/i,
+    /\b(?:farther|further)\s+(?:south|north|east|west|out|away|inland)\b[^.]{0,60}?\b(snow|sleet|ice|freezing\s+rain|rain)\b/i,
+  ];
+  for (const re of elsewhereRegexes) {
+    const em = raw.match(re);
+    if (em) {
+      let t = em[1].toLowerCase().replace(/\s+/g, ' ');
+      if (t === 'freezing rain') t = 'ice';
+      elsewherePrecip = t;
+      break;
+    }
+  }
+
+  // ---- 4b-ii. Per-city anchors ----
+  // Scan for "<amount> <unit> [of snow/sleet/ice] in <City>" or
+  // "<City> got/received/saw <amount> <unit>" within a local window.
+  // Populates perCityAnchor[cityName] = { amount, type }.
+  const perCityAnchor = {};
+  const amountPhraseRE = /(\d+\s+\d+\s*\/\s*\d+|\d+\s*\/\s*\d+|\d+(?:\.\d+)?)\s*(inch(?:es)?|in\b|"|foot|feet|ft\b|')/i;
+  const amountWithTypeRE = /(\d+\s+\d+\s*\/\s*\d+|\d+\s*\/\s*\d+|\d+(?:\.\d+)?)\s*(inch(?:es)?|in\b|"|foot|feet|ft\b|')(?:\s+of)?\s+(snow|sleet|ice|freezing\s+rain|rain)?/i;
+  function phraseToInches(numStr, unit) {
+    let n;
+    const s = String(numStr).replace(/\s+/g, ' ').trim();
+    const mixed = s.match(/^(\d+)\s+(\d+)\s*\/\s*(\d+)$/);
+    if (mixed) n = parseInt(mixed[1]) + parseInt(mixed[2]) / parseInt(mixed[3]);
+    else if (s.includes('/')) {
+      const [a, b] = s.replace(/\s+/g,'').split('/').map(x => parseFloat(x));
+      n = (isFinite(a) && isFinite(b) && b > 0) ? a / b : null;
+    } else n = parseFloat(s);
+    if (n === null || !isFinite(n) || n < 0) return null;
+    if (/foot|feet|ft|'/i.test(unit)) n *= 12;
+    return n;
+  }
+  foundCities.forEach(fc => {
+    const base = fc.n.split(',')[0];
+    const esc = base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const re = new RegExp('\\b' + esc + '\\b', 'gi');
+    const matches = [...raw.matchAll(re)];
+    for (const mt of matches) {
+      const pos = mt.index;
+      // Window: look up to 90 chars before and 90 after the city mention.
+      const start = Math.max(0, pos - 90);
+      const end = Math.min(raw.length, pos + 90);
+      const win = raw.slice(start, end);
+      const am = win.match(amountWithTypeRE);
+      if (!am) continue;
+      const amt = phraseToInches(am[1], am[2]);
+      if (amt === null) continue;
+      let type = am[3] ? am[3].toLowerCase().replace(/\s+/g, ' ') : 'snow';
+      if (type === 'freezing rain') type = 'ice';
+      perCityAnchor[fc.n] = { amount: amt, type };
+      break;
+    }
+  });
+
+  // ---- 4b-iii. Corridor indicators ("down to X", "from X to Y", "as far as X") ----
+  // If present alongside a single explicit amount, treat the second endpoint as
+  // a corridor edge rather than receiving the same amount — lets us pad cities
+  // in between naturally.
+  const hasCorridor = /\b(?:down|up|over|out|all the way|as far)\s+to\s+/i.test(raw)
+                   || /\bfrom\s+[A-Z][^.]{0,40}\s+to\s+[A-Z]/.test(raw)
+                   || /\b(?:stretch(?:ed|ing)?|extend(?:ed|ing)?|span(?:ned|ning)?|reach(?:ed|ing)?)\b/i.test(raw);
+
+  // "Only" + an elsewhere directive is contradictory — if the user said
+  // "sleet everywhere else", they clearly want padding, so un-restrict.
+  if (elsewherePrecip && restrictToMentioned) restrictToMentioned = false;
 
   // ---- 4c. Region constraints from natural-language phrases ----
   // These override/narrow the template's region pool when padding.
@@ -2332,9 +2451,9 @@ function parseParagraphInput() {
     dm = lower.match(md2);
     if (dm) parsedDate = { month: MONTHS[dm[2].toLowerCase()], day: parseInt(dm[1]), year: null };
   }
-  // Numeric: M/D, M-D, M/D/YY[YY]
+  // Numeric: M/D, M-D, M/D/YY[YY]  (skip if followed by a measurement unit — that's a fraction)
   if (!parsedDate) {
-    const md3 = lower.match(/\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\b/);
+    const md3 = lower.match(/\b(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?\b(?!\s*(?:inch|inches|in\b|"|foot|feet|ft\b|'))/);
     if (md3) {
       const mo = parseInt(md3[1]) - 1;
       const day = parseInt(md3[2]);
@@ -2448,6 +2567,20 @@ function parseParagraphInput() {
     return CITY_DB.filter(c => template.regions.includes(c.r));
   }
 
+  // Count how many distinct states the user mentioned so we can make sure
+  // the final city list always has MORE cities than states.
+  const mentionedStates = new Set();
+  for (const name of Object.keys(STATE_TO_REGION)) {
+    if (new RegExp('\\b' + name + '\\b', 'i').test(raw)) mentionedStates.add(name);
+  }
+  // State abbreviations after commas: "Minneapolis, MN" → MN
+  const ABBR_RE = /,\s*([A-Z]{2})\b/g;
+  let ab;
+  while ((ab = ABBR_RE.exec(raw)) !== null) mentionedStates.add(ab[1].toLowerCase());
+  const minCitiesForStates = mentionedStates.size >= 2
+    ? Math.max(mentionedStates.size * 2, 6)
+    : 0;
+
   if (foundCities.length > 0) {
     chosen = [...foundCities];
     if (restrictToMentioned) {
@@ -2458,11 +2591,47 @@ function parseParagraphInput() {
       let targetCount = randInt(sev.cityCount[0], sev.cityCount[1]);
       // For trace events, keep things small even if user didn't say "only"
       if (isTrace) targetCount = Math.min(targetCount, Math.max(chosen.length, 3));
-      if (chosen.length < targetCount) {
-        const pool = buildPool();
-        const extras = pool.filter(c => !chosen.some(x => x.n === c.n)).sort(() => Math.random() - 0.5);
-        while (chosen.length < targetCount && extras.length) chosen.push(extras.shift());
+      // Respect multi-state minimum: cities > states.
+      if (minCitiesForStates > 0) targetCount = Math.max(targetCount, minCitiesForStates);
+      // If we detected a corridor (two or more named cities + a "down to/from-to"
+      // phrase, OR an elsewhere-precip directive), prefer cities INSIDE the
+      // bounding box of the named cities so padding is geographically coherent.
+      let extras;
+      const useCorridor = chosen.length >= 2 && (hasCorridor || elsewherePrecip);
+      if (useCorridor) {
+        const lats = chosen.filter(c => c.lat != null).map(c => c.lat);
+        const lons = chosen.filter(c => c.lon != null).map(c => c.lon);
+        if (lats.length >= 2 && lons.length >= 2) {
+          const latMin = Math.min(...lats), latMax = Math.max(...lats);
+          const lonMin = Math.min(...lons), lonMax = Math.max(...lons);
+          // Allow a little slop outside the bounding box so the corridor feels natural.
+          const latPad = Math.max(1.5, (latMax - latMin) * 0.15);
+          const lonPad = Math.max(1.5, (lonMax - lonMin) * 0.15);
+          const box = CITY_DB.filter(c =>
+            c.lat != null && c.lon != null &&
+            c.lat >= latMin - latPad && c.lat <= latMax + latPad &&
+            c.lon >= lonMin - lonPad && c.lon <= lonMax + lonPad &&
+            !chosen.some(x => x.n === c.n)
+          );
+          // Sort by projection along the corridor axis so adds spread out evenly,
+          // with a small shuffle so runs aren't identical.
+          const axisLat = latMax - latMin, axisLon = lonMax - lonMin;
+          const axisLen = Math.hypot(axisLat, axisLon) || 1;
+          box.forEach(c => {
+            const rel = ((c.lat - latMin) * axisLat + (c.lon - lonMin) * axisLon) / axisLen;
+            c._proj = rel + (Math.random() - 0.5) * 0.8;
+          });
+          box.sort((a, b) => a._proj - b._proj);
+          extras = box;
+        }
       }
+      if (!extras) {
+        const pool = buildPool();
+        extras = pool.filter(c => !chosen.some(x => x.n === c.n)).sort(() => Math.random() - 0.5);
+      }
+      while (chosen.length < targetCount && extras.length) chosen.push(extras.shift());
+      // Cleanup scratch prop
+      chosen.forEach(c => { if (c._proj !== undefined) delete c._proj; });
       count = chosen.length;
     }
   } else {
@@ -2470,6 +2639,7 @@ function parseParagraphInput() {
     const pool = buildPool();
     count = randInt(sev.cityCount[0], sev.cityCount[1]);
     if (isTrace) count = Math.min(count, 3);
+    if (minCitiesForStates > 0) count = Math.max(count, minCitiesForStates);
     chosen = [...pool].sort(() => Math.random() - 0.5).slice(0, Math.min(count, pool.length));
   }
 
@@ -2485,30 +2655,44 @@ function parseParagraphInput() {
   }
 
   // Anchor specific cities to explicit amounts.
-  // - Single city + explicit amount → that city gets exactly that amount.
+  // - Per-city anchors (parsed from the text) take precedence.
+  // - Single-city shorthand: one city + one explicit amount → that city gets it.
   // - Trace mode: every mentioned city gets a trace amount.
   const anchorMap = {};
+  // Per-city parsed anchors (amount + type)
+  Object.entries(perCityAnchor).forEach(([name, info]) => {
+    anchorMap[name] = { amount: info.amount, type: info.type };
+  });
   if (isTrace) {
-    foundCities.forEach(fc => { anchorMap[fc.n] = Math.round((0.05 + Math.random() * 0.2) * 10) / 10; });
-  } else if (foundCities.length === 1 && explicitInches !== null) {
-    anchorMap[foundCities[0].n] = explicitInches;
+    foundCities.forEach(fc => {
+      if (anchorMap[fc.n] === undefined) anchorMap[fc.n] = { amount: Math.round((0.05 + Math.random() * 0.2) * 10) / 10, type: 'snow' };
+    });
+  } else if (foundCities.length === 1 && explicitInches !== null && anchorMap[foundCities[0].n] === undefined) {
+    anchorMap[foundCities[0].n] = { amount: explicitInches, type: 'snow' };
   }
+
+  // When an "everywhere else" precip type was detected, non-anchor cities
+  // should receive that precip (ice/sleet doesn't accumulate like snow, so
+  // scale the amount down so "sleet" doesn't report as 8" of sleet).
+  const elsewhereScale = { snow: 1.0, sleet: 0.35, ice: 0.2, rain: 0.8 };
 
   chosen.forEach((c, i) => {
     let totalAmount;
     const wasMentioned = foundCities.some(f => f.n === c.n);
-    if (anchorMap[c.n] !== undefined) {
-      totalAmount = anchorMap[c.n];
+    const anchor = anchorMap[c.n];
+    if (anchor !== undefined) {
+      totalAmount = anchor.amount;
     } else if (isTrace) {
       // All cities in a trace event stay tiny
       totalAmount = Math.round((0.05 + Math.random() * 0.25) * 10) / 10;
     } else {
-      const isCenter = i < centerCount || wasMentioned;
+      const isCenter = (i < centerCount || wasMentioned) && !elsewherePrecip;
       totalAmount = isCenter
         ? Math.round(rand(sev.centerSnow[0], sev.centerSnow[1]) * 10) / 10
         : Math.round(rand(sev.fringe[0], sev.fringe[1]) * 10) / 10;
-      // If explicit total exists, bias center cities toward that value
-      if (explicitInches !== null && isCenter) {
+      // If explicit total exists AND there's no "everywhere else" override,
+      // bias center cities toward that value.
+      if (explicitInches !== null && isCenter && !elsewherePrecip) {
         totalAmount = Math.round(((totalAmount + explicitInches) / 2) * 10) / 10;
       }
       if (isAllCont) {
@@ -2516,20 +2700,38 @@ function parseParagraphInput() {
         const resScale = 0.15 + (resFactor / 2.2) * 1.15;
         totalAmount = Math.round(totalAmount * resScale * 10) / 10;
       }
+      // Non-anchor cities under an "everywhere else" directive get that precip,
+      // scaled to realistic amounts for sleet / ice (which don't stack like snow).
+      if (elsewherePrecip && !anchor) {
+        totalAmount = Math.round(totalAmount * (elsewhereScale[elsewherePrecip] ?? 0.6) * 10) / 10;
+      }
     }
     if (totalAmount > 0 && totalAmount < 0.3 && Math.random() < 0.4) totalAmount = 0.05;
     if (totalAmount < 0) totalAmount = 0;
 
-    const mixTemplate = pickPrecipMix(template.precipMix);
+    // Choose precip mix: anchor-typed, elsewhere override, or template default.
     let phases;
-    if (totalAmount <= 0.05) {
-      phases = [{ type:'snow', amount: totalAmount }];
+    if (anchor && anchor.type) {
+      // Anchored city gets purely its anchor type (small natural variation only).
+      phases = [{ type: anchor.type, amount: Math.max(0.05, totalAmount) }];
+    } else if (elsewherePrecip && !wasMentioned) {
+      // Unmentioned padding cities under an "everywhere else" directive.
+      phases = [{ type: elsewherePrecip, amount: Math.max(0.05, totalAmount) }];
+    } else if (elsewherePrecip && wasMentioned && !anchor) {
+      // Mentioned but unanchored city (e.g. "down to Austin, TX") — it's the
+      // corridor edge, so it gets the elsewhere precip too.
+      phases = [{ type: elsewherePrecip, amount: Math.max(0.05, totalAmount) }];
     } else {
-      phases = mixTemplate.map(mp => ({
-        type: mp.type,
-        amount: Math.max(0.05, Math.round(totalAmount * mp.pct * (0.85 + Math.random() * 0.3) * 10) / 10)
-      }));
-      phases = phases.filter(p => p.amount >= 0.05 || p.type !== 'rain');
+      const mixTemplate = pickPrecipMix(template.precipMix);
+      if (totalAmount <= 0.05) {
+        phases = [{ type:'snow', amount: totalAmount }];
+      } else {
+        phases = mixTemplate.map(mp => ({
+          type: mp.type,
+          amount: Math.max(0.05, Math.round(totalAmount * mp.pct * (0.85 + Math.random() * 0.3) * 10) / 10)
+        }));
+        phases = phases.filter(p => p.amount >= 0.05 || p.type !== 'rain');
+      }
     }
     const derived = computeDerivedPrecip(phases);
 
@@ -2637,6 +2839,16 @@ function parseParagraphInput() {
   if (isTrace) parts.push(`<strong>Mode:</strong> trace event`);
   if (restrictToMentioned && foundCities.length) parts.push(`<strong>Scope:</strong> only the named cities (no padding)`);
   if (regionConstraints.size > 0) parts.push(`<strong>Region:</strong> ${[...regionConstraints].join(', ')} only`);
+  if (elsewherePrecip) parts.push(`<strong>Elsewhere:</strong> ${elsewherePrecip}`);
+  const anchorNames = Object.keys(perCityAnchor);
+  if (anchorNames.length) {
+    const pieces = anchorNames.map(n => {
+      const a = perCityAnchor[n];
+      return `${n.split(',')[0]} &rarr; ${a.amount}" ${a.type}`;
+    });
+    parts.push(`<strong>Anchors:</strong> ${pieces.join('; ')}`);
+  }
+  if (mentionedStates.size >= 2) parts.push(`<strong>States:</strong> ${mentionedStates.size} (min ${minCitiesForStates} cities)`);
   summary.innerHTML = parts.join(' &middot; ');
   summary.classList.add('show');
 
