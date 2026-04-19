@@ -2407,8 +2407,44 @@ function parseParagraphInput() {
     // Northern Rockies / Mountain West
     'colorado':'NR','wyoming':'NR','montana':'NR','idaho':'NR','utah':'NR',
   };
-  for (const [name, region] of Object.entries(STATE_TO_REGION)) {
-    if (new RegExp('\\b' + name + '\\b', 'i').test(raw)) regionConstraints.add(region);
+  // Postal abbreviations → full state name (so "Minneapolis, MN" → "minnesota")
+  const STATE_ABBR = {
+    'ny':'new york','pa':'pennsylvania','nj':'new jersey','ct':'connecticut','ma':'massachusetts',
+    'ri':'rhode island','vt':'vermont','nh':'new hampshire','me':'maine','md':'maryland','de':'delaware',
+    'va':'virginia','nc':'north carolina','sc':'south carolina','ga':'georgia','fl':'florida','al':'alabama',
+    'oh':'ohio','mi':'michigan','in':'indiana','il':'illinois','wi':'wisconsin','ky':'kentucky','tn':'tennessee',
+    'mn':'minnesota','ia':'iowa','nd':'north dakota','sd':'south dakota','ne':'nebraska',
+    'tx':'texas','ok':'oklahoma','ar':'arkansas','la':'louisiana','ms':'mississippi','ks':'kansas','mo':'missouri','nm':'new mexico',
+    'co':'colorado','wy':'wyoming','mt':'montana','id':'idaho','ut':'utah',
+  };
+  // Track full state names that were mentioned (either spelled out or via abbreviation).
+  const statesMentionedFull = new Set();
+  for (const name of Object.keys(STATE_TO_REGION)) {
+    if (new RegExp('\\b' + name + '\\b', 'i').test(raw)) statesMentionedFull.add(name);
+  }
+  // Scan for "City, ST" postal codes — abbreviations must appear after a comma to
+  // avoid false positives like the word "in" matching Indiana.
+  const ABBR_POSTAL_RE = /,\s*([A-Z]{2})\b/g;
+  let abm;
+  while ((abm = ABBR_POSTAL_RE.exec(raw)) !== null) {
+    const full = STATE_ABBR[abm[1].toLowerCase()];
+    if (full) statesMentionedFull.add(full);
+  }
+  for (const full of statesMentionedFull) {
+    const region = STATE_TO_REGION[full];
+    if (region) regionConstraints.add(region);
+  }
+  // Build state → cities map so we can guarantee at least one city per state.
+  // CITY_DB entries are "City, ST" — match by the state abbreviation suffix.
+  const fullToAbbr = Object.fromEntries(Object.entries(STATE_ABBR).map(([a, f]) => [f, a.toUpperCase()]));
+  function citiesInState(fullName) {
+    const abbr = fullToAbbr[fullName];
+    if (!abbr) return [];
+    return CITY_DB.filter(c => {
+      const parts = c.n.split(',');
+      if (parts.length < 2) return false;
+      return parts[1].trim().toUpperCase().startsWith(abbr);
+    });
   }
 
   // ---- 5. Detect cold mention ----
@@ -2567,19 +2603,35 @@ function parseParagraphInput() {
     return CITY_DB.filter(c => template.regions.includes(c.r));
   }
 
-  // Count how many distinct states the user mentioned so we can make sure
-  // the final city list always has MORE cities than states.
-  const mentionedStates = new Set();
-  for (const name of Object.keys(STATE_TO_REGION)) {
-    if (new RegExp('\\b' + name + '\\b', 'i').test(raw)) mentionedStates.add(name);
-  }
-  // State abbreviations after commas: "Minneapolis, MN" → MN
-  const ABBR_RE = /,\s*([A-Z]{2})\b/g;
-  let ab;
-  while ((ab = ABBR_RE.exec(raw)) !== null) mentionedStates.add(ab[1].toLowerCase());
+  // Use the full-state-name set we built earlier (covers both spelled-out names
+  // and postal abbreviations). Guarantee the final city list has MORE cities
+  // than states and includes at least one city per mentioned state.
+  const mentionedStates = statesMentionedFull;
   const minCitiesForStates = mentionedStates.size >= 2
     ? Math.max(mentionedStates.size * 2, 6)
-    : 0;
+    : (mentionedStates.size === 1 ? 1 : 0);
+
+  // For each mentioned state, ensure at least one city from that state is in
+  // `chosen`. If the user's explicit city list missed a state, pick a
+  // reasonable city from it (prefer larger cities; pick one at random among
+  // the top few so results aren't identical every run).
+  function ensureOneCityPerState(chosenList) {
+    for (const stateFull of mentionedStates) {
+      const already = chosenList.some(c => {
+        const parts = c.n.split(',');
+        const abbr = fullToAbbr[stateFull];
+        return parts.length >= 2 && parts[1].trim().toUpperCase().startsWith(abbr || '??');
+      });
+      if (already) continue;
+      const candidates = citiesInState(stateFull);
+      if (!candidates.length) continue;
+      // Sort by population desc, then pick one of the top 3 at random for variety.
+      candidates.sort((a, b) => (b.pop || 0) - (a.pop || 0));
+      const pickFrom = candidates.slice(0, Math.min(3, candidates.length));
+      const picked = pickFrom[Math.floor(Math.random() * pickFrom.length)];
+      if (picked && !chosenList.some(x => x.n === picked.n)) chosenList.push(picked);
+    }
+  }
 
   if (foundCities.length > 0) {
     chosen = [...foundCities];
@@ -2632,6 +2684,8 @@ function parseParagraphInput() {
       while (chosen.length < targetCount && extras.length) chosen.push(extras.shift());
       // Cleanup scratch prop
       chosen.forEach(c => { if (c._proj !== undefined) delete c._proj; });
+      // Guarantee at least one city per mentioned state (adds to chosen if missing).
+      ensureOneCityPerState(chosen);
       count = chosen.length;
     }
   } else {
@@ -2641,6 +2695,8 @@ function parseParagraphInput() {
     if (isTrace) count = Math.min(count, 3);
     if (minCitiesForStates > 0) count = Math.max(count, minCitiesForStates);
     chosen = [...pool].sort(() => Math.random() - 0.5).slice(0, Math.min(count, pool.length));
+    ensureOneCityPerState(chosen);
+    count = chosen.length;
   }
 
   const isAllCont = template.regions === 'all-continental';
