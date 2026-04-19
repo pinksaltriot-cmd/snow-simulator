@@ -2297,6 +2297,49 @@ function parseParagraphInput() {
     if (explicitInches === null || explicitInches > 0.5) explicitInches = 0.1;
   }
 
+  // ---- 4a-i. Global explicit precip type ----
+  // If the user says "3 inches of sleet" / "half an inch of ice" / "freezing rain",
+  // treat the amount as that precip type, not snow.
+  let explicitType = null;
+  const typeWordRE = /\b(snow(?:fall)?|sleet|ice(?!\s*age)|freezing\s+rain|rain(?!bow))\b/i;
+  // "<amount> <unit> of <type>"
+  const combo = lower.match(/(?:\d+(?:\.\d+)?|\d+\s*\/\s*\d+|\d+\s+\d+\s*\/\s*\d+)\s*(?:inch(?:es)?|in\b|"|foot|feet|ft\b|')\s*(?:of\s+)?(snow|sleet|ice|freezing\s+rain|rain)\b/i);
+  if (combo) {
+    let t = combo[1].toLowerCase().replace(/\s+/g, ' ');
+    if (t === 'freezing rain') t = 'ice';
+    if (t !== 'snow') explicitType = t;
+  }
+  // "<type> of X inches" — e.g. "sleet of 2 inches"
+  if (!explicitType) {
+    const rev = lower.match(/\b(sleet|ice|freezing\s+rain)\b[^.]{0,40}?(\d+(?:\.\d+)?|\d+\s*\/\s*\d+|\d+\s+\d+\s*\/\s*\d+)\s*(?:inch(?:es)?|in\b|"|foot|feet|ft\b|')/i);
+    if (rev) {
+      let t = rev[1].toLowerCase().replace(/\s+/g, ' ');
+      if (t === 'freezing rain') t = 'ice';
+      explicitType = t;
+    }
+  }
+
+  // ---- 4a-ii. Storm-kind hints: ice storm / sleet storm / wintry mix ----
+  // Bias template selection and inject supplemental precip phases.
+  const mentionsIceStorm = /\bice storm\b|\bcrippling ice\b|\bglazing\b|\bcoated (?:with|in) ice\b/i.test(lower);
+  const mentionsSleetStorm = /\bsleet storm\b|\bheavy sleet\b|\bsleet-driven\b/i.test(lower);
+  const mentionsWintryMix = /\bwintry mix\b|\bmixed precip(?:itation)?\b|\bmixed bag\b|\bchanged over (?:to|from)\b|\btransition(?:ed|ing)? (?:to|from)\b/i.test(lower);
+  const mentionsFreezingRain = /\bfreezing rain\b|\bice pellets\b/i.test(lower);
+
+  // Soft-mix directives: "with some sleet", "mixed with ice", "a little sleet",
+  // "changing over to sleet", "followed by ice". These add a small secondary
+  // phase on top of the default snow mix.
+  const softMix = { sleet: 0, ice: 0, rain: 0 };
+  function bumpSoft(type, amt) { if (softMix[type] !== undefined) softMix[type] = Math.max(softMix[type], amt); }
+  if (/\b(?:with|and)\s+(?:some|a little|a bit of|some scattered|scattered|occasional)\s+sleet\b/i.test(lower)) bumpSoft('sleet', 0.15);
+  if (/\b(?:with|and)\s+(?:some|a little|a bit of|some scattered|scattered|occasional)\s+(?:ice|freezing rain)\b/i.test(lower)) bumpSoft('ice', 0.12);
+  if (/\bmixed with sleet\b|\bmix of (?:snow )?and sleet\b|\bsnow and sleet\b/i.test(lower)) bumpSoft('sleet', 0.25);
+  if (/\bmixed with ice\b|\bmix of (?:snow )?and ice\b|\bsnow and ice\b/i.test(lower)) bumpSoft('ice', 0.2);
+  if (/\b(?:changed|changing|turned|turning|transitioned|transitioning) (?:over )?to sleet\b|\bfollowed by sleet\b/i.test(lower)) bumpSoft('sleet', 0.3);
+  if (/\b(?:changed|changing|turned|turning|transitioned|transitioning) (?:over )?to (?:ice|freezing rain)\b|\bfollowed by (?:ice|freezing rain)\b/i.test(lower)) bumpSoft('ice', 0.25);
+  if (mentionsWintryMix) { bumpSoft('sleet', 0.2); bumpSoft('ice', 0.15); }
+  if (mentionsFreezingRain) bumpSoft('ice', 0.25);
+
   // ---- 4b. Scope limiters: "only", "just", "exactly", "alone" ----
   // When present, restrict the storm to the cities/regions specifically mentioned.
   let restrictToMentioned = /\bonly\b|\bjust\s+(?!a\b)|\bexactly\b|\bsolely\b|\balone\b|\bnowhere else\b|\bno other (?:city|cities|areas?|locations?)\b/i.test(raw);
@@ -2553,16 +2596,39 @@ function parseParagraphInput() {
     }
   }
 
+  // ---- 7a. Ice storm / sleet storm bias ----
+  // If the user called it an "ice storm" (and didn't specify another storm type),
+  // switch to the ice-heavy template when region allows.
+  if (mentionsIceStorm && detectedType === null) {
+    const curTpl = STORM_TEMPLATES[typeIdx];
+    const curRegions = Array.isArray(curTpl.regions) ? curTpl.regions : [];
+    // Deep South Ice Storm works for SO/SE; for NE/OV use Historic East Coast
+    // (it carries an ice-mix branch). Otherwise leave template alone and let
+    // softMix handle it.
+    const wantsIce = curRegions.some(r => ['SO','SE'].includes(r)) || regionConstraints.has('SO') || regionConstraints.has('SE');
+    if (wantsIce) {
+      const iceIdx = STORM_TEMPLATES.findIndex(x => x.type === 'Deep South Ice Storm');
+      if (iceIdx >= 0) typeIdx = iceIdx;
+    }
+  }
+
   // ---- 8. Choose severity ----
+  // For ice/sleet, the severity thresholds are much lower — 0.5" of ice is a
+  // major event, whereas 0.5" of snow is minor. Scale accordingly.
   let sevIdx;
   if (detectedSev !== null) {
     sevIdx = detectedSev;
   } else if (explicitInches !== null) {
-    if (explicitInches >= 36) sevIdx = 4;
-    else if (explicitInches >= 18) sevIdx = 3;
-    else if (explicitInches >= 9) sevIdx = 2;
-    else if (explicitInches >= 4) sevIdx = 1;
+    let effectiveInches = explicitInches;
+    if (explicitType === 'ice') effectiveInches = explicitInches * 20; // 0.5" ice ≈ major
+    else if (explicitType === 'sleet') effectiveInches = explicitInches * 4;
+    if (effectiveInches >= 36) sevIdx = 4;
+    else if (effectiveInches >= 18) sevIdx = 3;
+    else if (effectiveInches >= 9) sevIdx = 2;
+    else if (effectiveInches >= 4) sevIdx = 1;
     else sevIdx = 0;
+  } else if (mentionsIceStorm || mentionsSleetStorm) {
+    sevIdx = 2;
   } else {
     sevIdx = 2; // default Significant
   }
@@ -2724,8 +2790,20 @@ function parseParagraphInput() {
       if (anchorMap[fc.n] === undefined) anchorMap[fc.n] = { amount: Math.round((0.05 + Math.random() * 0.2) * 10) / 10, type: 'snow' };
     });
   } else if (foundCities.length === 1 && explicitInches !== null && anchorMap[foundCities[0].n] === undefined) {
-    anchorMap[foundCities[0].n] = { amount: explicitInches, type: 'snow' };
+    anchorMap[foundCities[0].n] = { amount: explicitInches, type: explicitType || 'snow' };
   }
+
+  // Default precip type for cities without a specific anchor: snow, unless the
+  // user globally specified sleet/ice (e.g. "3 inches of sleet across Texas").
+  const defaultType = explicitType || 'snow';
+  // How much to scale non-anchor amounts when the default type is ice/sleet.
+  const defaultTypeScale = { snow: 1.0, sleet: 0.5, ice: 0.25, rain: 1.0 };
+
+  // If the user said "ice storm" / "sleet storm" without an explicit amount,
+  // bump the softMix for that type so the default snow-centric mix still
+  // produces meaningful icy phases.
+  if (mentionsIceStorm && !explicitType) bumpSoft('ice', 0.35);
+  if (mentionsSleetStorm && !explicitType) bumpSoft('sleet', 0.4);
 
   // When an "everywhere else" precip type was detected, non-anchor cities
   // should receive that precip (ice/sleet doesn't accumulate like snow, so
@@ -2761,6 +2839,12 @@ function parseParagraphInput() {
       if (elsewherePrecip && !anchor) {
         totalAmount = Math.round(totalAmount * (elsewhereScale[elsewherePrecip] ?? 0.6) * 10) / 10;
       }
+      // Global default type is sleet/ice — scale down since those don't stack
+      // like snow (e.g. "3 inches of sleet across Texas" means padding cities
+      // get ~1.5 inches of sleet, not 8 inches).
+      if (defaultType !== 'snow' && !elsewherePrecip) {
+        totalAmount = Math.round(totalAmount * (defaultTypeScale[defaultType] ?? 0.5) * 10) / 10;
+      }
     }
     if (totalAmount > 0 && totalAmount < 0.3 && Math.random() < 0.4) totalAmount = 0.05;
     if (totalAmount < 0) totalAmount = 0;
@@ -2777,6 +2861,19 @@ function parseParagraphInput() {
       // Mentioned but unanchored city (e.g. "down to Austin, TX") — it's the
       // corridor edge, so it gets the elsewhere precip too.
       phases = [{ type: elsewherePrecip, amount: Math.max(0.05, totalAmount) }];
+    } else if (defaultType !== 'snow') {
+      // Global explicit type (e.g. "3 inches of sleet"): build a mix centered
+      // on that type, with small snow/rain fringes for realism.
+      const primary = defaultType;
+      const secondaryPct = 0.15;
+      phases = [
+        { type: primary, amount: Math.max(0.05, Math.round(totalAmount * (1 - secondaryPct) * 10) / 10) },
+      ];
+      // Add a touch of snow (ahead of the precip transition) for ice/sleet events
+      if (primary === 'ice' || primary === 'sleet') {
+        const snowPhase = Math.max(0.05, Math.round(totalAmount * secondaryPct * 10) / 10);
+        phases.unshift({ type: 'snow', amount: snowPhase });
+      }
     } else {
       const mixTemplate = pickPrecipMix(template.precipMix);
       if (totalAmount <= 0.05) {
@@ -2787,6 +2884,26 @@ function parseParagraphInput() {
           amount: Math.max(0.05, Math.round(totalAmount * mp.pct * (0.85 + Math.random() * 0.3) * 10) / 10)
         }));
         phases = phases.filter(p => p.amount >= 0.05 || p.type !== 'rain');
+      }
+    }
+
+    // ---- softMix injection ----
+    // Add supplemental sleet/ice/rain phases when user mentioned them loosely
+    // ("with some sleet", "mixed with ice", "ice storm" without an amount).
+    // Skip for anchored cities (user already dictated exact type) and elsewhere-precip
+    // cities (those are already the desired type).
+    const alreadyAnchored = !!(anchor && anchor.type) || (!!elsewherePrecip && (!wasMentioned || !anchor));
+    if (!alreadyAnchored) {
+      for (const [t, frac] of Object.entries(softMix)) {
+        if (frac <= 0) continue;
+        // Don't duplicate an existing phase of this type — just bump its amount.
+        const existing = phases.find(p => p.type === t);
+        const addAmt = Math.max(0.05, Math.round(totalAmount * frac * (0.8 + Math.random() * 0.4) * 10) / 10);
+        if (existing) {
+          existing.amount = Math.round((existing.amount + addAmt) * 10) / 10;
+        } else {
+          phases.push({ type: t, amount: addAmt });
+        }
       }
     }
     const derived = computeDerivedPrecip(phases);
@@ -2883,7 +3000,16 @@ function parseParagraphInput() {
     `<strong>Severity:</strong> ${sevLabels[sevIdx]}`,
     `<strong>Cities:</strong> ${chosen.length}` + (foundCities.length ? ` (${foundCities.length} from your text)` : ''),
   ];
-  if (explicitInches !== null) parts.push(`<strong>Snow hint:</strong> ~${explicitInches}"`);
+  if (explicitInches !== null) {
+    const label = explicitType ? explicitType.charAt(0).toUpperCase() + explicitType.slice(1) : 'Snow';
+    parts.push(`<strong>${label} hint:</strong> ~${explicitInches}"`);
+  }
+  if (mentionsIceStorm) parts.push(`<strong>Kind:</strong> ice storm`);
+  else if (mentionsSleetStorm) parts.push(`<strong>Kind:</strong> sleet storm`);
+  const softMixParts = Object.entries(softMix).filter(([, v]) => v > 0);
+  if (softMixParts.length) {
+    parts.push(`<strong>Mix:</strong> +${softMixParts.map(([t, v]) => `${Math.round(v*100)}% ${t}`).join(', ')}`);
+  }
   if (coldHint !== null) parts.push(`<strong>Cold hint:</strong> ${coldHint}°F`);
   if (windHint !== null) parts.push(`<strong>Wind hint:</strong> ${windHint} mph`);
   if (parsedDate) {
