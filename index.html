@@ -149,33 +149,60 @@
   .impact-pill { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
   .res-pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.68rem; font-weight: 600; white-space: nowrap; }
 
-  /* Impact levels (23 tiers) */
+  /* Impact levels (40+ tiers) */
   .impact-none-impact  { background: #0f172a; color: #334155; }
   .impact-dusting      { background: #131c2e; color: #475569; }
   .impact-trace-impact { background: #172233; color: #546680; }
   .impact-negligible   { background: #1e293b; color: #64748b; }
   .impact-minimal      { background: #334155; color: #94a3b8; }
+  .impact-very-light   { background: #2a3a4a; color: #a3b8d4; }
+  .impact-light-impact { background: #223a3a; color: #7fe8d4; }
   .impact-minor        { background: #1e3a2f; color: #4ade80; }
+  .impact-mild         { background: #243a25; color: #86efac; }
   .impact-moderate     { background: #2d3a1a; color: #a3e635; }
+  .impact-notable-impact { background: #353a18; color: #d9e635; }
   .impact-considerable { background: #3b3a1a; color: #facc15; }
+  .impact-high-impact  { background: #3c331a; color: #fbbf24; }
   .impact-significant  { background: #3d2a0a; color: #fb923c; }
+  .impact-grave        { background: #421f0a; color: #fb7e24; }
   .impact-severe       { background: #451a0a; color: #f97316; }
+  .impact-oppressive   { background: #441308; color: #f85a16; }
   .impact-major        { background: #3b1010; color: #f87171; }
+  .impact-dire         { background: #371024; color: #ef4c7a; }
   .impact-crippling    { background: #2e1035; color: #c084fc; }
+  .impact-devastating  { background: #33104a; color: #b478ff; }
   .impact-extreme      { background: #3b0a2e; color: #f472b6; }
+  .impact-cataclysmic  { background: #400a29; color: #f85fae; }
   .impact-catastrophic { background: #450a0a; color: #fca5a5; }
+  .impact-calamitous   { background: #400a1a; color: #fcb0c0; }
   .impact-paralysis    { background: #1a0a2e; color: #d8b4fe; }
+  .impact-historic-impact { background: #1f0a3a; color: #c4a6ff; border: 1px solid #7c3aed; }
   .impact-apocalyptic  { background: linear-gradient(135deg,#450a0a,#1a0a2e); color: #fde68a; border: 1px solid #f59e0b; }
+  .impact-dystopian    { background: linear-gradient(135deg,#3a0a1a,#20102e); color: #fbcfe8; border: 1px solid #db2777; }
   .impact-civilization-ender { background: linear-gradient(135deg,#450a0a,#2a0a3e); color: #fde68a; border: 2px solid #f59e0b; }
+  .impact-post-civilization { background: linear-gradient(135deg,#2a0a3e,#3a0a1a); color: #e9d5ff; border: 2px solid #a855f7; }
   .impact-ice-age      { background: linear-gradient(135deg,#1a0a3e,#0a1a3e); color: #93c5fd; border: 2px solid #3b82f6; }
+  .impact-glacial-epoch { background: linear-gradient(135deg,#0a1a4a,#0a2a5a); color: #a5d8ff; border: 2px solid #38bdf8; }
   .impact-extinction   { background: linear-gradient(135deg,#0a0a2e,#1a0a1a); color: #e879f9; border: 2px solid #a855f7; }
+  .impact-world-ender  { background: linear-gradient(135deg,#1a0a2e,#3a0a1a); color: #ff6dd1; border: 2px solid #ec4899; text-shadow: 0 0 5px rgba(255,109,209,0.4); }
   .impact-planet-killer { background: #0a0a0a; color: #f87171; border: 2px solid #dc2626; text-shadow: 0 0 8px rgba(248,113,113,0.5); }
+  .impact-cryogenesis  { background: linear-gradient(135deg,#0a1a2e,#0a0a1a); color: #7dd3fc; border: 2px solid #0ea5e9; text-shadow: 0 0 10px rgba(125,211,252,0.6); }
   .impact-biblical     { background: linear-gradient(135deg,#0a0a0a,#1a0505); color: #fbbf24; border: 2px solid #f59e0b; text-shadow: 0 0 8px rgba(251,191,36,0.5); }
+  .impact-mythic-deluge { background: linear-gradient(135deg,#1a0505,#0a0a2a); color: #ffd166; border: 2px solid #f59e0b; text-shadow: 0 0 10px rgba(255,209,102,0.6); }
   .impact-omega        { background: linear-gradient(135deg,#000,#0a0a1a); color: #fff; border: 2px solid #fff; text-shadow: 0 0 10px rgba(255,255,255,0.7); }
   .impact-heat-death   { background: radial-gradient(circle,#1a0a2e,#000); color: #e2e8f0; border: 2px solid #e2e8f0; text-shadow: 0 0 12px rgba(255,255,255,0.8); animation: pulse-glow 2s infinite; }
+  .impact-singularity  { background: radial-gradient(circle,#2a0a4a,#000); color: #c4b5fd; border: 2px solid #a78bfa; text-shadow: 0 0 14px rgba(196,181,253,0.9); animation: pulse-glow 2s infinite; }
+  .impact-cosmic-entropy { background: radial-gradient(circle,#1a0a3e,#0a0a2a); color: #fcd34d; border: 2px solid #f59e0b; text-shadow: 0 0 16px rgba(252,211,77,1); animation: pulse-glow 1.6s infinite; }
+  .impact-white-void   { background: radial-gradient(circle,#e2e8f0,#94a3b8); color: #000; border: 3px solid #fff; text-shadow: 0 0 6px rgba(255,255,255,1); animation: pulse-glow 1.2s infinite; }
+  .impact-omega-point  { background: radial-gradient(circle,#fff,#cbd5e1); color: #000; border: 3px solid #fbbf24; text-shadow: 0 0 8px rgba(251,191,36,1); animation: pulse-glow 0.8s infinite; }
   @keyframes pulse-glow { 0%,100% { box-shadow: 0 0 5px rgba(255,255,255,0.3); } 50% { box-shadow: 0 0 20px rgba(255,255,255,0.6); } }
 
-  /* Resilience levels (24 tiers) */
+  /* Resilience levels (36 tiers) */
+  .res-absolute-zero   { background: radial-gradient(circle,#fff,#bae6fd); color: #000; border: 3px solid #60a5fa; text-shadow: 0 0 8px rgba(255,255,255,1); animation: pulse-glow 1.2s infinite; }
+  .res-cryogenic       { background: linear-gradient(135deg,#bae6fd,#60a5fa); color: #0a1e4a; border: 3px solid #e0f2fe; text-shadow: 0 0 6px rgba(255,255,255,0.8); }
+  .res-transcendent    { background: linear-gradient(135deg,#0a1e4a,#1e3a8a); color: #a5d8ff; border: 2px solid #60a5fa; text-shadow: 0 0 10px rgba(165,216,255,0.9); animation: pulse-glow 2s infinite; }
+  .res-mythic          { background: linear-gradient(135deg,#0b2555,#3b0a6e); color: #c4b5fd; border: 2px solid #a78bfa; text-shadow: 0 0 8px rgba(196,181,253,0.7); }
+  .res-cosmic          { background: linear-gradient(135deg,#0a1e4a,#2a0a5a); color: #93c5fd; border: 2px solid #6366f1; text-shadow: 0 0 7px rgba(147,197,253,0.6); }
   .res-legendary       { background: #0a1e4a; color: #60a5fa; border: 2px solid #3b82f6; text-shadow: 0 0 6px rgba(96,165,250,0.5); }
   .res-extreme-res     { background: #0b2555; color: #38bdf8; border: 1px solid #0ea5e9; }
   .res-elite           { background: #0c2d5a; color: #38bdf8; border: 1px solid #0ea5e9; }
@@ -200,6 +227,12 @@
   .res-virtually-none  { background: #440a0a; color: #fca5a5; border: 1px solid #dc2626; }
   .res-none            { background: #450a0a; color: #fca5a5; border: 1px solid #dc2626; }
   .res-nonexistent     { background: linear-gradient(135deg,#450a0a,#2a0505); color: #fde68a; border: 2px solid #dc2626; }
+  .res-subtropical     { background: linear-gradient(135deg,#4a1a00,#5a2a00); color: #fed7aa; border: 1px solid #ea580c; }
+  .res-tropical-margin { background: linear-gradient(135deg,#5a1a00,#6a2500); color: #fdba74; border: 1px solid #f97316; }
+  .res-outer-tropical  { background: linear-gradient(135deg,#6a1500,#4a2a00); color: #fdba74; border: 1px solid #fb923c; }
+  .res-tropical        { background: linear-gradient(135deg,#5a2a00,#3a4a00); color: #facc15; border: 1px solid #eab308; }
+  .res-deep-tropical   { background: linear-gradient(135deg,#2a4a00,#0a3a10); color: #a3e635; border: 1px solid #65a30d; }
+  .res-equatorial      { background: linear-gradient(135deg,#0a3a1a,#0a2a2a); color: #6ee7b7; border: 2px solid #10b981; text-shadow: 0 0 4px rgba(110,231,183,0.4); }
 
   .storm-color-none       { background: #1e293b; color: #64748b; }
   .storm-color-trace      { background: #334155; color: #94a3b8; }
@@ -622,6 +655,98 @@ const RAW_CITIES = [
   // ---- OTHER ----
   ["Ankara, Turkey",5663,null,18,39.9,32.9],["Tehran, Iran",9000,null,14,35.7,51.4],
   ["Tbilisi, Georgia",1118,null,10,41.7,44.8],["Yerevan, Armenia",1075,null,14,40.2,44.5],
+  // ---- TROPICAL / EQUATORIAL (never see snow) ----
+  ["Singapore",5896,null,0,1.3,103.8],["Kuala Lumpur, Malaysia",1790,null,0,3.1,101.7],
+  ["Jakarta, Indonesia",10562,null,0,-6.2,106.8],["Bangkok, Thailand",10539,null,0,13.7,100.5],
+  ["Manila, Philippines",13484,null,0,14.6,120.98],["Ho Chi Minh City, Vietnam",8993,null,0,10.8,106.7],
+  ["Hanoi, Vietnam",8053,null,0,21.0,105.8],["Colombo, Sri Lanka",752,null,0,6.9,79.9],
+  ["Mumbai, India",20411,null,0,19.1,72.9],["Delhi, India",32941,null,0,28.7,77.1],
+  ["Chennai, India",11235,null,0,13.1,80.3],["Kolkata, India",14974,null,0,22.6,88.4],
+  ["Bangalore, India",13608,null,0,13.0,77.6],["Hyderabad, India",10801,null,0,17.4,78.5],
+  ["Dhaka, Bangladesh",22478,null,0,23.8,90.4],["Karachi, Pakistan",16459,null,0,24.9,67.0],
+  ["Dubai, UAE",3332,null,0,25.3,55.3],["Abu Dhabi, UAE",1483,null,0,24.5,54.4],
+  ["Doha, Qatar",2382,null,0,25.3,51.5],["Riyadh, Saudi Arabia",7676,null,0.01,24.7,46.7],
+  ["Jeddah, Saudi Arabia",4697,null,0,21.5,39.2],["Muscat, Oman",1720,null,0,23.6,58.6],
+  ["Kuwait City, Kuwait",3114,null,0.05,29.4,47.98],["Manama, Bahrain",329,null,0,26.2,50.6],
+  ["Tel Aviv, Israel",460,null,0,32.1,34.8],["Jerusalem, Israel",936,null,1,31.8,35.2],
+  ["Beirut, Lebanon",2407,null,0,33.9,35.5],["Amman, Jordan",4007,null,2,31.95,35.9],
+  ["Cairo, Egypt",10100,null,0,30.0,31.2],["Alexandria, Egypt",5381,null,0,31.2,29.9],
+  ["Casablanca, Morocco",3752,null,0,33.6,-7.6],["Marrakech, Morocco",928,null,0,31.6,-8.0],
+  ["Lagos, Nigeria",15388,null,0,6.5,3.4],["Abuja, Nigeria",3464,null,0,9.1,7.5],
+  ["Nairobi, Kenya",4922,null,0,-1.3,36.8],["Mombasa, Kenya",1440,null,0,-4.04,39.7],
+  ["Addis Ababa, Ethiopia",5006,null,0,9.0,38.8],["Accra, Ghana",2605,null,0,5.6,-0.2],
+  ["Dakar, Senegal",3140,null,0,14.7,-17.5],["Dar es Salaam, Tanzania",7405,null,0,-6.8,39.3],
+  ["Kampala, Uganda",1680,null,0,0.3,32.6],["Khartoum, Sudan",5534,null,0,15.6,32.5],
+  ["Johannesburg, South Africa",5635,null,0.3,-26.2,28.0],["Cape Town, South Africa",4618,null,0,-33.9,18.4],
+  ["Durban, South Africa",3442,null,0,-29.9,31.0],["Luanda, Angola",8952,null,0,-8.8,13.2],
+  ["Kinshasa, DRC",15628,null,0,-4.3,15.3],["Harare, Zimbabwe",1542,null,0,-17.8,31.1],
+  ["Managua, Nicaragua",1028,null,0,12.1,-86.3],["San Jose, Costa Rica",340,null,0,9.9,-84.1],
+  ["Panama City, Panama",880,null,0,8.98,-79.5],["Guatemala City, Guatemala",2935,null,0,14.6,-90.5],
+  ["San Salvador, El Salvador",1107,null,0,13.7,-89.2],["Tegucigalpa, Honduras",1444,null,0,14.1,-87.2],
+  ["Belize City, Belize",62,null,0,17.5,-88.2],["San Pedro Sula, Honduras",719,null,0,15.5,-88.0],
+  ["Caracas, Venezuela",2946,null,0,10.5,-66.9],["Bogota, Colombia",7968,null,0,4.7,-74.1],
+  ["Medellin, Colombia",2569,null,0,6.2,-75.6],["Cartagena, Colombia",1028,null,0,10.4,-75.5],
+  ["Quito, Ecuador",1978,null,0,-0.2,-78.5],["Guayaquil, Ecuador",2723,null,0,-2.2,-79.9],
+  ["Lima, Peru",10883,null,0,-12.0,-77.0],["La Paz, Bolivia",835,null,3,-16.5,-68.1],
+  ["Asuncion, Paraguay",525,null,0,-25.3,-57.6],["Montevideo, Uruguay",1319,null,0,-34.9,-56.2],
+  ["Buenos Aires, Argentina",3075,null,0,-34.6,-58.4],["Santiago, Chile",6680,null,0.1,-33.4,-70.7],
+  ["Rio de Janeiro, Brazil",6748,null,0,-22.9,-43.2],["Sao Paulo, Brazil",12396,null,0,-23.6,-46.6],
+  ["Brasilia, Brazil",4728,null,0,-15.8,-47.9],["Salvador, Brazil",2886,null,0,-12.97,-38.5],
+  ["Recife, Brazil",1661,null,0,-8.05,-34.9],["Fortaleza, Brazil",2686,null,0,-3.7,-38.5],
+  ["Manaus, Brazil",2064,null,0,-3.1,-60.02],["Belem, Brazil",1506,null,0,-1.5,-48.5],
+  ["San Juan, PR",342,null,0,18.5,-66.1],["Ponce, PR",137,null,0,18.01,-66.6],
+  ["Kingston, Jamaica",585,null,0,18.01,-76.8],["Santo Domingo, DR",965,null,0,18.5,-69.9],
+  ["Port-au-Prince, Haiti",987,null,0,18.5,-72.3],["Havana (metro), Cuba",2106,null,0,23.1,-82.4],
+  ["Port of Spain, Trinidad",37,null,0,10.7,-61.5],["Bridgetown, Barbados",110,null,0,13.1,-59.6],
+  ["Hamilton, Bermuda (town)",1,null,0,32.3,-64.8],["George Town, Cayman",40,null,0,19.3,-81.4],
+  ["Cancun, Mexico",888,null,0,21.2,-86.8],["Merida, Mexico",1035,null,0,20.97,-89.6],
+  ["Acapulco, Mexico",779,null,0,16.9,-99.9],["Guadalajara, Mexico",1385,null,0,20.7,-103.3],
+  ["Puerto Vallarta, Mexico",291,null,0,20.6,-105.2],["Taipei, Taiwan",2646,null,0,25.03,121.6],
+  ["Kaohsiung, Taiwan",2773,null,0,22.6,120.3],["Hong Kong",7392,null,0,22.3,114.2],
+  ["Macau",672,null,0,22.2,113.5],["Guangzhou, China",15306,null,0,23.1,113.3],
+  ["Shenzhen, China",12592,null,0,22.5,114.1],["Shanghai, China",24870,null,2,31.2,121.5],
+  ["Bali (Denpasar), Indonesia",930,null,0,-8.7,115.2],["Surabaya, Indonesia",2875,null,0,-7.3,112.7],
+  ["Phnom Penh, Cambodia",2129,null,0,11.6,104.9],["Vientiane, Laos",820,null,0,17.97,102.6],
+  ["Yangon, Myanmar",5160,null,0,16.8,96.2],["Male, Maldives",252,null,0,4.2,73.5],
+  ["Darwin, Australia",147,null,0,-12.5,130.8],["Brisbane, Australia",2560,null,0,-27.5,153.03],
+  ["Perth, Australia",2192,null,0,-31.9,115.9],["Sydney, Australia",5312,null,0,-33.9,151.2],
+  ["Melbourne, Australia",5159,null,0.1,-37.8,145.0],["Auckland, New Zealand",1582,null,0,-36.9,174.8],
+  ["Suva, Fiji",94,null,0,-18.1,178.4],["Papeete, Tahiti",26,null,0,-17.5,-149.6],
+  ["Apia, Samoa",36,null,0,-13.8,-171.8],["Port Moresby, PNG",364,null,0,-9.4,147.2],
+  ["Athens, Greece",3153,null,1,38.0,23.7],["Naples, Italy",967,null,0.5,40.8,14.3],
+  ["Palermo, Italy",630,null,0,38.1,13.4],["Valencia, Spain",792,null,0.2,39.5,-0.4],
+  ["Seville, Spain",684,null,0.1,37.4,-5.99],["Malaga, Spain",575,null,0,36.7,-4.4],
+  ["Porto, Portugal",238,null,0,41.1,-8.6],
+  // ---- ADDITIONAL OK / KS / MO ----
+  ["Ada, OK",17,"SO",5,34.77,-96.68],["Okemah, OK",3.1,"SO",5,35.43,-96.31],
+  ["Coffeyville, KS",9.5,"SO",12,37.04,-95.62],["Emporia, KS",24,"SO",16,38.40,-96.18],
+  ["Ottawa, KS",12.4,"SO",17,38.61,-95.27],["Excelsior Springs, MO",11.6,"SO",17,39.34,-94.23],
+  ["Chillicothe, MO",9,"SO",22,39.80,-93.55],["Bethany, MO",3,"SO",24,40.27,-94.03],
+  ["Grinnell, IA",9.5,"UM",30,41.74,-92.72],
+  // ---- EXTREME-SNOW STATIONS / SKI COMMUNITIES ----
+  // Populate upper resilience tiers (Cosmic, Mythic, Transcendent, Cryogenic, Absolute Zero)
+  ["Mt. Baker Ski Area, WA",0.1,null,663,48.86,-121.69],      // Absolute Zero: world single-season record
+  ["Paradise Ranger Station, WA",0.02,null,645,46.79,-121.74], // Absolute Zero: Mt. Rainier NP
+  ["Niseko, Japan",4.8,null,590,42.80,140.68],                 // Cryogenic
+  ["Alta, UT",0.4,null,551,40.59,-111.64],                     // Cryogenic
+  ["Brighton, UT",0.05,null,500,40.60,-111.58],                // Cryogenic
+  ["Crater Lake NP, OR",0.02,null,463,42.94,-122.14],          // Cryogenic
+  ["Stevens Pass, WA",0.01,null,460,47.75,-121.09],            // Cryogenic
+  ["Jackson Hole (Teton Village), WY",0.3,null,459,43.59,-110.83], // Transcendent
+  ["Revelstoke Mt. Resort, BC, Canada",0.5,null,410,50.96,-118.16], // Transcendent
+  ["Snoqualmie Pass, WA",0.3,null,400,47.42,-121.40],          // Transcendent
+  ["Soda Springs, CA",0.2,null,400,39.33,-120.38],             // Transcendent
+  ["Whistler Peak, BC, Canada",0.1,null,383,50.06,-122.95],    // Transcendent
+  ["Steamboat Springs, CO",13,null,336,40.48,-106.83],         // Mythic
+  ["Valdez, AK",3.9,null,325,61.13,-146.35],                   // Mythic
+  ["Aomori, Japan",267,null,312,40.82,140.74],                 // Mythic
+  ["Fernie, BC, Canada",5,null,305,49.50,-115.06],             // Mythic
+  ["Whistler Village, BC, Canada",14,null,310,50.12,-122.95],  // Mythic
+  ["Mt. Washington Obs., NH",0.01,null,281,44.27,-71.30],      // Mythic
+  ["Revelstoke, BC, Canada",8,null,267,50.99,-118.19],         // Cosmic
+  ["Cordova, AK",2.6,null,231,60.54,-145.76],                  // Cosmic
+  ["Telluride, CO",2.6,null,235,37.94,-107.81],                // Cosmic
+  ["Taos Ski Valley, NM",0.06,null,230,36.60,-105.45],         // Cosmic
 ];
 
 const CITY_DB = RAW_CITIES.map(c => ({ n: c[0], pop: c[1], r: c[2], snow: c[3], lat: c[4], lon: c[5] }));
@@ -775,8 +900,13 @@ const HISTORIC_STORMS = [
    snow have higher resilience (need more to cause disruption). Cities
    that rarely see snow are much more impacted by the same amount.
    ====================================================================== */
-function getResilienceFactor(annualSnow) {
+function getResilienceFactor(annualSnow, lat) {
   if (annualSnow === null || annualSnow === undefined) return 1.0;
+  if (annualSnow >= 600) return 3.6;   // Absolute Zero Realm (theoretical max)
+  if (annualSnow >= 450) return 3.3;   // Cryogenic
+  if (annualSnow >= 350) return 3.1;   // Transcendent
+  if (annualSnow >= 275) return 2.95;  // Mythic
+  if (annualSnow >= 225) return 2.85;  // Cosmic
   if (annualSnow >= 200) return 2.8;   // Legendary (Valdez AK, Aomori Japan)
   if (annualSnow >= 150) return 2.5;   // Extreme (Sault Ste Marie, Mammoth Lakes)
   if (annualSnow >= 120) return 2.2;   // Elite (Syracuse, Marquette)
@@ -799,11 +929,26 @@ function getResilienceFactor(annualSnow) {
   if (annualSnow >= 0.2) return 0.32;  // Trace (New Orleans, Baton Rouge)
   if (annualSnow > 0.05) return 0.25;  // Near Zero (Houston, Savannah)
   if (annualSnow > 0)    return 0.2;   // Virtually None (Tampa, Jacksonville)
+  // Zero annual snow: sub-tier by latitude if available
+  if (lat !== null && lat !== undefined) {
+    const absLat = Math.abs(lat);
+    if (absLat < 5)   return 0.06;    // Equatorial (Singapore, Quito, Nairobi)
+    if (absLat < 10)  return 0.08;    // Deep Tropical (Lagos, Kuala Lumpur, Bogota)
+    if (absLat < 15)  return 0.09;    // Tropical (Managua, Bangkok, Ho Chi Minh)
+    if (absLat < 20)  return 0.1;     // Outer Tropical (Mumbai, San Juan)
+    if (absLat < 23.5)return 0.12;    // Tropical Margin (Rio, Havana metro, Dhaka)
+    if (absLat < 30)  return 0.13;    // Subtropical (Dubai, Miami, Cairo)
+  }
   return 0.15;                          // None (LA, Phoenix, Honolulu, Miami)
 }
 
-function getResilienceLabel(annualSnow) {
+function getResilienceLabel(annualSnow, lat) {
   if (annualSnow === null || annualSnow === undefined) return { label:'Unknown', css:'moderate', icon:'?' };
+  if (annualSnow >= 600) return { label:'Absolute Zero',  css:'absolute-zero',   icon:'\u2744\u2744\u2744\u2744\u2744\u2B50' };
+  if (annualSnow >= 450) return { label:'Cryogenic',      css:'cryogenic',       icon:'\u2744\u2744\u2744\u2744\u2B50' };
+  if (annualSnow >= 350) return { label:'Transcendent',   css:'transcendent',    icon:'\u2744\u2744\u2744\u2744\u2B50' };
+  if (annualSnow >= 275) return { label:'Mythic',         css:'mythic',          icon:'\u2744\u2744\u2744\u2744' };
+  if (annualSnow >= 225) return { label:'Cosmic',         css:'cosmic',          icon:'\u2744\u2744\u2744\u2744' };
   if (annualSnow >= 200) return { label:'Legendary',      css:'legendary',       icon:'\u2744\u2744\u2744\u2744\u2B50' };
   if (annualSnow >= 150) return { label:'Extreme',        css:'extreme-res',     icon:'\u2744\u2744\u2744\u2744' };
   if (annualSnow >= 120) return { label:'Elite',          css:'elite',           icon:'\u2744\u2744\u2744\u2744' };
@@ -826,6 +971,16 @@ function getResilienceLabel(annualSnow) {
   if (annualSnow >= 0.2) return { label:'Trace',          css:'trace-res',       icon:'\u274c' };
   if (annualSnow > 0.05) return { label:'Near Zero',      css:'near-zero',       icon:'\u274c' };
   if (annualSnow > 0)    return { label:'Virtually None', css:'virtually-none',  icon:'\u274c\u274c' };
+  // Zero annual snow: sub-tier by latitude if available
+  if (lat !== null && lat !== undefined) {
+    const absLat = Math.abs(lat);
+    if (absLat < 5)   return { label:'Equatorial',       css:'equatorial',      icon:'\u{1F334}\u{1F334}\u{1F334}' };
+    if (absLat < 10)  return { label:'Deep Tropical',    css:'deep-tropical',   icon:'\u{1F334}\u{1F334}' };
+    if (absLat < 15)  return { label:'Tropical',         css:'tropical',        icon:'\u{1F334}' };
+    if (absLat < 20)  return { label:'Outer Tropical',   css:'outer-tropical',  icon:'\u{1F335}' };
+    if (absLat < 23.5)return { label:'Tropical Margin',  css:'tropical-margin', icon:'\u2600\uFE0F' };
+    if (absLat < 30)  return { label:'Subtropical',      css:'subtropical',     icon:'\u2600\uFE0F' };
+  }
   return                         { label:'None',           css:'none',            icon:'\u274c\u274c' };
 }
 
@@ -956,8 +1111,8 @@ function getWindLabel(windSpeed, gustSpeed) {
   return                     { label: 'Calm',            icon: '' };
 }
 
-function getImpact(snow, annualSnow, recordCold, coldTemp, snowEquivalent, windSpeed, gustSpeed) {
-  const factor = getResilienceFactor(annualSnow);
+function getImpact(snow, annualSnow, recordCold, coldTemp, snowEquivalent, windSpeed, gustSpeed, lat) {
+  const factor = getResilienceFactor(annualSnow, lat);
   const coldMult = recordCold ? getColdMultiplier(coldTemp) : 1.0;
   const windMult = getWindMultiplier(windSpeed, gustSpeed);
   // Use snowEquivalent (precip-type-weighted) when available, otherwise raw snow
@@ -982,24 +1137,46 @@ function getImpact(snow, annualSnow, recordCold, coldTemp, snowEquivalent, windS
   else if (effective <= 0.01)   result = { level:'Trace',             css:'trace-impact',        desc:'Brief flurries spotted; ground remains clear. Social media buzz.',                     school:'No effect on schools.' };
   else if (effective <= 0.02)   result = { level:'Negligible',        css:'negligible',          desc:'No measurable impact; a few flakes spotted.',                                         school:'No effect on schools.' };
   else if (effective <= 0.05)   result = { level:'Minimal',           css:'minimal',             desc:'Light dusting on grassy surfaces; roads stay wet.',                                   school:'No effect on schools.' };
+  else if (effective <= 0.15)   result = { level:'Very Light',        css:'very-light',          desc:'Fine powder on lawns and cars; melts within hours.',                                  school:'No effect on schools.' };
+  else if (effective <= 0.3)    result = { level:'Light',             css:'light-impact',        desc:'Noticeable coating; brushed off cars; kids step outside to play.',                    school:'Schools open on normal schedule.' };
   else if (effective < 0.5)     result = { level:'Minor',             css:'minor',               desc:'Thin coating on cold surfaces; mostly cosmetic.',                                     school:'Schools open on normal schedule.' };
+  else if (effective < 1)       result = { level:'Mild',              css:'mild',                desc:'Slushy roads; morning ice on windshields; some slipping on sidewalks.',               school:'Schools open; watch for icy mornings.' };
   else if (effective < 2)       result = { level:'Moderate',          css:'moderate',            desc:'Slippery roads; cautious driving needed; possible school delays.',                    school:'1\u20132 hour delays likely; buses on snow routes.' };
+  else if (effective < 3)       result = { level:'Notable',           css:'notable-impact',      desc:'Roads white; commutes disrupted; plow crews out; first accidents reported.',          school:'2-hour delays common; some districts close.' };
   else if (effective < 4)       result = { level:'Considerable',      css:'considerable',        desc:'Accumulating roads; school delays/closures begin; plows deployed.',                   school:'2-hour delays or closures; some districts cancel.' };
+  else if (effective < 5.5)     result = { level:'High Impact',       css:'high-impact',         desc:'Travel hazardous; accidents rising; non-essential businesses slow to open.',          school:'Most schools delayed or closed.' };
   else if (effective < 7)       result = { level:'Significant',       css:'significant',         desc:'School closures likely; hazardous travel; businesses may close early.',               school:'Most schools closed; 1 snow day expected.' };
+  else if (effective < 8.5)     result = { level:'Grave',             css:'grave',               desc:'Road network failing; spinouts every mile; regional state of emergency likely.',       school:'All schools closed; hazardous for any travel.' };
   else if (effective < 10)      result = { level:'Severe',            css:'severe',              desc:'Most schools closed; roads dangerous; only essential travel advised.',                 school:'All schools closed; 1\u20132 snow days.' };
+  else if (effective < 12.5)    result = { level:'Oppressive',        css:'oppressive',          desc:'Travel bans; stores shelved empty; plow convoys struggle to keep up.',                school:'All schools closed; 2 snow days guaranteed.' };
   else if (effective < 15)      result = { level:'Major',             css:'major',               desc:'Travel shutdown; widespread closures; power outages possible.',                       school:'All schools closed; 2\u20133 snow days expected.' };
+  else if (effective < 17.5)    result = { level:'Dire',              css:'dire',                desc:'Stranded vehicles; roof loads concerning; emergency services overwhelmed.',          school:'Schools closed 3\u20134 days; some buildings lose heat.' };
   else if (effective < 20)      result = { level:'Crippling',         css:'crippling',           desc:'Region-wide shutdowns; emergency conditions; military/guard may deploy.',             school:'Schools closed 3\u20135 days; makeup days needed.' };
+  else if (effective < 25)      result = { level:'Devastating',       css:'devastating',         desc:'National Guard activated; power grid failures; roof collapses reported.',             school:'Schools closed 4\u20136 days; structural inspections needed.' };
   else if (effective < 30)      result = { level:'Extreme',           css:'extreme',             desc:'Life-threatening; complete transportation halt; roofs stressed.',                     school:'Schools closed 5\u20137 days; calendar restructured.' };
+  else if (effective < 36)      result = { level:'Cataclysmic',       css:'cataclysmic',         desc:'Regional disaster declaration; supply lines broken; hospitals on backup power.',      school:'Schools closed 1+ week; some buildings condemned.' };
   else if (effective < 42)      result = { level:'Catastrophic',      css:'catastrophic',        desc:'Infrastructure collapse; structural damage; days-long paralysis.',                    school:'Schools closed 1\u20132 weeks; buildings may be damaged.' };
+  else if (effective < 50)      result = { level:'Calamitous',        css:'calamitous',          desc:'Federal disaster; widespread roof collapses; fatalities mounting.',                   school:'Schools closed 2 weeks; many buildings unusable.' };
   else if (effective < 60)      result = { level:'City Paralysis',    css:'paralysis',           desc:'City completely buried; historic accumulation; week-long recovery.',                  school:'Schools closed 2\u20133 weeks; emergency shelters may use school buildings.' };
+  else if (effective < 70)      result = { level:'Historic',          css:'historic-impact',     desc:'Generational event; entire neighborhoods inaccessible; heavy machinery required.',    school:'Schools closed 3+ weeks; calendar irrecoverable.' };
   else if (effective < 80)      result = { level:'Apocalyptic',       css:'apocalyptic',         desc:'Beyond any recorded event; survival conditions; month-long recovery.',                school:'Schools closed indefinitely; semester may be lost.' };
+  else if (effective < 90)      result = { level:'Dystopian',         css:'dystopian',           desc:'Urban areas unreachable for weeks; supply drops by helicopter; mass evacuations.',    school:'Schools abandoned as infrastructure; no classes for months.' };
   else if (effective < 100)     result = { level:'Civilization Ender', css:'civilization-ender', desc:'Society stops functioning; National Guard overwhelmed; mass evacuations impossible.',  school:'School year canceled; buildings repurposed as emergency shelters.' };
+  else if (effective < 125)     result = { level:'Post-Civilization', css:'post-civilization',   desc:'Cities functionally erased; survivors cluster near heated infrastructure.',           school:'Education is a lost concept; survival schools only.' };
   else if (effective < 150)     result = { level:'Ice Age Onset',     css:'ice-age',             desc:'Record-shattering; multi-week digging out; structural collapses widespread.',         school:'Schools closed for remainder of semester; buildings condemned.' };
+  else if (effective < 175)     result = { level:'Glacial Epoch',     css:'glacial-epoch',       desc:'Snowpack resembles a glacier; cities entombed; no thaw expected this season.',        school:'Schools buried entirely; no recovery foreseen.' };
   else if (effective < 200)     result = { level:'Extinction Event',  css:'extinction',          desc:'Theoretically impossible; every building buried; survival mode for months.',          school:'Schools abandoned; no foreseeable reopening.' };
+  else if (effective < 250)     result = { level:'World-Ender',       css:'world-ender',         desc:'Regional biomes rewritten; permafrost layer forming; migration impossible.',          school:'Education system globally disrupted.' };
   else if (effective < 300)     result = { level:'Planet Killer',     css:'planet-killer',       desc:'Fantasy-level snowfall exceeding any physical model; entire regions uninhabitable.',  school:'Education system ceases to exist in the region.' };
+  else if (effective < 400)     result = { level:'Planetary Cryogenesis', css:'cryogenesis',     desc:'Continent-scale freeze-in; terrain unrecognizable; atmosphere too cold to hold water vapor.', school:'Humanity shelters underground.' };
   else if (effective < 500)     result = { level:'Biblical',          css:'biblical',            desc:'Noah\'s Ark but frozen; entire landscape unrecognizable for months.',                 school:'Concept of school no longer relevant.' };
+  else if (effective < 700)     result = { level:'Mythic Deluge',     css:'mythic-deluge',       desc:'Mountain ranges exceeded; entire climate zones displaced; legends written anew.',     school:'Only oral histories remain.' };
   else if (effective < 1000)    result = { level:'Snowpocalypse Omega', css:'omega',             desc:'Beyond any conceivable scenario; multiple stories of snow everywhere.',               school:'Civilization enters permanent winter.' };
-  else                          result = { level:'Heat Death of Snow', css:'heat-death',         desc:'The mathematical limit; snow ceases to have meaning as a unit of measure.',           school:'N/A \u2014 the concept of society no longer applies.' };
+  else if (effective < 1500)    result = { level:'Heat Death of Snow', css:'heat-death',         desc:'The mathematical limit; snow ceases to have meaning as a unit of measure.',           school:'N/A \u2014 the concept of society no longer applies.' };
+  else if (effective < 2500)    result = { level:'Big Freeze Singularity', css:'singularity',    desc:'Spacetime itself appears to curve around the snowpack; gravity anomalies reported.',   school:'N/A \u2014 observers no longer report back.' };
+  else if (effective < 5000)    result = { level:'Cosmic Snow Entropy', css:'cosmic-entropy',    desc:'Entropy reversed; snowflakes assemble from nothing; laws of thermodynamics violated.',school:'N/A \u2014 causality is optional.' };
+  else if (effective < 10000)   result = { level:'The White Void',    css:'white-void',          desc:'All matter converted to snow; light does not escape; time is silent.',                school:'N/A \u2014 nothing remembers school.' };
+  else                          result = { level:'Omega Point Frost', css:'omega-point',         desc:'Final unified snow state; universe achieves maximal crystallinity; no further events possible.', school:'N/A \u2014 the end of all narrative.' };
 
   result.effective = effective;
   result.factor = factor;
@@ -1143,7 +1320,7 @@ function showAC() {
   acIndex = -1;
   acList.innerHTML = matches.map((c, i) => {
     const rn = regionName(c.r);
-    const res = getResilienceLabel(c.snow);
+    const res = getResilienceLabel(c.snow, c.lat);
     return `<div class="ac-item" data-idx="${i}" data-name="${c.n}" data-pop="${c.pop}" data-region="${c.r||''}" data-snow="${c.snow}">
       <span>${esc(c.n)}</span>
       <span class="ac-meta">${formatPop(c.pop)} | ${rn || 'Non-RSI'} | ${res.icon} ${res.label}</span>
@@ -1215,7 +1392,7 @@ function formatPhasesSummary(phases) {
 function renderCityList() {
   generateBtn.disabled = !cities.length;
   cityListEl.innerHTML = cities.map((c,i) => {
-    const res = getResilienceLabel(c.annualSnow);
+    const res = getResilienceLabel(c.annualSnow, c.lat);
     const rn = regionName(c.region);
     const meta = [rn||'Non-RSI', `${res.icon} ${res.label}`].join(' | ');
     const coldTag = c.recordCold ? ` <span style="color:#93c5fd;font-size:0.8rem">\u{1F976} ${c.coldTemp}\u00b0F</span>` : '';
@@ -1486,8 +1663,8 @@ function generateProfile() {
   }
 
   const rows = sorted.map(c => {
-    const imp = getImpact(c.snow, c.annualSnow, c.recordCold, c.coldTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed);
-    const res = getResilienceLabel(c.annualSnow);
+    const imp = getImpact(c.snow, c.annualSnow, c.recordCold, c.coldTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat);
+    const res = getResilienceLabel(c.annualSnow, c.lat);
     const rn = regionName(c.region);
     const locTag = rn ? `<span style="opacity:0.35;font-size:0.7rem;margin-left:3px">${rn}</span>` : '';
 
@@ -1553,6 +1730,13 @@ function generateProfile() {
     </tr>`;
   }).join('');
 
+  // Peak impact across all cities (drives record-shattering fun facts)
+  const peakCity = sorted.reduce((best, c) => {
+    const imp = getImpact(c.snow, c.annualSnow, c.recordCold, c.coldTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat);
+    return imp.effective > best.eff ? { eff: imp.effective, level: imp.level, name: c.name } : best;
+  }, { eff: 0, level: 'None', name: '' });
+  const peakEffective = peakCity.eff;
+
   // Fun facts
   const ff = [];
   if (maxSnow >= 6) ff.push('The NWS would likely issue <strong>Winter Storm Warnings</strong> for the hardest-hit areas.');
@@ -1560,6 +1744,62 @@ function generateProfile() {
   if (maxSnow >= 24) ff.push('This rivals some of the strongest storms on record!');
   if (maxSnow >= 36) ff.push('A storm this intense would likely be studied by meteorologists for decades.');
   if (maxSnow >= 48) ff.push('This would shatter all-time snowfall records for most locations.');
+
+  // Record-shattering escalation (driven by peak effective impact at any city)
+  if (peakEffective >= 42) {
+    ff.push(`\u{1F6A8} <strong>Record-shattering:</strong> Peak impact in <strong>${esc(peakCity.name)}</strong> reaches <em>${peakCity.level}</em> \u2014 beyond the bounds of any modern storm record for that area.`);
+  }
+  if (peakEffective >= 60) {
+    ff.push('\u{1F3D9}\uFE0F <strong>City paralysis:</strong> At this intensity, entire metropolitan areas stop functioning for weeks \u2014 plow fleets are simply outnumbered by the snowpack.');
+  }
+  if (peakEffective >= 80) {
+    ff.push('\u{1F6D1} <strong>Apocalyptic threshold crossed:</strong> No recorded storm in human history has produced sustained impact at this level. Emergency protocols have no playbook.');
+  }
+  if (peakEffective >= 100) {
+    ff.push('\u{1F3DB}\uFE0F <strong>Civilization-ending territory:</strong> Infrastructure is not designed to survive this. Mass evacuation is impossible because the roads are gone.');
+  }
+  if (peakEffective >= 125) {
+    ff.push('\u{1F480} <strong>Post-civilization:</strong> Cities effectively cease to exist as functional units. Survivors cluster around heated infrastructure while the rest of the region is entombed.');
+  }
+  if (peakEffective >= 150) {
+    ff.push('\u{1F9CA} <strong>Ice Age onset:</strong> The snowpack no longer melts seasonally. Climate zones begin to shift southward on a geological timescale.');
+  }
+  if (peakEffective >= 175) {
+    ff.push('\u{1F3D4}\uFE0F <strong>Glacial epoch beginning:</strong> Snow compacts into ice. What was a city last week is now the bottom of a forming glacier.');
+  }
+  if (peakEffective >= 200) {
+    ff.push('\u2620\uFE0F <strong>Extinction-level snowfall:</strong> Theoretical atmospheric moisture limits are exceeded. Physicists consulted would describe this as "not physically possible."');
+  }
+  if (peakEffective >= 250) {
+    ff.push('\u{1F30D} <strong>World-ender:</strong> Regional biomes are rewritten in a single storm. Migration is impossible \u2014 there is nowhere warmer within reach.');
+  }
+  if (peakEffective >= 300) {
+    ff.push('\u{1F4A5} <strong>Planet-killer tier:</strong> Entire subcontinents are buried. Satellite imagery shows a single unbroken sheet of white where nations used to be.');
+  }
+  if (peakEffective >= 400) {
+    ff.push('\u2744\uFE0F <strong>Planetary cryogenesis:</strong> Continental freeze-in. The atmosphere becomes too cold to hold water vapor \u2014 the snow is falling faster than it can form.');
+  }
+  if (peakEffective >= 500) {
+    ff.push('\u{1F4D6} <strong>Biblical:</strong> Mentioned only in apocryphal weather texts and improperly translated prophecies. The term "blizzard" no longer applies.');
+  }
+  if (peakEffective >= 700) {
+    ff.push('\u{1F30B} <strong>Mythic Deluge:</strong> Mountain ranges are buried to their summits. Oral histories that survive will describe this as the Great Whitening.');
+  }
+  if (peakEffective >= 1000) {
+    ff.push('\u{1F52E} <strong>Heat Death of Snow:</strong> The inch ceases to function as a unit of measurement. Meteorologists switch to vertical meters, then kilometers, then give up.');
+  }
+  if (peakEffective >= 1500) {
+    ff.push('\u{1F300} <strong>Big Freeze Singularity:</strong> The snowpack has enough mass to warp local spacetime. Weather stations report impossible readings before falling silent.');
+  }
+  if (peakEffective >= 2500) {
+    ff.push('\u267E\uFE0F <strong>Cosmic Snow Entropy:</strong> Thermodynamics reverses. Snowflakes assemble spontaneously from empty atmosphere. Cause and effect become optional.');
+  }
+  if (peakEffective >= 5000) {
+    ff.push('\u26AA <strong>The White Void:</strong> All matter in the affected region has been converted to snow. Light does not escape the snowpack. Time appears to be paused.');
+  }
+  if (peakEffective >= 10000) {
+    ff.push('\u2728 <strong>Omega Point Frost:</strong> The universe achieves maximal crystallinity. This is the final unified snow state. No further meteorological events are possible. Thank you for using the Snow Event Profile Maker.');
+  }
 
   // Ice-specific fun facts
   if (hasIce && totalIce >= 0.25) ff.push('\u{1F9CA} <strong>Ice warning:</strong> Even a quarter inch of ice can snap power lines, coat roads, and cause widespread outages lasting days.');
@@ -1787,16 +2027,17 @@ const STORM_TEMPLATES = [
     { label:'Flurry Dud', centerSnow:[0.1,0.5],  fringe:[0,0.15], cityCount:[1,2],  coldChance:0.08, coldRange:[22,30] },
     { label:'Flurry Dud', centerSnow:[0.15,0.6], fringe:[0,0.2],  cityCount:[1,2],  coldChance:0.1,  coldRange:[20,30] },
   ]},
-  { type:'Omega Continental Blizzard Outbreak', regions:'all-continental', typicalDirections:['W_E','SW_NE'], windProfile:{base:[40,80],severe:[70,130],gustAdd:[25,55],chance:0.98}, precipMix:[
+  { type:'Omega Continental Blizzard Outbreak', regions:'all-continental', typicalDirections:['W_E','SW_NE'], windProfile:{base:[120,180],severe:[180,260],gustAdd:[60,120],chance:1.0}, precipMix:[
     { phases:[{type:'snow',pct:1.0}], weight:8 },
     { phases:[{type:'snow',pct:0.92},{type:'sleet',pct:0.08}], weight:1 },
     { phases:[{type:'snow',pct:0.93},{type:'ice',pct:0.07}], weight:1 },
   ], severities:[
-    { label:'Omega Continental Blizzard Outbreak', centerSnow:[240,360], fringe:[120,200], cityCount:[300,400], coldChance:0.97, coldRange:[-100,-30] },
-    { label:'Omega Continental Blizzard Outbreak', centerSnow:[280,420], fringe:[140,240], cityCount:[360,470], coldChance:0.98, coldRange:[-120,-40] },
-    { label:'Omega Continental Blizzard Outbreak', centerSnow:[320,500], fringe:[160,280], cityCount:[430,540], coldChance:0.99, coldRange:[-140,-50] },
-    { label:'Omega Continental Blizzard Outbreak', centerSnow:[360,580], fringe:[200,320], cityCount:[500,600], coldChance:0.99, coldRange:[-160,-65] },
-    { label:'Omega Continental Blizzard Outbreak', centerSnow:[400,700], fringe:[240,400], cityCount:[560,700], coldChance:1.0,  coldRange:[-200,-80] },
+    // Every severity level maxes out every scale — every city, every time, beyond Omega Point Frost.
+    { label:'Omega Continental Blizzard Outbreak', centerSnow:[8000,12000],  fringe:[4500,7000],   cityCount:[99999,99999], coldChance:1.0, coldRange:[-300,-150] },
+    { label:'Omega Continental Blizzard Outbreak', centerSnow:[12000,18000], fringe:[7000,11000],  cityCount:[99999,99999], coldChance:1.0, coldRange:[-400,-200] },
+    { label:'Omega Continental Blizzard Outbreak', centerSnow:[18000,28000], fringe:[11000,16000], cityCount:[99999,99999], coldChance:1.0, coldRange:[-500,-300] },
+    { label:'Omega Continental Blizzard Outbreak', centerSnow:[28000,45000], fringe:[16000,24000], cityCount:[99999,99999], coldChance:1.0, coldRange:[-700,-400] },
+    { label:'Omega Continental Blizzard Outbreak', centerSnow:[45000,80000], fringe:[24000,40000], cityCount:[99999,99999], coldChance:1.0, coldRange:[-999,-600] },
   ]},
 ];
 
@@ -1838,7 +2079,7 @@ stormTypeSelect.addEventListener('change', () => {
     severityNote.style.display = 'inline';
     severityNote.textContent = t.type === 'Flurry Dud'
       ? 'Below Minor — underwhelming, one random region'
-      : 'Beyond Extreme — maxes out every scale';
+      : 'Beyond Omega Point Frost — every city in the database, every time';
   } else {
     severitySelect.disabled = false;
     severitySelect.style.opacity = '1';
@@ -2044,7 +2285,7 @@ function generateRandomStorm() {
 
     // Continental mode: scale by resilience
     if (isAllContinental) {
-      const resFactor = getResilienceFactor(c.snow);
+      const resFactor = getResilienceFactor(c.snow, c.lat);
       const resScale = 0.15 + (resFactor / 2.2) * 1.15;
       totalAmount = Math.round(totalAmount * resScale * 10) / 10;
     }
@@ -2830,7 +3071,7 @@ function parseParagraphInput() {
         totalAmount = Math.round(((totalAmount + explicitInches) / 2) * 10) / 10;
       }
       if (isAllCont) {
-        const resFactor = getResilienceFactor(c.snow);
+        const resFactor = getResilienceFactor(c.snow, c.lat);
         const resScale = 0.15 + (resFactor / 2.2) * 1.15;
         totalAmount = Math.round(totalAmount * resScale * 10) / 10;
       }
