@@ -3,13 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Snow Event Profile Maker</title>
+<title>Snow Event Profile Maker 3.14</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
     background: linear-gradient(135deg, #0b1a3e 0%, #1a3a6e 40%, #2d5a8e 100%);
-    color: #e8edf5; min-height: 100vh; padding: 24px;
+    color: #e8edf5; min-height: 100vh;
+    padding: 24px 154px;
   }
   h1 { text-align: center; font-size: 2rem; margin-bottom: 4px; letter-spacing: -0.5px; }
   .subtitle { text-align: center; opacity: 0.6; font-size: 0.85rem; margin-bottom: 28px; }
@@ -348,12 +349,191 @@
   }
   .parse-summary.show { display: block; }
   .parse-summary strong { color: #93c5fd; }
+
+  /* Historic Reference list */
+  .historic-list {
+    display: flex; flex-direction: column; gap: 4px;
+    margin-top: 14px;
+    max-height: 640px; overflow-y: auto;
+    padding-right: 4px;
+  }
+  .historic-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 12px; border-radius: 8px;
+    background: rgba(0,0,0,0.22);
+    font-size: 0.88rem;
+  }
+  .historic-row .hs-rsi {
+    min-width: 52px; text-align: center;
+    padding: 4px 8px; border-radius: 6px;
+    font-weight: 700; font-size: 0.78rem;
+    color: #fff; flex-shrink: 0;
+  }
+  .historic-row .hs-cat {
+    min-width: 150px;
+    font-size: 0.7rem; opacity: 0.7;
+    letter-spacing: 0.6px; text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .historic-row .hs-name { flex: 1; line-height: 1.35; }
+  @media (max-width: 720px) {
+    .historic-row { flex-wrap: wrap; gap: 6px; }
+    .historic-row .hs-cat { min-width: 0; }
+  }
+
+  /* Color-coded tier ladders anchored to the viewport margins */
+  .tier-ladder {
+    position: fixed; top: 0; bottom: 0;
+    width: 138px; z-index: 5;
+    padding: 14px 8px;
+    overflow-y: auto;
+    font-size: 0.62rem;
+    line-height: 1.1;
+    background: rgba(8,14,32,0.55);
+    backdrop-filter: blur(6px);
+    display: flex; flex-direction: column; gap: 2px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.2) transparent;
+  }
+  .tier-ladder::-webkit-scrollbar { width: 6px; }
+  .tier-ladder::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+  .tier-ladder.left  { left: 0;  border-right: 1px solid rgba(255,255,255,0.08); }
+  .tier-ladder.right { right: 0; border-left:  1px solid rgba(255,255,255,0.08); }
+  .ladder-title {
+    text-align: center; font-size: 0.66rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 1.2px;
+    color: #e8edf5; opacity: 0.85;
+    padding: 4px 2px 8px; position: sticky; top: 0;
+    background: rgba(8,14,32,0.85); backdrop-filter: blur(4px);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    margin-bottom: 4px;
+  }
+  .ladder-item {
+    padding: 4px 6px; border-radius: 5px;
+    text-align: center; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    font-size: 0.62rem; letter-spacing: 0.2px;
+  }
+
+  /* Shrink ladders + content padding in lockstep on narrower viewports
+     so the ladders remain visible no matter the screen width. */
+  @media (max-width: 1180px) {
+    body { padding: 24px 124px; }
+    .tier-ladder { width: 112px; font-size: 0.58rem; padding: 12px 6px; }
+    .ladder-item { font-size: 0.58rem; padding: 3px 4px; }
+  }
+  @media (max-width: 900px) {
+    body { padding: 20px 92px; }
+    .tier-ladder { width: 84px; font-size: 0.54rem; padding: 10px 4px; }
+    .ladder-title { font-size: 0.58rem; letter-spacing: 0.8px; padding: 4px 2px 6px; }
+    .ladder-item { font-size: 0.54rem; padding: 3px 3px; border-radius: 4px; }
+  }
+  @media (max-width: 640px) {
+    body { padding: 16px 64px; }
+    .tier-ladder { width: 58px; padding: 8px 3px; }
+    .ladder-title { font-size: 0.5rem; letter-spacing: 0.3px; }
+    .ladder-item { font-size: 0.48rem; padding: 2px 2px; letter-spacing: 0; }
+  }
+  @media (max-width: 420px) {
+    body { padding: 14px 48px; }
+    .tier-ladder { width: 44px; padding: 6px 2px; }
+    .ladder-title { font-size: 0.46rem; }
+    .ladder-item { font-size: 0.44rem; padding: 2px 1px; }
+  }
 </style>
 </head>
 <body>
 <div class="snowflakes" id="snowflakes"></div>
+
+<aside class="tier-ladder left" id="resilienceLadder" aria-label="Resilience tier ladder">
+  <div class="ladder-title">Resilience</div>
+  <div class="ladder-item res-absolute-zero">Absolute Zero</div>
+  <div class="ladder-item res-cryogenic">Cryogenic</div>
+  <div class="ladder-item res-transcendent">Transcendent</div>
+  <div class="ladder-item res-mythic">Mythic</div>
+  <div class="ladder-item res-cosmic">Cosmic</div>
+  <div class="ladder-item res-legendary">Legendary</div>
+  <div class="ladder-item res-extreme-res">Extreme</div>
+  <div class="ladder-item res-elite">Elite</div>
+  <div class="ladder-item res-very-high-plus">Very High+</div>
+  <div class="ladder-item res-very-high">Very High</div>
+  <div class="ladder-item res-high-plus">High+</div>
+  <div class="ladder-item res-high">High</div>
+  <div class="ladder-item res-above-avg-plus">Above Avg+</div>
+  <div class="ladder-item res-above-avg">Above Avg</div>
+  <div class="ladder-item res-moderate-plus">Moderate+</div>
+  <div class="ladder-item res-moderate">Moderate</div>
+  <div class="ladder-item res-below-avg-plus">Below Avg+</div>
+  <div class="ladder-item res-below-avg">Below Avg</div>
+  <div class="ladder-item res-low-plus">Low+</div>
+  <div class="ladder-item res-low">Low</div>
+  <div class="ladder-item res-very-low-plus">Very Low+</div>
+  <div class="ladder-item res-very-low">Very Low</div>
+  <div class="ladder-item res-minimal-plus">Minimal+</div>
+  <div class="ladder-item res-minimal">Minimal</div>
+  <div class="ladder-item res-trace-res">Trace</div>
+  <div class="ladder-item res-near-zero">Near Zero</div>
+  <div class="ladder-item res-virtually-none">Virtually None</div>
+  <div class="ladder-item res-none">None</div>
+  <div class="ladder-item res-subtropical">Subtropical</div>
+  <div class="ladder-item res-tropical-margin">Tropical Margin</div>
+  <div class="ladder-item res-outer-tropical">Outer Tropical</div>
+  <div class="ladder-item res-tropical">Tropical</div>
+  <div class="ladder-item res-deep-tropical">Deep Tropical</div>
+  <div class="ladder-item res-equatorial">Equatorial</div>
+</aside>
+
+<aside class="tier-ladder right" id="impactLadder" aria-label="Impact tier ladder">
+  <div class="ladder-title">Impact</div>
+  <div class="ladder-item impact-omega-point">Omega Point Frost</div>
+  <div class="ladder-item impact-white-void">The White Void</div>
+  <div class="ladder-item impact-cosmic-entropy">Cosmic Snow Entropy</div>
+  <div class="ladder-item impact-singularity">Big Freeze Singularity</div>
+  <div class="ladder-item impact-heat-death">Heat Death of Snow</div>
+  <div class="ladder-item impact-omega">Snowpocalypse Omega</div>
+  <div class="ladder-item impact-mythic-deluge">Mythic Deluge</div>
+  <div class="ladder-item impact-biblical">Biblical</div>
+  <div class="ladder-item impact-cryogenesis">Planetary Cryogenesis</div>
+  <div class="ladder-item impact-planet-killer">Planet Killer</div>
+  <div class="ladder-item impact-world-ender">World-Ender</div>
+  <div class="ladder-item impact-extinction">Extinction Event</div>
+  <div class="ladder-item impact-glacial-epoch">Glacial Epoch</div>
+  <div class="ladder-item impact-ice-age">Ice Age Onset</div>
+  <div class="ladder-item impact-post-civilization">Post-Civilization</div>
+  <div class="ladder-item impact-civilization-ender">Civilization Ender</div>
+  <div class="ladder-item impact-dystopian">Dystopian</div>
+  <div class="ladder-item impact-apocalyptic">Apocalyptic</div>
+  <div class="ladder-item impact-historic-impact">Historic</div>
+  <div class="ladder-item impact-paralysis">City Paralysis</div>
+  <div class="ladder-item impact-calamitous">Calamitous</div>
+  <div class="ladder-item impact-catastrophic">Catastrophic</div>
+  <div class="ladder-item impact-cataclysmic">Cataclysmic</div>
+  <div class="ladder-item impact-extreme">Extreme</div>
+  <div class="ladder-item impact-devastating">Devastating</div>
+  <div class="ladder-item impact-crippling">Crippling</div>
+  <div class="ladder-item impact-dire">Dire</div>
+  <div class="ladder-item impact-major">Major</div>
+  <div class="ladder-item impact-oppressive">Oppressive</div>
+  <div class="ladder-item impact-severe">Severe</div>
+  <div class="ladder-item impact-grave">Grave</div>
+  <div class="ladder-item impact-significant">Significant</div>
+  <div class="ladder-item impact-high-impact">High Impact</div>
+  <div class="ladder-item impact-considerable">Considerable</div>
+  <div class="ladder-item impact-notable-impact">Notable</div>
+  <div class="ladder-item impact-moderate">Moderate</div>
+  <div class="ladder-item impact-mild">Mild</div>
+  <div class="ladder-item impact-minor">Minor</div>
+  <div class="ladder-item impact-light-impact">Light</div>
+  <div class="ladder-item impact-very-light">Very Light</div>
+  <div class="ladder-item impact-minimal">Minimal</div>
+  <div class="ladder-item impact-negligible">Negligible</div>
+  <div class="ladder-item impact-trace-impact">Trace</div>
+  <div class="ladder-item impact-dusting">Dusting</div>
+  <div class="ladder-item impact-none-impact">None</div>
+</aside>
+
 <div class="container">
-  <h1>Snow Event Profile Maker</h1>
+  <h1>Snow Event Profile Maker 3.14</h1>
   <p class="subtitle">Powered by real NOAA RSI methodology with location-based impact scaling</p>
 
   <div class="card">
@@ -367,7 +547,14 @@
     <div class="mode-toggle">
       <button type="button" class="mode-btn active" data-mode="detailed">Detailed Input</button>
       <button type="button" class="mode-btn" data-mode="paragraph">Paragraph Mode</button>
+      <button type="button" class="mode-btn" data-mode="historic">Historic Reference</button>
     </div>
+  </div>
+
+  <div class="card" id="historicCard" style="display:none">
+    <h2>Closest Historic Comparison &mdash; Storm Reference</h2>
+    <p class="paragraph-hint">Every storm used as a "Closest Historic Comparison" benchmark, sorted lowest to highest RSI. The simulator picks whichever of these is nearest to your generated storm's RSI score.</p>
+    <div class="historic-list" id="historicList"></div>
   </div>
 
   <div class="card" id="paragraphCard" style="display:none">
@@ -747,6 +934,327 @@ const RAW_CITIES = [
   ["Cordova, AK",2.6,null,231,60.54,-145.76],                  // Cosmic
   ["Telluride, CO",2.6,null,235,37.94,-107.81],                // Cosmic
   ["Taos Ski Valley, NM",0.06,null,230,36.60,-105.45],         // Cosmic
+
+  // ==================================================================
+  // ---- SOUTHERN HEMISPHERE EXPANSION (~470 cities) ----
+  // Match Northern Hemisphere density so Omega Continental Blizzard
+  // Outbreak (regions:'all-continental') reaches both hemispheres.
+  // All use null RSI region (outside the six eastern U.S. zones).
+  // ==================================================================
+
+  // ---- AUSTRALIA ----
+  ["Adelaide, Australia",1402,null,0,-34.93,138.60],["Gold Coast, Australia",679,null,0,-28.02,153.40],
+  ["Canberra, Australia",431,null,1,-35.28,149.13],["Newcastle, NSW, Australia",322,null,0,-32.93,151.78],
+  ["Wollongong, Australia",261,null,0,-34.42,150.90],["Hobart, Australia",240,null,2,-42.88,147.32],
+  ["Geelong, Australia",253,null,0.2,-38.15,144.36],["Townsville, Australia",180,null,0,-19.26,146.82],
+  ["Cairns, Australia",153,null,0,-16.92,145.77],["Toowoomba, Australia",136,null,0.5,-27.56,151.95],
+  ["Ballarat, Australia",109,null,1,-37.56,143.85],["Bendigo, Australia",100,null,0.3,-36.76,144.28],
+  ["Launceston, Australia",87,null,1,-41.44,147.14],["Mackay, Australia",80,null,0,-21.15,149.20],
+  ["Rockhampton, Australia",79,null,0,-23.38,150.51],["Bunbury, Australia",75,null,0,-33.33,115.64],
+  ["Bundaberg, Australia",71,null,0,-24.87,152.35],["Hervey Bay, Australia",54,null,0,-25.29,152.85],
+  ["Wagga Wagga, Australia",56,null,1,-35.12,147.37],["Coffs Harbour, Australia",71,null,0,-30.30,153.12],
+  ["Gladstone, Australia",46,null,0,-23.85,151.26],["Mildura, Australia",54,null,0,-34.20,142.15],
+  ["Tamworth, Australia",42,null,0.3,-31.09,150.93],["Orange, NSW, Australia",40,null,5,-33.28,149.10],
+  ["Dubbo, Australia",38,null,0.2,-32.24,148.61],["Port Macquarie, Australia",47,null,0,-31.43,152.91],
+  ["Geraldton, Australia",38,null,0,-28.77,114.61],["Albany, Australia",34,null,0.5,-35.02,117.88],
+  ["Kalgoorlie, Australia",30,null,0,-30.75,121.47],["Broken Hill, Australia",17,null,0,-31.95,141.47],
+  ["Katoomba, Australia",8,null,6,-33.71,150.31],["Thredbo, Australia",0.5,null,80,-36.50,148.30],
+  ["Perisher, Australia",0.2,null,95,-36.41,148.41],["Mount Hotham, Australia",0.3,null,120,-36.98,147.13],
+  ["Falls Creek, Australia",0.3,null,110,-36.88,147.29],["Alice Springs, Australia",26,null,0,-23.70,133.88],
+  ["Whyalla, Australia",22,null,0,-33.04,137.58],["Port Lincoln, Australia",16,null,0,-34.73,135.86],
+  ["Mount Gambier, Australia",30,null,0.5,-37.83,140.78],["Warrnambool, Australia",35,null,0.1,-38.38,142.49],
+  ["Devonport, Australia",27,null,1,-41.18,146.36],["Burnie, Australia",19,null,0.5,-41.05,145.90],
+  ["Shepparton, Australia",52,null,0.3,-36.38,145.40],["Traralgon, Australia",27,null,1,-38.20,146.54],
+  ["Griffith, Australia",21,null,0.5,-34.29,146.05],["Lismore, Australia",28,null,0,-28.82,153.28],
+  ["Armidale, Australia",25,null,3,-30.52,151.67],["Goulburn, Australia",24,null,2,-34.75,149.72],
+  ["Bathurst, Australia",44,null,3,-33.42,149.58],["Maitland, Australia",85,null,0,-32.73,151.55],
+  ["Cessnock, Australia",22,null,0,-32.84,151.35],["Mudgee, Australia",11,null,1,-32.60,149.59],
+  ["Taree, Australia",26,null,0,-31.90,152.46],["Grafton, Australia",19,null,0,-29.69,152.93],
+  ["Ballina, Australia",26,null,0,-28.87,153.57],["Ipswich, Australia",213,null,0,-27.61,152.76],
+  ["Logan City, Australia",345,null,0,-27.64,153.11],["Caloundra, Australia",50,null,0,-26.80,153.13],
+  ["Maroochydore, Australia",19,null,0,-26.66,153.10],["Noosa Heads, Australia",10,null,0,-26.40,153.09],
+  ["Gympie, Australia",22,null,0,-26.19,152.67],["Maryborough, QLD, Australia",27,null,0,-25.54,152.70],
+  ["Mount Isa, Australia",19,null,0,-20.72,139.49],["Karratha, Australia",17,null,0,-20.74,116.85],
+  ["Port Hedland, Australia",14,null,0,-20.31,118.58],["Broome, Australia",14,null,0,-17.96,122.24],
+  ["Katherine, Australia",10,null,0,-14.46,132.27],["Esperance, Australia",14,null,0,-33.86,121.89],
+  ["Busselton, Australia",40,null,0,-33.65,115.35],["Mandurah, Australia",91,null,0,-32.53,115.74],
+  ["Rockingham, Australia",140,null,0,-32.28,115.73],["Fremantle, Australia",32,null,0,-32.06,115.75],
+  ["Nowra, Australia",38,null,0.5,-34.88,150.60],["Queanbeyan, Australia",40,null,2,-35.36,149.23],
+
+  // ---- NEW ZEALAND ----
+  ["Wellington, New Zealand",215,null,0.5,-41.29,174.78],["Christchurch, New Zealand",377,null,3,-43.53,172.64],
+  ["Hamilton, New Zealand",176,null,0,-37.78,175.28],["Tauranga, New Zealand",144,null,0,-37.69,176.17],
+  ["Napier, New Zealand",65,null,0.1,-39.49,176.92],["Dunedin, New Zealand",135,null,5,-45.88,170.50],
+  ["Palmerston North, New Zealand",85,null,0.5,-40.35,175.61],["Nelson, New Zealand",53,null,0.5,-41.27,173.28],
+  ["Rotorua, New Zealand",58,null,0.5,-38.14,176.25],["Whangarei, New Zealand",54,null,0,-35.72,174.32],
+  ["New Plymouth, New Zealand",59,null,0,-39.06,174.08],["Invercargill, New Zealand",57,null,5,-46.41,168.35],
+  ["Whanganui, New Zealand",42,null,0,-39.93,175.05],["Gisborne, New Zealand",37,null,0,-38.66,178.02],
+  ["Queenstown, New Zealand",15,null,25,-45.03,168.66],["Timaru, New Zealand",29,null,2,-44.40,171.25],
+  ["Blenheim, New Zealand",26,null,1,-41.51,173.96],["Masterton, New Zealand",21,null,1,-40.96,175.66],
+  ["Hastings, New Zealand",50,null,0.1,-39.64,176.84],["Oamaru, New Zealand",14,null,2,-45.10,170.97],
+  ["Ashburton, New Zealand",20,null,2,-43.90,171.75],["Levin, New Zealand",20,null,0.3,-40.63,175.27],
+  ["Porirua, New Zealand",60,null,0.3,-41.14,174.84],["Lower Hutt, New Zealand",112,null,0.3,-41.21,174.91],
+  ["Upper Hutt, New Zealand",44,null,0.5,-41.12,175.07],["Taupo, New Zealand",27,null,3,-38.69,176.07],
+  ["Whakatane, New Zealand",16,null,0,-37.96,176.99],["Cambridge, New Zealand",19,null,0.3,-37.89,175.47],
+  ["Tokoroa, New Zealand",14,null,1,-38.22,175.87],["Wanaka, New Zealand",9,null,30,-44.70,169.14],
+
+  // ---- PACIFIC ISLANDS ----
+  ["Nadi, Fiji",42,null,0,-17.78,177.42],["Lautoka, Fiji",52,null,0,-17.61,177.45],
+  ["Nukualofa, Tonga",23,null,0,-21.14,-175.20],["Neiafu, Tonga",4,null,0,-18.65,-173.98],
+  ["Port Vila, Vanuatu",51,null,0,-17.74,168.31],["Luganville, Vanuatu",15,null,0,-15.52,167.17],
+  ["Noumea, New Caledonia",94,null,0,-22.28,166.45],["Honiara, Solomon Islands",85,null,0,-9.43,159.96],
+  ["Lae, Papua New Guinea",100,null,0,-6.73,146.99],["Mount Hagen, Papua New Guinea",46,null,0,-5.83,144.30],
+  ["Madang, Papua New Guinea",29,null,0,-5.22,145.79],["Goroka, Papua New Guinea",19,null,0,-6.08,145.38],
+  ["Kokopo, Papua New Guinea",26,null,0,-4.35,152.27],["Wewak, Papua New Guinea",25,null,0,-3.55,143.63],
+  ["Rabaul, Papua New Guinea",4,null,0,-4.20,152.16],["Avarua, Cook Islands",5,null,0,-21.21,-159.78],
+  ["Alofi, Niue",0.6,null,0,-19.06,-169.91],["Funafuti, Tuvalu",6,null,0,-8.52,179.20],
+  ["Hanga Roa, Easter Island",7,null,0,-27.15,-109.43],["Yaren, Nauru",1,null,0,-0.55,166.92],
+  ["Pago Pago, American Samoa",3.6,null,0,-14.28,-170.70],
+
+  // ---- INDONESIA (Southern Hemisphere) ----
+  ["Bandung, Indonesia",2444,null,0,-6.91,107.61],["Makassar, Indonesia",1653,null,0,-5.15,119.43],
+  ["Palembang, Indonesia",1668,null,0,-2.99,104.76],["Yogyakarta, Indonesia",413,null,0,-7.80,110.37],
+  ["Malang, Indonesia",843,null,0,-7.98,112.62],["Semarang, Indonesia",1653,null,0,-6.97,110.42],
+  ["Bogor, Indonesia",1081,null,0,-6.60,106.80],["Tangerang, Indonesia",1798,null,0,-6.18,106.63],
+  ["Bekasi, Indonesia",2564,null,0,-6.24,106.99],["Depok, Indonesia",2056,null,0,-6.40,106.82],
+  ["Surakarta, Indonesia",522,null,0,-7.57,110.82],["Padang, Indonesia",909,null,0,-0.95,100.35],
+  ["Kupang, Indonesia",425,null,0,-10.17,123.61],["Mataram, Indonesia",441,null,0,-8.58,116.12],
+  ["Jayapura, Indonesia",315,null,0,-2.53,140.72],["Ambon, Indonesia",331,null,0,-3.66,128.19],
+  ["Kendari, Indonesia",345,null,0,-3.97,122.53],["Sorong, Indonesia",254,null,0,-0.86,131.25],
+  ["Jambi, Indonesia",606,null,0,-1.60,103.61],["Bengkulu, Indonesia",351,null,0,-3.80,102.27],
+  ["Palangkaraya, Indonesia",294,null,0,-2.21,113.91],["Tasikmalaya, Indonesia",717,null,0,-7.33,108.22],
+  ["Cirebon, Indonesia",316,null,0,-6.71,108.56],["Sukabumi, Indonesia",332,null,0,-6.92,106.93],
+  ["Tegal, Indonesia",276,null,0,-6.87,109.14],["Pekalongan, Indonesia",307,null,0,-6.89,109.67],
+  ["Magelang, Indonesia",122,null,0,-7.47,110.22],["Kediri, Indonesia",287,null,0,-7.82,112.01],
+  ["Madiun, Indonesia",172,null,0,-7.63,111.52],["Probolinggo, Indonesia",230,null,0,-7.75,113.22],
+  ["Pasuruan, Indonesia",195,null,0,-7.65,112.91],["Jember, Indonesia",332,null,0,-8.16,113.70],
+  ["Banyuwangi, Indonesia",110,null,0,-8.22,114.37],["Mamuju, Indonesia",134,null,0,-2.68,118.88],
+  ["Ende, Indonesia",87,null,0,-8.84,121.66],["Maumere, Indonesia",77,null,0,-8.61,122.22],
+  ["Labuan Bajo, Indonesia",7,null,0,-8.49,119.87],["Manokwari, Indonesia",161,null,0,-0.86,134.08],
+  ["Waingapu, Indonesia",54,null,0,-9.66,120.27],["Palu, Indonesia",386,null,0,-0.89,119.88],
+  ["Pontianak, Indonesia",660,null,0,-0.02,109.32],["Samarinda, Indonesia",830,null,0,-0.50,117.15],
+  ["Balikpapan, Indonesia",693,null,0,-1.27,116.83],["Banjarmasin, Indonesia",700,null,0,-3.32,114.59],
+  ["Dili, East Timor",281,null,0,-8.56,125.56],["Baucau, East Timor",17,null,0,-8.47,126.46],
+
+  // ---- BRAZIL (additional, all south of equator) ----
+  ["Curitiba, Brazil",1963,null,0,-25.40,-49.27],["Porto Alegre, Brazil",1488,null,0,-30.03,-51.22],
+  ["Goiania, Brazil",1555,null,0,-16.68,-49.25],["Belo Horizonte, Brazil",2721,null,0,-19.92,-43.93],
+  ["Campinas, Brazil",1213,null,0,-22.91,-47.06],["Santos, Brazil",433,null,0,-23.96,-46.33],
+  ["Guarulhos, Brazil",1392,null,0,-23.45,-46.53],["Sao Bernardo do Campo, Brazil",844,null,0,-23.69,-46.55],
+  ["Osasco, Brazil",699,null,0,-23.53,-46.79],["Nova Iguacu, Brazil",821,null,0,-22.76,-43.45],
+  ["Duque de Caxias, Brazil",918,null,0,-22.78,-43.31],["Niteroi, Brazil",515,null,0,-22.88,-43.10],
+  ["Sao Goncalo, Brazil",1091,null,0,-22.83,-43.05],["Campo Grande, Brazil",906,null,0,-20.44,-54.65],
+  ["Cuiaba, Brazil",624,null,0,-15.60,-56.10],["Maceio, Brazil",1025,null,0,-9.65,-35.74],
+  ["Natal, Brazil",890,null,0,-5.79,-35.21],["Teresina, Brazil",868,null,0,-5.09,-42.80],
+  ["Sao Luis, Brazil",1108,null,0,-2.52,-44.30],["Joao Pessoa, Brazil",817,null,0,-7.12,-34.85],
+  ["Campina Grande, Brazil",413,null,0,-7.23,-35.88],["Aracaju, Brazil",664,null,0,-10.91,-37.07],
+  ["Vitoria, Brazil",365,null,0,-20.32,-40.34],["Florianopolis, Brazil",508,null,0,-27.59,-48.55],
+  ["Londrina, Brazil",575,null,0,-23.31,-51.16],["Maringa, Brazil",430,null,0,-23.42,-51.94],
+  ["Joinville, Brazil",597,null,0,-26.30,-48.85],["Blumenau, Brazil",361,null,0,-26.92,-49.07],
+  ["Caxias do Sul, Brazil",517,null,0.1,-29.17,-51.18],["Pelotas, Brazil",343,null,0.1,-31.76,-52.33],
+  ["Santa Maria, Brazil",282,null,0.1,-29.68,-53.81],["Uberlandia, Brazil",691,null,0,-18.92,-48.28],
+  ["Ribeirao Preto, Brazil",711,null,0,-21.17,-47.81],["Uberaba, Brazil",337,null,0,-19.75,-47.93],
+  ["Juiz de Fora, Brazil",573,null,0,-21.76,-43.35],["Montes Claros, Brazil",414,null,0,-16.74,-43.86],
+  ["Piracicaba, Brazil",407,null,0,-22.73,-47.65],["Sao Jose dos Campos, Brazil",721,null,0,-23.18,-45.88],
+  ["Sorocaba, Brazil",687,null,0,-23.50,-47.46],["Bauru, Brazil",379,null,0,-22.32,-49.07],
+  ["Jundiai, Brazil",423,null,0,-23.19,-46.88],["Sao Jose do Rio Preto, Brazil",469,null,0,-20.82,-49.38],
+  ["Feira de Santana, Brazil",619,null,0,-12.26,-38.97],["Ponta Grossa, Brazil",355,null,0,-25.09,-50.16],
+  ["Anapolis, Brazil",391,null,0,-16.32,-48.95],["Palmas, Brazil",306,null,0,-10.20,-48.32],
+  ["Rio Branco, Brazil",413,null,0,-9.97,-67.82],["Porto Velho, Brazil",548,null,0,-8.76,-63.90],
+  ["Macapa, Brazil",512,null,0,-0.03,-51.07],["Aparecida de Goiania, Brazil",578,null,0,-16.82,-49.25],
+  ["Ananindeua, Brazil",535,null,0,-1.37,-48.37],["Sao Vicente, Brazil",364,null,0,-23.96,-46.39],
+  ["Betim, Brazil",439,null,0,-19.97,-44.20],["Canoas, Brazil",346,null,0,-29.92,-51.18],
+  ["Contagem, Brazil",668,null,0,-19.93,-44.05],["Diadema, Brazil",423,null,0,-23.69,-46.62],
+  ["Olinda, Brazil",378,null,0,-8.01,-34.86],["Volta Redonda, Brazil",273,null,0,-22.52,-44.10],
+
+  // ---- ARGENTINA ----
+  ["Cordoba, Argentina",1455,null,0.5,-31.42,-64.18],["Rosario, Argentina",1276,null,0.1,-32.95,-60.64],
+  ["Mendoza, Argentina",937,null,1,-32.89,-68.84],["La Plata, Argentina",699,null,0,-34.92,-57.95],
+  ["San Miguel de Tucuman, Argentina",800,null,0,-26.81,-65.21],["Mar del Plata, Argentina",618,null,0.3,-38.00,-57.56],
+  ["Salta, Argentina",535,null,0,-24.79,-65.41],["Santa Fe, Argentina",415,null,0,-31.64,-60.71],
+  ["San Juan, Argentina",447,null,0.2,-31.54,-68.54],["Resistencia, Argentina",387,null,0,-27.45,-58.99],
+  ["Neuquen, Argentina",337,null,1,-38.95,-68.06],["Formosa, Argentina",234,null,0,-26.19,-58.17],
+  ["Posadas, Argentina",324,null,0,-27.37,-55.90],["San Salvador de Jujuy, Argentina",305,null,0.1,-24.19,-65.30],
+  ["San Luis, Argentina",204,null,0,-33.30,-66.34],["Catamarca, Argentina",201,null,0.1,-28.47,-65.79],
+  ["La Rioja, Argentina",181,null,0,-29.43,-66.85],["Comodoro Rivadavia, Argentina",177,null,2,-45.86,-67.50],
+  ["Bahia Blanca, Argentina",301,null,0.5,-38.72,-62.27],["Santiago del Estero, Argentina",253,null,0,-27.79,-64.27],
+  ["Parana, Argentina",247,null,0,-31.74,-60.51],["Concordia, Argentina",170,null,0,-31.39,-58.02],
+  ["Rio Cuarto, Argentina",158,null,0.3,-33.13,-64.35],["Santa Rosa, Argentina",103,null,1,-36.62,-64.29],
+  ["Tandil, Argentina",123,null,1,-37.32,-59.13],["Bariloche, Argentina",113,null,40,-41.15,-71.31],
+  ["Ushuaia, Argentina",83,null,30,-54.81,-68.30],["Rio Gallegos, Argentina",98,null,12,-51.62,-69.22],
+  ["El Calafate, Argentina",25,null,25,-50.34,-72.28],["Puerto Madryn, Argentina",91,null,1,-42.77,-65.04],
+  ["Trelew, Argentina",99,null,1,-43.25,-65.30],["Viedma, Argentina",81,null,0.5,-40.81,-62.99],
+  ["Junin, Argentina",90,null,0.3,-34.59,-60.95],["Olavarria, Argentina",95,null,0.5,-36.89,-60.32],
+  ["Pergamino, Argentina",104,null,0.2,-33.89,-60.57],["Rafaela, Argentina",102,null,0.1,-31.25,-61.49],
+  ["San Rafael, Argentina",119,null,1,-34.62,-68.34],["Puerto Iguazu, Argentina",82,null,0,-25.60,-54.57],
+  ["Esquel, Argentina",33,null,20,-42.91,-71.32],["El Bolson, Argentina",19,null,25,-41.97,-71.54],
+  ["Tres Arroyos, Argentina",57,null,1,-38.38,-60.28],["Necochea, Argentina",89,null,0.5,-38.55,-58.74],
+  ["Villa Maria, Argentina",80,null,0.2,-32.41,-63.24],["Villa Mercedes, Argentina",97,null,0.3,-33.68,-65.46],
+  ["Goya, Argentina",77,null,0,-29.14,-59.26],["Reconquista, Argentina",74,null,0,-29.14,-59.65],
+
+  // ---- CHILE ----
+  ["Valparaiso, Chile",296,null,0,-33.04,-71.62],["Vina del Mar, Chile",334,null,0,-33.02,-71.55],
+  ["Concepcion, Chile",223,null,0.5,-36.83,-73.05],["Antofagasta, Chile",391,null,0,-23.65,-70.40],
+  ["Temuco, Chile",282,null,3,-38.73,-72.59],["Rancagua, Chile",241,null,0,-34.17,-70.74],
+  ["Talca, Chile",220,null,0,-35.43,-71.66],["Arica, Chile",221,null,0,-18.47,-70.30],
+  ["Iquique, Chile",191,null,0,-20.22,-70.14],["La Serena, Chile",221,null,0,-29.90,-71.25],
+  ["Copiapo, Chile",158,null,0,-27.37,-70.33],["Puerto Montt, Chile",245,null,1,-41.47,-72.94],
+  ["Punta Arenas, Chile",132,null,15,-53.16,-70.91],["Valdivia, Chile",166,null,0.5,-39.81,-73.25],
+  ["Osorno, Chile",162,null,1,-40.57,-73.13],["Chillan, Chile",185,null,2,-36.61,-72.11],
+  ["Los Angeles, Chile",202,null,2,-37.47,-72.35],["Calama, Chile",170,null,0,-22.46,-68.93],
+  ["Curico, Chile",150,null,0,-34.98,-71.24],["San Antonio, Chile",91,null,0,-33.59,-71.61],
+  ["Quilpue, Chile",155,null,0,-33.04,-71.44],["Coquimbo, Chile",228,null,0,-29.96,-71.34],
+  ["Castro, Chile",44,null,1,-42.48,-73.77],["Ancud, Chile",39,null,0.5,-41.87,-73.82],
+  ["Coihaique, Chile",58,null,18,-45.57,-72.07],["Puerto Natales, Chile",20,null,30,-51.73,-72.51],
+  ["Porvenir, Chile",5,null,25,-53.30,-70.37],["Melipilla, Chile",110,null,0,-33.69,-71.22],
+  ["Quillota, Chile",90,null,0,-32.88,-71.25],["Los Andes, Chile",68,null,1,-32.83,-70.60],
+  ["San Felipe, Chile",76,null,0.5,-32.75,-70.72],["Angol, Chile",54,null,1,-37.80,-72.71],
+  ["Linares, Chile",94,null,0.5,-35.85,-71.60],["Parral, Chile",39,null,0.5,-36.14,-71.82],
+
+  // ---- URUGUAY, PARAGUAY, BOLIVIA, PERU, ECUADOR ----
+  ["Salto, Uruguay",108,null,0,-31.38,-57.96],["Paysandu, Uruguay",77,null,0,-32.32,-58.08],
+  ["Las Piedras, Uruguay",95,null,0,-34.72,-56.23],["Rivera, Uruguay",78,null,0,-30.90,-55.55],
+  ["Maldonado, Uruguay",62,null,0,-34.91,-54.96],["Tacuarembo, Uruguay",55,null,0,-31.72,-55.98],
+  ["Melo, Uruguay",51,null,0,-32.37,-54.18],["Mercedes, Uruguay",41,null,0,-33.26,-58.03],
+  ["Minas, Uruguay",38,null,0,-34.38,-55.24],["Punta del Este, Uruguay",9,null,0,-34.97,-54.95],
+  ["Ciudad del Este, Paraguay",302,null,0,-25.51,-54.61],["San Lorenzo, Paraguay",269,null,0,-25.34,-57.51],
+  ["Luque, Paraguay",283,null,0,-25.27,-57.48],["Capiata, Paraguay",225,null,0,-25.35,-57.44],
+  ["Lambare, Paraguay",167,null,0,-25.35,-57.60],["Fernando de la Mora, Paraguay",165,null,0,-25.32,-57.54],
+  ["Encarnacion, Paraguay",131,null,0,-27.33,-55.87],["Pedro Juan Caballero, Paraguay",100,null,0,-22.54,-55.73],
+  ["Concepcion, Paraguay",78,null,0,-23.41,-57.43],
+  ["Santa Cruz de la Sierra, Bolivia",1722,null,0,-17.78,-63.18],["El Alto, Bolivia",943,null,8,-16.52,-68.16],
+  ["Cochabamba, Bolivia",630,null,2,-17.39,-66.16],["Oruro, Bolivia",264,null,15,-17.98,-67.11],
+  ["Sucre, Bolivia",238,null,3,-19.05,-65.26],["Tarija, Bolivia",205,null,0,-21.53,-64.73],
+  ["Potosi, Bolivia",176,null,20,-19.58,-65.75],["Trinidad, Bolivia",107,null,0,-14.83,-64.90],
+  ["Riberalta, Bolivia",89,null,0,-10.99,-66.09],["Montero, Bolivia",145,null,0,-17.34,-63.25],
+  ["Quillacollo, Bolivia",137,null,1,-17.40,-66.28],["Yacuiba, Bolivia",92,null,0,-22.02,-63.68],
+  ["Arequipa, Peru",1080,null,0,-16.41,-71.54],["Trujillo, Peru",919,null,0,-8.11,-79.03],
+  ["Chiclayo, Peru",600,null,0,-6.77,-79.84],["Piura, Peru",484,null,0,-5.19,-80.63],
+  ["Iquitos, Peru",438,null,0,-3.75,-73.25],["Cusco, Peru",428,null,6,-13.52,-71.98],
+  ["Chimbote, Peru",371,null,0,-9.08,-78.59],["Huancayo, Peru",376,null,2,-12.07,-75.21],
+  ["Tacna, Peru",319,null,0,-18.01,-70.25],["Puno, Peru",140,null,10,-15.84,-70.03],
+  ["Ica, Peru",282,null,0,-14.07,-75.73],["Pucallpa, Peru",310,null,0,-8.38,-74.56],
+  ["Tarapoto, Peru",177,null,0,-6.48,-76.37],["Juliaca, Peru",225,null,10,-15.50,-70.13],
+  ["Huanuco, Peru",196,null,0,-9.93,-76.24],["Ayacucho, Peru",181,null,1,-13.16,-74.22],
+  ["Cajamarca, Peru",218,null,0.2,-7.16,-78.52],["Cerro de Pasco, Peru",66,null,20,-10.68,-76.26],
+  ["Cuenca, Ecuador",597,null,0,-2.90,-79.00],["Machala, Ecuador",245,null,0,-3.26,-79.96],
+  ["Loja, Ecuador",201,null,1,-3.99,-79.20],["Manta, Ecuador",258,null,0,-0.96,-80.71],
+  ["Santo Domingo, Ecuador",458,null,0,-0.25,-79.17],["Riobamba, Ecuador",156,null,2,-1.67,-78.65],
+  ["Portoviejo, Ecuador",223,null,0,-1.05,-80.45],["Quevedo, Ecuador",173,null,0,-1.03,-79.47],
+  ["Ambato, Ecuador",178,null,1,-1.25,-78.62],["Latacunga, Ecuador",98,null,2,-0.94,-78.62],
+
+  // ---- SOUTHERN AFRICA ----
+  ["Pretoria, South Africa",741,null,0.5,-25.70,28.20],["Port Elizabeth, South Africa",312,null,0,-33.96,25.60],
+  ["Bloemfontein, South Africa",256,null,1,-29.10,26.20],["East London, South Africa",267,null,0,-33.00,27.90],
+  ["Pietermaritzburg, South Africa",451,null,0,-29.60,30.40],["Polokwane, South Africa",130,null,0,-23.90,29.45],
+  ["Nelspruit, South Africa",110,null,0,-25.50,30.97],["Rustenburg, South Africa",103,null,0,-25.65,27.24],
+  ["Kimberley, South Africa",225,null,0,-28.74,24.77],["Potchefstroom, South Africa",128,null,0,-26.72,27.10],
+  ["George, South Africa",157,null,0,-33.96,22.46],["Oudtshoorn, South Africa",74,null,0,-33.60,22.20],
+  ["Upington, South Africa",75,null,0,-28.45,21.26],["Welkom, South Africa",211,null,0,-27.97,26.74],
+  ["Mthatha, South Africa",137,null,0,-31.59,28.79],["Richards Bay, South Africa",60,null,0,-28.78,32.04],
+  ["Newcastle, South Africa",289,null,0.5,-27.77,29.93],["Vereeniging, South Africa",377,null,1,-26.67,27.93],
+  ["Ladysmith, South Africa",65,null,1,-28.55,29.78],["Benoni, South Africa",605,null,0.5,-26.19,28.32],
+  ["Vanderbijlpark, South Africa",104,null,1,-26.71,27.84],["Springs, South Africa",236,null,0.5,-26.25,28.44],
+  ["Boksburg, South Africa",260,null,0.5,-26.21,28.26],["Germiston, South Africa",255,null,0.5,-26.22,28.17],
+  ["Centurion, South Africa",236,null,0.5,-25.86,28.19],["Soweto, South Africa",1271,null,0.3,-26.27,27.86],
+  ["Midrand, South Africa",87,null,0.3,-25.99,28.13],["Sandton, South Africa",222,null,0.3,-26.11,28.05],
+  ["Randburg, South Africa",337,null,0.3,-26.10,28.00],["Stellenbosch, South Africa",155,null,0,-33.93,18.86],
+  ["Paarl, South Africa",191,null,0,-33.73,18.96],["Worcester, South Africa",127,null,0,-33.64,19.45],
+  ["Hermanus, South Africa",32,null,0,-34.42,19.23],["Knysna, South Africa",68,null,0,-34.04,23.04],
+  ["Plettenberg Bay, South Africa",35,null,0,-34.05,23.37],["Mossel Bay, South Africa",59,null,0,-34.18,22.15],
+  ["Beaufort West, South Africa",34,null,0,-32.36,22.58],["Kroonstad, South Africa",103,null,0,-27.65,27.23],
+  ["Sasolburg, South Africa",87,null,1,-26.82,27.83],["Klerksdorp, South Africa",179,null,1,-26.85,26.67],
+  ["Witbank, South Africa",108,null,1,-25.88,29.20],["Uitenhage, South Africa",103,null,0,-33.76,25.40],
+  ["Bethlehem, South Africa",65,null,1,-28.23,28.30],["Empangeni, South Africa",56,null,0,-28.75,31.89],
+  ["Queenstown, South Africa",105,null,0.5,-31.90,26.88],
+  ["Maseru, Lesotho",330,null,1,-29.32,27.48],["Leribe, Lesotho",47,null,1,-28.87,28.05],
+  ["Mafeteng, Lesotho",57,null,1,-29.82,27.25],["Teyateyaneng, Lesotho",48,null,1,-29.15,27.74],
+  ["Mokhotlong, Lesotho",9,null,12,-29.29,29.07],["Thaba-Tseka, Lesotho",12,null,10,-29.53,28.60],
+  ["Butha-Buthe, Lesotho",12,null,5,-28.77,28.25],["Qacha's Nek, Lesotho",7,null,8,-30.12,28.68],
+  ["Mbabane, Eswatini",95,null,0.5,-26.30,31.14],["Manzini, Eswatini",110,null,0,-26.49,31.37],
+  ["Big Bend, Eswatini",10,null,0,-26.82,31.93],["Nhlangano, Eswatini",9,null,0,-27.11,31.20],
+  ["Siteki, Eswatini",6,null,0,-26.45,31.95],["Lobamba, Eswatini",5,null,0.5,-26.47,31.20],
+  ["Windhoek, Namibia",431,null,0,-22.57,17.08],["Walvis Bay, Namibia",85,null,0,-22.96,14.51],
+  ["Swakopmund, Namibia",45,null,0,-22.68,14.53],["Rundu, Namibia",88,null,0,-17.92,19.77],
+  ["Oshakati, Namibia",40,null,0,-17.78,15.70],["Katima Mulilo, Namibia",29,null,0,-17.50,24.29],
+  ["Keetmanshoop, Namibia",21,null,0,-26.58,18.14],["Luderitz, Namibia",13,null,0,-26.65,15.15],
+  ["Tsumeb, Namibia",44,null,0,-19.23,17.71],["Gobabis, Namibia",19,null,0,-22.45,18.97],
+  ["Grootfontein, Namibia",28,null,0,-19.56,18.12],["Okahandja, Namibia",24,null,0,-21.98,16.91],
+  ["Gaborone, Botswana",273,null,0,-24.66,25.91],["Francistown, Botswana",100,null,0,-21.17,27.51],
+  ["Maun, Botswana",60,null,0,-19.98,23.42],["Molepolole, Botswana",67,null,0,-24.41,25.50],
+  ["Lobatse, Botswana",29,null,0,-25.22,25.68],["Serowe, Botswana",50,null,0,-22.39,26.71],
+  ["Kanye, Botswana",48,null,0,-24.99,25.34],["Selibe-Phikwe, Botswana",49,null,0,-21.98,27.84],
+  ["Bulawayo, Zimbabwe",653,null,0,-20.17,28.58],["Mutare, Zimbabwe",188,null,0,-18.97,32.65],
+  ["Gweru, Zimbabwe",157,null,0,-19.45,29.82],["Masvingo, Zimbabwe",87,null,0,-20.08,30.83],
+  ["Chinhoyi, Zimbabwe",79,null,0,-17.36,30.19],["Chitungwiza, Zimbabwe",371,null,0,-18.01,31.08],
+  ["Kwekwe, Zimbabwe",100,null,0,-18.93,29.81],["Kadoma, Zimbabwe",80,null,0,-18.34,29.92],
+  ["Victoria Falls, Zimbabwe",35,null,0,-17.93,25.83],
+  ["Lusaka, Zambia",2906,null,0,-15.39,28.32],["Kitwe, Zambia",517,null,0,-12.81,28.20],
+  ["Ndola, Zambia",475,null,0,-12.97,28.65],["Kabwe, Zambia",230,null,0,-14.43,28.45],
+  ["Chingola, Zambia",147,null,0,-12.52,27.87],["Mufulira, Zambia",122,null,0,-12.54,28.24],
+  ["Livingstone, Zambia",177,null,0,-17.85,25.85],["Luanshya, Zambia",152,null,0,-13.14,28.42],
+  ["Lilongwe, Malawi",989,null,0,-13.98,33.78],["Blantyre, Malawi",800,null,0,-15.79,35.01],
+  ["Mzuzu, Malawi",221,null,0,-11.47,34.02],["Zomba, Malawi",105,null,0,-15.38,35.32],
+  ["Kasungu, Malawi",58,null,0,-13.04,33.48],["Salima, Malawi",38,null,0,-13.78,34.44],
+  ["Maputo, Mozambique",1102,null,0,-25.97,32.59],["Matola, Mozambique",1032,null,0,-25.96,32.46],
+  ["Beira, Mozambique",533,null,0,-19.84,34.84],["Nampula, Mozambique",663,null,0,-15.12,39.27],
+  ["Chimoio, Mozambique",373,null,0,-19.11,33.48],["Nacala, Mozambique",226,null,0,-14.55,40.67],
+  ["Quelimane, Mozambique",349,null,0,-17.88,36.89],["Tete, Mozambique",300,null,0,-16.16,33.60],
+  ["Pemba, Mozambique",201,null,0,-12.97,40.52],["Xai-Xai, Mozambique",133,null,0,-25.05,33.64],
+  ["Inhambane, Mozambique",79,null,0,-23.86,35.38],
+  ["Antananarivo, Madagascar",1275,null,0,-18.88,47.51],["Toamasina, Madagascar",326,null,0,-18.15,49.40],
+  ["Antsirabe, Madagascar",245,null,0,-19.87,47.04],["Fianarantsoa, Madagascar",190,null,0,-21.44,47.09],
+  ["Mahajanga, Madagascar",246,null,0,-15.72,46.32],["Toliara, Madagascar",156,null,0,-23.35,43.67],
+  ["Antsiranana, Madagascar",115,null,0,-12.28,49.29],["Morondava, Madagascar",42,null,0,-20.28,44.28],
+  ["Manakara, Madagascar",40,null,0,-22.13,48.02],
+  ["Huambo, Angola",713,null,0,-12.77,15.74],["Lobito, Angola",358,null,0,-12.35,13.54],
+  ["Benguela, Angola",555,null,0,-12.58,13.41],["Lubango, Angola",600,null,0,-14.92,13.49],
+  ["Malanje, Angola",455,null,0,-9.54,16.34],["Namibe, Angola",204,null,0,-15.20,12.15],
+  ["Kuito, Angola",355,null,0,-12.38,16.94],["Saurimo, Angola",40,null,0,-9.66,20.39],
+  ["Cabinda, Angola",716,null,0,-5.55,12.19],["Uige, Angola",58,null,0,-7.61,15.06],
+  ["Lubumbashi, DRC",2584,null,0,-11.66,27.48],["Mbuji-Mayi, DRC",1559,null,0,-6.15,23.60],
+  ["Kananga, DRC",1524,null,0,-5.89,22.42],["Kolwezi, DRC",573,null,0,-10.72,25.47],
+  ["Likasi, DRC",422,null,0,-10.98,26.74],["Kikwit, DRC",397,null,0,-5.04,18.82],
+  ["Bukavu, DRC",870,null,0,-2.51,28.84],["Kindu, DRC",172,null,0,-2.95,25.91],
+  ["Mwanza, Tanzania",707,null,0,-2.52,32.90],["Arusha, Tanzania",617,null,0,-3.37,36.68],
+  ["Mbeya, Tanzania",386,null,0,-8.91,33.46],["Morogoro, Tanzania",315,null,0,-6.82,37.66],
+  ["Tanga, Tanzania",273,null,0,-5.07,39.10],["Kigoma, Tanzania",215,null,0,-4.88,29.63],
+  ["Dodoma, Tanzania",411,null,0,-6.17,35.74],["Zanzibar City, Tanzania",223,null,0,-6.16,39.19],
+  ["Iringa, Tanzania",151,null,0,-7.77,35.69],["Moshi, Tanzania",184,null,0,-3.35,37.34],
+  ["Singida, Tanzania",150,null,0,-4.82,34.74],["Shinyanga, Tanzania",108,null,0,-3.66,33.43],
+  ["Tabora, Tanzania",226,null,0,-5.02,32.80],["Sumbawanga, Tanzania",147,null,0,-7.97,31.62],
+  ["Mbarara, Uganda",196,null,0,-0.61,30.66],["Masaka, Uganda",104,null,0,-0.33,31.73],
+  ["Kigali, Rwanda",1132,null,0,-1.94,30.06],["Butare, Rwanda",90,null,0,-2.60,29.74],
+  ["Gisenyi, Rwanda",106,null,0,-1.70,29.26],["Ruhengeri, Rwanda",86,null,0,-1.50,29.63],
+  ["Bujumbura, Burundi",497,null,0,-3.38,29.36],["Gitega, Burundi",135,null,0,-3.43,29.93],
+  ["Ngozi, Burundi",40,null,0,-2.90,29.83],["Muyinga, Burundi",72,null,0,-2.84,30.34],
+  ["Kisumu, Kenya",410,null,0,-0.10,34.75],["Nakuru, Kenya",570,null,0,-0.30,36.08],
+  ["Machakos, Kenya",151,null,0,-1.52,37.27],["Nyeri, Kenya",125,null,0,-0.42,36.95],
+  ["Malindi, Kenya",119,null,0,-3.22,40.12],["Lamu, Kenya",25,null,0,-2.27,40.90],
+  ["Port Louis, Mauritius",148,null,0,-20.16,57.50],["Curepipe, Mauritius",78,null,0,-20.32,57.52],
+  ["Quatre Bornes, Mauritius",80,null,0,-20.26,57.48],["Victoria, Seychelles",26,null,0,-4.62,55.45],
+  ["Saint-Denis, Reunion",147,null,0,-20.88,55.45],["Saint-Pierre, Reunion",85,null,0,-21.34,55.48],
+  ["Moroni, Comoros",111,null,0,-11.70,43.25],["Mamoudzou, Mayotte",71,null,0,-12.78,45.22],
+
+  // ---- ANTARCTIC & SUB-ANTARCTIC RESEARCH STATIONS ----
+  ["McMurdo Station, Antarctica",1.3,null,10,-77.85,166.67],
+  ["Amundsen-Scott South Pole, Antarctica",0.2,null,3,-90.00,0.00],
+  ["Vostok Station, Antarctica",0.025,null,3,-78.46,106.84],
+  ["Halley Research Station, Antarctica",0.07,null,20,-75.58,-26.50],
+  ["Mawson Station, Antarctica",0.06,null,20,-67.60,62.88],
+  ["Davis Station, Antarctica",0.07,null,20,-68.58,77.97],
+  ["Casey Station, Antarctica",0.08,null,25,-66.28,110.53],
+  ["Scott Base, Antarctica",0.08,null,10,-77.85,166.77],
+  ["Rothera Research Station, Antarctica",0.13,null,40,-67.57,-68.13],
+  ["Esperanza Base, Antarctica",0.1,null,60,-63.40,-56.99],
+  ["Palmer Station, Antarctica",0.04,null,150,-64.77,-64.05],
+  ["Dumont d'Urville, Antarctica",0.03,null,10,-66.66,140.00],
+  ["Marambio Base, Antarctica",0.2,null,50,-64.24,-56.63],
+  ["Neumayer-Station III, Antarctica",0.04,null,20,-70.67,-8.27],
+  ["Concordia Station, Antarctica",0.08,null,3,-75.10,123.33],
+  ["Port-aux-Francais, Kerguelen",0.1,null,40,-49.35,70.22],
+  ["Grytviken, South Georgia",0.03,null,80,-54.28,-36.51],
+  ["Stanley, Falkland Islands",2.5,null,3,-51.69,-57.85],
 ];
 
 const CITY_DB = RAW_CITIES.map(c => ({ n: c[0], pop: c[1], r: c[2], snow: c[3], lat: c[4], lon: c[5] }));
@@ -885,13 +1393,17 @@ const HISTORIC_STORMS = [
   { name:'Dec 2025 Southern Ice Siege',rsi:5.7 },
   { name:'Feb 2026 Ohio Valley Wallop',rsi:9.9 },
   // === Low-RSI composites for comparison coverage ===
+  { name:'Flurry (composite)',rsi:0.03 },
+  { name:'Average Snow Event (composite)',rsi:0.08 },
+  { name:'Weak Alberta Clipper (composite)',rsi:0.2 },
+  { name:'Pacific Northwest Snow (composite)',rsi:0.3 },
   { name:'Typical Midwest Clipper (composite)',rsi:0.5 },
   { name:'Minor Lake Effect Event (composite)',rsi:0.8 },
+  { name:'Gulf Coast Frost Event (composite)',rsi:1.0 },
   { name:'Southern Dusting Event (composite)',rsi:1.5 },
   { name:'Average Nor\'easter (composite)',rsi:2.1 },
-  { name:'Pacific Northwest Snow (composite)',rsi:0.3 },
-  { name:'Weak Alberta Clipper (composite)',rsi:0.2 },
-  { name:'Gulf Coast Frost Event (composite)',rsi:1.0 },
+  // === Theoretical maximum (for scale reference) ===
+  { name:'Snowball Earth (composite)',rsi:999 },
 ];
 
 /* ======================================================================
@@ -1132,51 +1644,51 @@ function getImpact(snow, annualSnow, recordCold, coldTemp, snowEquivalent, windS
   const effective = Math.max(snowEffective, coldBaseline);  // Whichever is worse
 
   let result;
-  if (effective === 0)          result = { level:'None',              css:'none-impact',         desc:'No precipitation of any kind. Clear skies.',                                          school:'No effect on schools.' };
-  else if (effective <= 0.005)  result = { level:'Dusting',           css:'dusting',             desc:'A few flakes observed; nothing accumulates. Photo-worthy.',                            school:'No effect on schools.' };
-  else if (effective <= 0.01)   result = { level:'Trace',             css:'trace-impact',        desc:'Brief flurries spotted; ground remains clear. Social media buzz.',                     school:'No effect on schools.' };
-  else if (effective <= 0.02)   result = { level:'Negligible',        css:'negligible',          desc:'No measurable impact; a few flakes spotted.',                                         school:'No effect on schools.' };
-  else if (effective <= 0.05)   result = { level:'Minimal',           css:'minimal',             desc:'Light dusting on grassy surfaces; roads stay wet.',                                   school:'No effect on schools.' };
-  else if (effective <= 0.15)   result = { level:'Very Light',        css:'very-light',          desc:'Fine powder on lawns and cars; melts within hours.',                                  school:'No effect on schools.' };
-  else if (effective <= 0.3)    result = { level:'Light',             css:'light-impact',        desc:'Noticeable coating; brushed off cars; kids step outside to play.',                    school:'Schools open on normal schedule.' };
-  else if (effective < 0.5)     result = { level:'Minor',             css:'minor',               desc:'Thin coating on cold surfaces; mostly cosmetic.',                                     school:'Schools open on normal schedule.' };
-  else if (effective < 1)       result = { level:'Mild',              css:'mild',                desc:'Slushy roads; morning ice on windshields; some slipping on sidewalks.',               school:'Schools open; watch for icy mornings.' };
-  else if (effective < 2)       result = { level:'Moderate',          css:'moderate',            desc:'Slippery roads; cautious driving needed; possible school delays.',                    school:'1\u20132 hour delays likely; buses on snow routes.' };
-  else if (effective < 3)       result = { level:'Notable',           css:'notable-impact',      desc:'Roads white; commutes disrupted; plow crews out; first accidents reported.',          school:'2-hour delays common; some districts close.' };
-  else if (effective < 4)       result = { level:'Considerable',      css:'considerable',        desc:'Accumulating roads; school delays/closures begin; plows deployed.',                   school:'2-hour delays or closures; some districts cancel.' };
-  else if (effective < 5.5)     result = { level:'High Impact',       css:'high-impact',         desc:'Travel hazardous; accidents rising; non-essential businesses slow to open.',          school:'Most schools delayed or closed.' };
-  else if (effective < 7)       result = { level:'Significant',       css:'significant',         desc:'School closures likely; hazardous travel; businesses may close early.',               school:'Most schools closed; 1 snow day expected.' };
-  else if (effective < 8.5)     result = { level:'Grave',             css:'grave',               desc:'Road network failing; spinouts every mile; regional state of emergency likely.',       school:'All schools closed; hazardous for any travel.' };
-  else if (effective < 10)      result = { level:'Severe',            css:'severe',              desc:'Most schools closed; roads dangerous; only essential travel advised.',                 school:'All schools closed; 1\u20132 snow days.' };
-  else if (effective < 12.5)    result = { level:'Oppressive',        css:'oppressive',          desc:'Travel bans; stores shelved empty; plow convoys struggle to keep up.',                school:'All schools closed; 2 snow days guaranteed.' };
-  else if (effective < 15)      result = { level:'Major',             css:'major',               desc:'Travel shutdown; widespread closures; power outages possible.',                       school:'All schools closed; 2\u20133 snow days expected.' };
-  else if (effective < 17.5)    result = { level:'Dire',              css:'dire',                desc:'Stranded vehicles; roof loads concerning; emergency services overwhelmed.',          school:'Schools closed 3\u20134 days; some buildings lose heat.' };
-  else if (effective < 20)      result = { level:'Crippling',         css:'crippling',           desc:'Region-wide shutdowns; emergency conditions; military/guard may deploy.',             school:'Schools closed 3\u20135 days; makeup days needed.' };
-  else if (effective < 25)      result = { level:'Devastating',       css:'devastating',         desc:'National Guard activated; power grid failures; roof collapses reported.',             school:'Schools closed 4\u20136 days; structural inspections needed.' };
-  else if (effective < 30)      result = { level:'Extreme',           css:'extreme',             desc:'Life-threatening; complete transportation halt; roofs stressed.',                     school:'Schools closed 5\u20137 days; calendar restructured.' };
-  else if (effective < 36)      result = { level:'Cataclysmic',       css:'cataclysmic',         desc:'Regional disaster declaration; supply lines broken; hospitals on backup power.',      school:'Schools closed 1+ week; some buildings condemned.' };
-  else if (effective < 42)      result = { level:'Catastrophic',      css:'catastrophic',        desc:'Infrastructure collapse; structural damage; days-long paralysis.',                    school:'Schools closed 1\u20132 weeks; buildings may be damaged.' };
-  else if (effective < 50)      result = { level:'Calamitous',        css:'calamitous',          desc:'Federal disaster; widespread roof collapses; fatalities mounting.',                   school:'Schools closed 2 weeks; many buildings unusable.' };
-  else if (effective < 60)      result = { level:'City Paralysis',    css:'paralysis',           desc:'City completely buried; historic accumulation; week-long recovery.',                  school:'Schools closed 2\u20133 weeks; emergency shelters may use school buildings.' };
-  else if (effective < 70)      result = { level:'Historic',          css:'historic-impact',     desc:'Generational event; entire neighborhoods inaccessible; heavy machinery required.',    school:'Schools closed 3+ weeks; calendar irrecoverable.' };
-  else if (effective < 80)      result = { level:'Apocalyptic',       css:'apocalyptic',         desc:'Beyond any recorded event; survival conditions; month-long recovery.',                school:'Schools closed indefinitely; semester may be lost.' };
-  else if (effective < 90)      result = { level:'Dystopian',         css:'dystopian',           desc:'Urban areas unreachable for weeks; supply drops by helicopter; mass evacuations.',    school:'Schools abandoned as infrastructure; no classes for months.' };
-  else if (effective < 100)     result = { level:'Civilization Ender', css:'civilization-ender', desc:'Society stops functioning; National Guard overwhelmed; mass evacuations impossible.',  school:'School year canceled; buildings repurposed as emergency shelters.' };
-  else if (effective < 125)     result = { level:'Post-Civilization', css:'post-civilization',   desc:'Cities functionally erased; survivors cluster near heated infrastructure.',           school:'Education is a lost concept; survival schools only.' };
-  else if (effective < 150)     result = { level:'Ice Age Onset',     css:'ice-age',             desc:'Record-shattering; multi-week digging out; structural collapses widespread.',         school:'Schools closed for remainder of semester; buildings condemned.' };
-  else if (effective < 175)     result = { level:'Glacial Epoch',     css:'glacial-epoch',       desc:'Snowpack resembles a glacier; cities entombed; no thaw expected this season.',        school:'Schools buried entirely; no recovery foreseen.' };
-  else if (effective < 200)     result = { level:'Extinction Event',  css:'extinction',          desc:'Theoretically impossible; every building buried; survival mode for months.',          school:'Schools abandoned; no foreseeable reopening.' };
-  else if (effective < 250)     result = { level:'World-Ender',       css:'world-ender',         desc:'Regional biomes rewritten; permafrost layer forming; migration impossible.',          school:'Education system globally disrupted.' };
-  else if (effective < 300)     result = { level:'Planet Killer',     css:'planet-killer',       desc:'Fantasy-level snowfall exceeding any physical model; entire regions uninhabitable.',  school:'Education system ceases to exist in the region.' };
-  else if (effective < 400)     result = { level:'Planetary Cryogenesis', css:'cryogenesis',     desc:'Continent-scale freeze-in; terrain unrecognizable; atmosphere too cold to hold water vapor.', school:'Humanity shelters underground.' };
-  else if (effective < 500)     result = { level:'Biblical',          css:'biblical',            desc:'Noah\'s Ark but frozen; entire landscape unrecognizable for months.',                 school:'Concept of school no longer relevant.' };
-  else if (effective < 700)     result = { level:'Mythic Deluge',     css:'mythic-deluge',       desc:'Mountain ranges exceeded; entire climate zones displaced; legends written anew.',     school:'Only oral histories remain.' };
-  else if (effective < 1000)    result = { level:'Snowpocalypse Omega', css:'omega',             desc:'Beyond any conceivable scenario; multiple stories of snow everywhere.',               school:'Civilization enters permanent winter.' };
-  else if (effective < 1500)    result = { level:'Heat Death of Snow', css:'heat-death',         desc:'The mathematical limit; snow ceases to have meaning as a unit of measure.',           school:'N/A \u2014 the concept of society no longer applies.' };
-  else if (effective < 2500)    result = { level:'Big Freeze Singularity', css:'singularity',    desc:'Spacetime itself appears to curve around the snowpack; gravity anomalies reported.',   school:'N/A \u2014 observers no longer report back.' };
-  else if (effective < 5000)    result = { level:'Cosmic Snow Entropy', css:'cosmic-entropy',    desc:'Entropy reversed; snowflakes assemble from nothing; laws of thermodynamics violated.',school:'N/A \u2014 causality is optional.' };
-  else if (effective < 10000)   result = { level:'The White Void',    css:'white-void',          desc:'All matter converted to snow; light does not escape; time is silent.',                school:'N/A \u2014 nothing remembers school.' };
-  else                          result = { level:'Omega Point Frost', css:'omega-point',         desc:'Final unified snow state; universe achieves maximal crystallinity; no further events possible.', school:'N/A \u2014 the end of all narrative.' };
+  if (effective === 0)          result = { level:'None',              css:'none-impact',         desc:'No precipitation of any kind. Clear skies.',                                          school:'0-minute delay; normal schedule.' };
+  else if (effective <= 0.005)  result = { level:'Dusting',           css:'dusting',             desc:'A few flakes observed; nothing accumulates. Photo-worthy.',                            school:'0-minute delay; normal schedule.' };
+  else if (effective <= 0.01)   result = { level:'Trace',             css:'trace-impact',        desc:'Brief flurries spotted; ground remains clear. Social media buzz.',                     school:'0-minute delay; normal schedule.' };
+  else if (effective <= 0.02)   result = { level:'Negligible',        css:'negligible',          desc:'No measurable impact; a few flakes spotted.',                                         school:'5-minute delay possible for a few late buses.' };
+  else if (effective <= 0.05)   result = { level:'Minimal',           css:'minimal',             desc:'Light dusting on grassy surfaces; roads stay wet.',                                   school:'10-minute delay possible in a few districts.' };
+  else if (effective <= 0.15)   result = { level:'Very Light',        css:'very-light',          desc:'Fine powder on lawns and cars; melts within hours.',                                  school:'15-minute delay possible in rural districts.' };
+  else if (effective <= 0.3)    result = { level:'Light',             css:'light-impact',        desc:'Noticeable coating; brushed off cars; kids step outside to play.',                    school:'30-minute delay possible; most districts normal.' };
+  else if (effective < 0.5)     result = { level:'Minor',             css:'minor',               desc:'Thin coating on cold surfaces; mostly cosmetic.',                                     school:'45-minute delay likely in some districts.' };
+  else if (effective < 1)       result = { level:'Mild',              css:'mild',                desc:'Slushy roads; morning ice on windshields; some slipping on sidewalks.',               school:'1-hour delay common; scattered 2-hour delays.' };
+  else if (effective < 2)       result = { level:'Moderate',          css:'moderate',            desc:'Slippery roads; cautious driving needed; possible school delays.',                    school:'2-hour delays likely across the region.' };
+  else if (effective < 3)       result = { level:'Notable',           css:'notable-impact',      desc:'Roads white; commutes disrupted; plow crews out; first accidents reported.',          school:'2-hour delays standard; 0\u20131 snow days.' };
+  else if (effective < 4)       result = { level:'Considerable',      css:'considerable',        desc:'Accumulating roads; school delays/closures begin; plows deployed.',                   school:'1 snow day; delays for neighboring districts.' };
+  else if (effective < 5.5)     result = { level:'High Impact',       css:'high-impact',         desc:'Travel hazardous; accidents rising; non-essential businesses slow to open.',          school:'1 snow day; most schools closed.' };
+  else if (effective < 7)       result = { level:'Significant',       css:'significant',         desc:'School closures likely; hazardous travel; businesses may close early.',               school:'1 snow day.' };
+  else if (effective < 8.5)     result = { level:'Grave',             css:'grave',               desc:'Road network failing; spinouts every mile; regional state of emergency likely.',       school:'1\u20132 snow days; all schools closed.' };
+  else if (effective < 10)      result = { level:'Severe',            css:'severe',              desc:'Most schools closed; roads dangerous; only essential travel advised.',                 school:'1\u20132 snow days.' };
+  else if (effective < 12.5)    result = { level:'Oppressive',        css:'oppressive',          desc:'Travel bans; stores shelved empty; plow convoys struggle to keep up.',                school:'2 snow days.' };
+  else if (effective < 15)      result = { level:'Major',             css:'major',               desc:'Travel shutdown; widespread closures; power outages possible.',                       school:'2\u20133 snow days.' };
+  else if (effective < 17.5)    result = { level:'Dire',              css:'dire',                desc:'Stranded vehicles; roof loads concerning; emergency services overwhelmed.',          school:'3\u20134 snow days.' };
+  else if (effective < 20)      result = { level:'Crippling',         css:'crippling',           desc:'Region-wide shutdowns; emergency conditions; military/guard may deploy.',             school:'3\u20135 snow days.' };
+  else if (effective < 25)      result = { level:'Devastating',       css:'devastating',         desc:'National Guard activated; power grid failures; roof collapses reported.',             school:'4\u20136 snow days.' };
+  else if (effective < 30)      result = { level:'Extreme',           css:'extreme',             desc:'Life-threatening; complete transportation halt; roofs stressed.',                     school:'5\u20137 snow days.' };
+  else if (effective < 36)      result = { level:'Cataclysmic',       css:'cataclysmic',         desc:'Regional disaster declaration; supply lines broken; hospitals on backup power.',      school:'7\u201310 snow days; some buildings condemned.' };
+  else if (effective < 42)      result = { level:'Catastrophic',      css:'catastrophic',        desc:'Infrastructure collapse; structural damage; days-long paralysis.',                    school:'10\u201314 snow days.' };
+  else if (effective < 50)      result = { level:'Calamitous',        css:'calamitous',          desc:'Federal disaster; widespread roof collapses; fatalities mounting.',                   school:'14\u201318 snow days; many buildings unusable.' };
+  else if (effective < 60)      result = { level:'City Paralysis',    css:'paralysis',           desc:'City completely buried; historic accumulation; week-long recovery.',                  school:'18\u201325 snow days; schools serve as shelters.' };
+  else if (effective < 70)      result = { level:'Historic',          css:'historic-impact',     desc:'Generational event; entire neighborhoods inaccessible; heavy machinery required.',    school:'25\u201335 snow days; calendar irrecoverable.' };
+  else if (effective < 80)      result = { level:'Apocalyptic',       css:'apocalyptic',         desc:'Beyond any recorded event; survival conditions; month-long recovery.',                school:'35\u201360 snow days; semester lost.' };
+  else if (effective < 90)      result = { level:'Dystopian',         css:'dystopian',           desc:'Urban areas unreachable for weeks; supply drops by helicopter; mass evacuations.',    school:'60\u2013120 snow days; no classes for months.' };
+  else if (effective < 100)     result = { level:'Civilization Ender', css:'civilization-ender', desc:'Society stops functioning; National Guard overwhelmed; mass evacuations impossible.',  school:'120\u2013180 snow days; full school year canceled.' };
+  else if (effective < 125)     result = { level:'Post-Civilization', css:'post-civilization',   desc:'Cities functionally erased; survivors cluster near heated infrastructure.',           school:'180\u2013365 snow days; survival schools only.' };
+  else if (effective < 150)     result = { level:'Ice Age Onset',     css:'ice-age',             desc:'Record-shattering; multi-week digging out; structural collapses widespread.',         school:'365\u2013730 snow days; buildings condemned.' };
+  else if (effective < 175)     result = { level:'Glacial Epoch',     css:'glacial-epoch',       desc:'Snowpack resembles a glacier; cities entombed; no thaw expected this season.',        school:'730\u20133,650 snow days; schools buried entirely.' };
+  else if (effective < 200)     result = { level:'Extinction Event',  css:'extinction',          desc:'Theoretically impossible; every building buried; survival mode for months.',          school:'3,650\u201336,500 snow days; no reopening foreseen.' };
+  else if (effective < 250)     result = { level:'World-Ender',       css:'world-ender',         desc:'Regional biomes rewritten; permafrost layer forming; migration impossible.',          school:'36,500\u2013365,000 snow days; education globally disrupted.' };
+  else if (effective < 300)     result = { level:'Planet Killer',     css:'planet-killer',       desc:'Fantasy-level snowfall exceeding any physical model; entire regions uninhabitable.',  school:'365,000\u20133,650,000 snow days; regional education ends.' };
+  else if (effective < 400)     result = { level:'Planetary Cryogenesis', css:'cryogenesis',     desc:'Continent-scale freeze-in; terrain unrecognizable; atmosphere too cold to hold water vapor.', school:'3,650,000\u201336,500,000 snow days; humanity shelters underground.' };
+  else if (effective < 500)     result = { level:'Biblical',          css:'biblical',            desc:'Noah\'s Ark but frozen; entire landscape unrecognizable for months.',                 school:'36,500,000\u2013365,000,000 snow days; concept of school lost.' };
+  else if (effective < 700)     result = { level:'Mythic Deluge',     css:'mythic-deluge',       desc:'Mountain ranges exceeded; entire climate zones displaced; legends written anew.',     school:'365,000,000\u20133,650,000,000 snow days; only oral histories remain.' };
+  else if (effective < 1000)    result = { level:'Snowpocalypse Omega', css:'omega',             desc:'Beyond any conceivable scenario; multiple stories of snow everywhere.',               school:'3,650,000,000+ snow days; permanent winter.' };
+  else if (effective < 1500)    result = { level:'Heat Death of Snow', css:'heat-death',         desc:'The mathematical limit; snow ceases to have meaning as a unit of measure.',           school:'10\u00b9\u2070\u207a snow days; society no longer exists.' };
+  else if (effective < 2500)    result = { level:'Big Freeze Singularity', css:'singularity',    desc:'Spacetime itself appears to curve around the snowpack; gravity anomalies reported.',   school:'10\u00b2\u2070\u207a snow days; no observers remain.' };
+  else if (effective < 5000)    result = { level:'Cosmic Snow Entropy', css:'cosmic-entropy',    desc:'Entropy reversed; snowflakes assemble from nothing; laws of thermodynamics violated.',school:'10\u2075\u2070\u207a snow days; causality is optional.' };
+  else if (effective < 10000)   result = { level:'The White Void',    css:'white-void',          desc:'All matter converted to snow; light does not escape; time is silent.',                school:'10\u00b9\u2070\u2070\u207a snow days; nothing remembers school.' };
+  else                          result = { level:'Omega Point Frost', css:'omega-point',         desc:'Final unified snow state; universe achieves maximal crystallinity; no further events possible.', school:'\u221E snow days; end of all narrative.' };
 
   result.effective = effective;
   result.factor = factor;
@@ -1798,7 +2310,7 @@ function generateProfile() {
     ff.push('\u26AA <strong>The White Void:</strong> All matter in the affected region has been converted to snow. Light does not escape the snowpack. Time appears to be paused.');
   }
   if (peakEffective >= 10000) {
-    ff.push('\u2728 <strong>Omega Point Frost:</strong> The universe achieves maximal crystallinity. This is the final unified snow state. No further meteorological events are possible. Thank you for using the Snow Event Profile Maker.');
+    ff.push('\u2728 <strong>Omega Point Frost:</strong> The universe achieves maximal crystallinity. This is the final unified snow state. No further meteorological events are possible. Thank you for using the Snow Event Profile Maker 3.14.');
   }
 
   // Ice-specific fun facts
@@ -2820,7 +3332,23 @@ function parseParagraphInput() {
       const t = regionDefault[topRegion] || 'Historic East Coast Storm';
       typeIdx = STORM_TEMPLATES.findIndex(x => x.type === t);
     } else {
-      typeIdx = STORM_TEMPLATES.findIndex(t => t.type === 'Historic East Coast Storm');
+      // Gobbledygook fallback: pick a region weighted by average annual snowfall
+      // (same climate weighting used by Flurry Dud). Higher-snow regions are
+      // more likely, so the storm doesn't always hit the East Coast.
+      const regionCodes = ['NE','SE','OV','UM','SO','NR'];
+      const weights = regionCodes.map(r => {
+        const rCities = CITY_DB.filter(c => c.r === r);
+        return rCities.reduce((s, c) => s + (c.snow || 0), 0) / (rCities.length || 1);
+      });
+      const totalWeight = weights.reduce((s, w) => s + w, 0);
+      let roll = Math.random() * totalWeight;
+      let picked = regionCodes[0];
+      for (let i = 0; i < regionCodes.length; i++) {
+        roll -= weights[i];
+        if (roll <= 0) { picked = regionCodes[i]; break; }
+      }
+      const t = regionDefault[picked] || 'Historic East Coast Storm';
+      typeIdx = STORM_TEMPLATES.findIndex(x => x.type === t);
     }
   } else if (regionConstraints.size > 0) {
     // Detected type was found, but if its regions don't overlap the constraints,
@@ -3286,17 +3814,31 @@ function setInputMode(mode) {
   });
   const detailed = document.getElementById('detailedCard');
   const para = document.getElementById('paragraphCard');
-  if (mode === 'paragraph') {
-    detailed.style.display = 'none';
-    para.style.display = '';
-  } else {
-    detailed.style.display = '';
-    para.style.display = 'none';
-  }
+  const historic = document.getElementById('historicCard');
+  detailed.style.display = (mode === 'detailed') ? '' : 'none';
+  para.style.display     = (mode === 'paragraph') ? '' : 'none';
+  historic.style.display = (mode === 'historic')  ? '' : 'none';
 }
 document.querySelectorAll('.mode-btn').forEach(b => {
   b.addEventListener('click', () => setInputMode(b.dataset.mode));
 });
+
+/* ---- Populate Historic Reference list (sorted low to high RSI) ---- */
+(function populateHistoricList() {
+  const list = document.getElementById('historicList');
+  if (!list) return;
+  const escapeHtml = (s) => String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const sorted = [...HISTORIC_STORMS].sort((a,b) => a.rsi - b.rsi);
+  list.innerHTML = sorted.map(s => {
+    const cat = getRSICategory(s.rsi);
+    return `<div class="historic-row">
+      <span class="hs-rsi rsi-${cat.css}">${s.rsi.toFixed(1)}</span>
+      <span class="hs-cat">Cat ${cat.cat} &middot; ${cat.label}</span>
+      <span class="hs-name">${escapeHtml(s.name)}</span>
+    </div>`;
+  }).join('');
+})();
 document.getElementById('parseParagraphBtn').addEventListener('click', parseParagraphInput);
 document.getElementById('clearParagraphBtn').addEventListener('click', () => {
   document.getElementById('paragraphInput').value = '';
