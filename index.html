@@ -572,7 +572,25 @@
       <button type="button" class="mode-btn active" data-mode="detailed">Detailed Input</button>
       <button type="button" class="mode-btn" data-mode="paragraph">Paragraph Mode</button>
       <button type="button" class="mode-btn" data-mode="historic">Historic Reference</button>
+      <button type="button" class="mode-btn" data-mode="replay">Historic Replay</button>
     </div>
+  </div>
+
+  <div class="card" id="historicReplayCard" style="display:none">
+    <h2>Replay Historic Storm</h2>
+    <p style="font-size:0.82rem;opacity:0.55;margin-bottom:12px">
+      Type the name of any storm from the Historic Reference list and we'll generate a matching
+      profile &mdash; template picked from the storm's named region, severity picked from its RSI.
+      Output renders exactly like the other modes.
+    </p>
+    <div class="gap-fill-row">
+      <div class="gap-fill-field">
+        <input type="text" id="replayStormInput" placeholder="e.g. Great Blizzard of 1888, Winter Storm Uri, Snowball Earth" autocomplete="off">
+        <div class="autocomplete-list" id="replayAcList"></div>
+      </div>
+      <button type="button" class="btn-add" id="replayStormBtn" style="margin:0">Replay</button>
+    </div>
+    <div class="error-msg" id="replayError"></div>
   </div>
 
   <div class="card" id="historicCard" style="display:none">
@@ -3989,13 +4007,220 @@ function setInputMode(mode) {
   const detailed = document.getElementById('detailedCard');
   const para = document.getElementById('paragraphCard');
   const historic = document.getElementById('historicCard');
-  detailed.style.display = (mode === 'detailed') ? '' : 'none';
+  const replay = document.getElementById('historicReplayCard');
+  detailed.style.display = (mode === 'detailed')  ? '' : 'none';
   para.style.display     = (mode === 'paragraph') ? '' : 'none';
   historic.style.display = (mode === 'historic')  ? '' : 'none';
+  replay.style.display   = (mode === 'replay')    ? '' : 'none';
 }
 document.querySelectorAll('.mode-btn').forEach(b => {
   b.addEventListener('click', () => setInputMode(b.dataset.mode));
 });
+
+/* ---- Historic Replay: regenerate a profile for any storm in HISTORIC_STORMS ---- */
+const replayInput = document.getElementById('replayStormInput');
+const replayAcList = document.getElementById('replayAcList');
+const replayBtn = document.getElementById('replayStormBtn');
+const replayError = document.getElementById('replayError');
+
+function templateForHistoricStorm(name, rsi) {
+  const lower = name.toLowerCase();
+  // Special composites and out-of-bounds storms
+  if (lower.includes('snowball earth')) return 'Omega Continental Blizzard Outbreak';
+  if (lower.includes('snowmageddon') || lower.includes('snowpocalypse omega')) return 'Omega Continental Blizzard Outbreak';
+  if (lower.includes('flurry') && lower.includes('composite')) return 'Flurry Dud';
+  if (rsi < 0.1) return 'Flurry Dud';
+  // Specific phenomena (take priority over region keywords)
+  if (lower.includes('ice storm') || lower.includes('ice siege') || lower.includes('ice event') || lower.includes('kentucky ice')) return 'Deep South Ice Storm';
+  if (lower.includes('polar vortex')) return 'Polar Vortex Outbreak';
+  if (lower.includes('uri') || (lower.includes('texas') && lower.includes('emergency'))) return 'Texas Winter Emergency';
+  if (lower.includes('gulf coast')) return 'Gulf Coast Freeze';
+  if (lower.includes('lake effect') || lower.includes('lake-effect') || lower.includes('buffalo')) return 'Ohio Valley Wallop';
+  if (lower.includes('clipper') || lower.includes('alberta')) return 'Clipper System';
+  // Scale-based priority for continent-wide storms
+  if (lower.includes('superstorm') || lower.includes('century') || lower.includes('great appalachian') || lower.includes('east coast') || lower.includes('eastern seaboard') || lower.includes('nationwide')) return 'Historic East Coast Storm';
+  // Region keywords
+  if (lower.includes('colorado') || lower.includes('rockies') || lower.includes('rocky mountain') || lower.includes('front range')) return 'Northern Rockies Dump';
+  if (lower.includes("nor'easter") || lower.includes('noreaster') || lower.includes('northeast') || lower.includes('new england') || lower.includes('mid-atlantic') || lower.includes('nyc') || lower.includes('new york') || lower.includes('boston') || lower.includes('knickerbocker') || lower.includes('presidents')) return "Northeast Nor'easter";
+  if (lower.includes('southeast') || lower.includes('carolinas') || lower.includes('deep south') || lower.includes('atlanta') || lower.includes('georgia')) return 'Southeast Surprise';
+  if (lower.includes('ohio valley') || lower.includes('ohio') || lower.includes('great lakes') || lower.includes('chicago') || lower.includes('cleveland') || lower.includes('valentine') || lower.includes('michigan')) return 'Ohio Valley Wallop';
+  if (lower.includes('upper midwest') || lower.includes('northern plains') || lower.includes('dakota') || lower.includes('minnesota') || lower.includes('schoolhouse') || lower.includes('armistice')) return 'Midwest Blizzard';
+  if (lower.includes('plains') || lower.includes('south central') || lower.includes('oklahoma') || lower.includes('texas') || lower.includes('kansas') || lower.includes('southern')) return 'Southern Snowpocalypse';
+  // Fallback by RSI magnitude
+  if (rsi > 25) return 'Historic East Coast Storm';
+  if (rsi > 15) return 'Polar Vortex Outbreak';
+  if (rsi > 8) return "Northeast Nor'easter";
+  if (rsi > 3) return 'Clipper System';
+  return 'Clipper System';
+}
+
+function severityForRSI(rsi) {
+  if (rsi < 3) return 0;   // Minor
+  if (rsi < 6) return 1;   // Moderate
+  if (rsi < 10) return 2;  // Significant
+  if (rsi < 18) return 3;  // Major
+  return 4;                // Extreme
+}
+
+/* Tune city list so totalRSI matches the historic target exactly. Rebuilds
+   the city list from the template's region pool using a two-dimensional
+   search over (cityCount, uniformSnow). Each (count, snow) combination
+   produces a deterministic city list; we pick the configuration whose
+   computed RSI is closest to the target. This avoids the discrete-jump
+   trap of pure snow scaling, where many integer city counts can't reach
+   arbitrary RSI values no matter how snow is scaled. */
+function tuneToTargetRSI(targetRSI, template) {
+  if (!cities.length) return;
+  // Skip continental / single-region / test templates — they define their
+  // own RSI identity (Omega saturates, Flurry Dud stays near zero).
+  if (template.regions === 'all-continental') return;
+  if (template.regions === 'weighted-single') return;
+  if (template.testLadder) return;
+  if (!Array.isArray(template.regions)) return;
+
+  // Preserve storm context from the original generator run
+  const origCity = cities[0] || {};
+  const hadCold = cities.some(c => c.recordCold);
+  const origColdTemp = cities.find(c => c.recordCold)?.coldTemp ?? null;
+  const origWind = origCity.windSpeed ?? null;
+  const origGust = origCity.gustSpeed ?? null;
+  // Preserve precip mix ratio (if the storm is ice/sleet/snow mix)
+  const mixPhases = origCity.phases && origCity.phases.length
+    ? origCity.phases.map(p => ({ type: p.type, pct: p.amount }))
+    : [{ type: 'snow', pct: 1 }];
+  const mixTotal = mixPhases.reduce((s,p) => s + p.pct, 0) || 1;
+  mixPhases.forEach(p => p.pct /= mixTotal);
+
+  // Build the candidate city pool sorted by population (largest first)
+  const regionPool = CITY_DB
+    .filter(c => template.regions.includes(c.r))
+    .sort((a,b) => (b.pop || 0) - (a.pop || 0));
+  if (!regionPool.length) return;
+
+  function build(count, snowAmount) {
+    cities.length = 0;
+    const picked = regionPool.slice(0, count);
+    picked.forEach((c, i) => {
+      // Light fringe gradient: center cities 100%, last city 60%
+      const gradient = count > 1 ? 1 - (i / (count - 1)) * 0.4 : 1;
+      const totalAmt = Math.round(snowAmount * gradient * 10) / 10;
+      const phases = mixPhases.map(mp => ({
+        type: mp.type,
+        amount: Math.max(0, Math.round(totalAmt * mp.pct * 10) / 10)
+      })).filter(p => p.amount > 0 || p.type === 'snow');
+      const derived = computeDerivedPrecip(phases.length ? phases : [{ type: 'snow', amount: totalAmt }]);
+      cities.push({
+        name: c.n,
+        phases: phases.length ? phases : [{ type: 'snow', amount: totalAmt }],
+        snow: derived.snow,
+        snowEquivalent: derived.snowEquivalent,
+        pop: c.pop, region: c.r, annualSnow: c.snow,
+        recordCold: hadCold, coldTemp: origColdTemp,
+        windSpeed: origWind, gustSpeed: origGust
+      });
+    });
+  }
+
+  // Outer search: try city counts from small to large. Inner search:
+  // binary-search the uniform snow amount that makes RSI match target.
+  // Keep the (count, snow) pair with the smallest |computedRSI - target|.
+  const maxCount = Math.min(regionPool.length, Math.max(8, Math.ceil(targetRSI * 1.2) + 6));
+  let best = { diff: Infinity, count: 3, snow: 2 };
+
+  for (let count = 1; count <= maxCount; count++) {
+    let lo = 0.1, hi = 120;
+    for (let iter = 0; iter < 24; iter++) {
+      const mid = (lo + hi) / 2;
+      build(count, mid);
+      const r = calculateRSI().totalRSI;
+      const diff = Math.abs(r - targetRSI);
+      if (diff < best.diff) best = { diff, count, snow: mid };
+      if (diff < 0.02) break;
+      if (r < targetRSI) lo = mid; else hi = mid;
+    }
+    if (best.diff < 0.02) break;
+  }
+
+  // Final build with the winning configuration
+  build(best.count, best.snow);
+}
+
+function replayHistoricStorm(storm) {
+  replayError.textContent = '';
+  const tmplName = templateForHistoricStorm(storm.name, storm.rsi);
+  const tmplIdx = STORM_TEMPLATES.findIndex(t => t.type === tmplName);
+  if (tmplIdx < 0) { replayError.textContent = `Could not find matching template "${tmplName}".`; return; }
+  stormTypeSelect.value = tmplIdx;
+  stormTypeSelect.dispatchEvent(new Event('change'));
+  const template = STORM_TEMPLATES[tmplIdx];
+  const sevSel = document.getElementById('severitySelect');
+  if (sevSel && !sevSel.disabled) sevSel.value = severityForRSI(storm.rsi);
+  document.getElementById('stormDate').value = '';
+  generateRandomStorm();
+
+  // Precision tuning: adjust snowfall so the simulator's RSI lands on the
+  // historic storm's exact RSI. Omega/Flurry Dud/Test Ladder short-circuit
+  // inside generateRandomStorm and shouldn't be tuned — their RSI is their
+  // identity. Everything else gets scaled.
+  if (!FIXED_SEVERITY_TYPES[template.type] && !template.testLadder) {
+    tuneToTargetRSI(storm.rsi, template);
+  }
+
+  document.getElementById('stormName').value = storm.name;
+  generateProfile();
+  profileEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function runReplay() {
+  replayError.textContent = '';
+  const name = replayInput.value.trim();
+  if (!name) { replayError.textContent = 'Type a historic storm name.'; return; }
+  let storm = HISTORIC_STORMS.find(s => s.name.toLowerCase() === name.toLowerCase());
+  if (!storm) storm = HISTORIC_STORMS.find(s => s.name.toLowerCase().includes(name.toLowerCase()));
+  if (!storm) { replayError.textContent = 'Storm not found. Try a name from the Historic Reference list.'; return; }
+  replayHistoricStorm(storm);
+}
+
+let replayAcIndex = -1;
+replayInput.addEventListener('input', () => {
+  const q = replayInput.value.trim().toLowerCase();
+  if (q.length < 1) { replayAcList.classList.remove('open'); return; }
+  const matches = HISTORIC_STORMS
+    .filter(s => s.name.toLowerCase().includes(q))
+    .sort((a,b) => a.rsi - b.rsi)
+    .slice(0, 15);
+  if (!matches.length) { replayAcList.classList.remove('open'); return; }
+  replayAcIndex = -1;
+  replayAcList.innerHTML = matches.map(s => {
+    const cat = getRSICategory(s.rsi);
+    return `<div class="ac-item" data-name="${esc(s.name)}"><span>${esc(s.name)}</span><span class="ac-meta">RSI ${s.rsi.toFixed(1)} &middot; ${cat.label}</span></div>`;
+  }).join('');
+  replayAcList.classList.add('open');
+});
+replayAcList.addEventListener('click', e => {
+  const item = e.target.closest('.ac-item');
+  if (!item) return;
+  replayInput.value = item.dataset.name;
+  replayAcList.classList.remove('open');
+});
+replayInput.addEventListener('keydown', e => {
+  const items = replayAcList.querySelectorAll('.ac-item');
+  if (replayAcList.classList.contains('open') && items.length) {
+    if (e.key === 'ArrowDown') { e.preventDefault(); replayAcIndex = (replayAcIndex + 1) % items.length; items.forEach((x,i) => x.classList.toggle('active', i === replayAcIndex)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); replayAcIndex = (replayAcIndex - 1 + items.length) % items.length; items.forEach((x,i) => x.classList.toggle('active', i === replayAcIndex)); }
+    else if (e.key === 'Enter') { e.preventDefault(); if (replayAcIndex >= 0) { replayInput.value = items[replayAcIndex].dataset.name; replayAcList.classList.remove('open'); } else { runReplay(); } }
+    else if (e.key === 'Escape') replayAcList.classList.remove('open');
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    runReplay();
+  }
+});
+document.addEventListener('click', e => {
+  if (!e.target.closest('#replayStormInput') && !e.target.closest('#replayAcList')) {
+    replayAcList.classList.remove('open');
+  }
+});
+replayBtn.addEventListener('click', runReplay);
 
 /* ---- Fill In The Gaps: interpolate snow for a new city from entered cities ---- */
 const gapCityInput = document.getElementById('gapCityInput');
