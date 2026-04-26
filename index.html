@@ -1997,7 +1997,17 @@ function renderCityList() {
   }).join('');
 }
 
-function clearAll() { cities.length=0; clearPhaseBuilder(); windInput.value=''; gustInput.value=''; renderCityList(); profileEl.classList.remove('visible'); }
+function clearAll() { cities.length=0; clearPhaseBuilder(); windInput.value=''; gustInput.value=''; renderCityList(); profileEl.classList.remove('visible'); resetGapFillState(); }
+
+function resetGapFillState() {
+  if (typeof gapFillEntries !== 'undefined') {
+    gapFillEntries.length = 0;
+    if (typeof renderGapFillEntries === 'function') renderGapFillEntries();
+  }
+  if (typeof gapFillError !== 'undefined' && gapFillError) gapFillError.textContent = '';
+  if (typeof gapCityInput !== 'undefined' && gapCityInput) gapCityInput.value = '';
+  if (typeof gapFillUsedForStorm !== 'undefined') gapFillUsedForStorm = false;
+}
 
 /* ---- RSI Calculation ---- */
 const MAX_AREA_FACTOR = 6; // Cap area at each threshold to prevent runaway RSI
@@ -2477,13 +2487,9 @@ function generateProfile() {
   profileEl.classList.add('visible');
   profileEl.scrollIntoView({ behavior:'smooth', block:'start' });
 
-  // Reset Fill In The Gaps — stale estimates don't carry across storms
-  if (typeof gapFillEntries !== 'undefined') {
-    gapFillEntries.length = 0;
-    if (typeof renderGapFillEntries === 'function') renderGapFillEntries();
-    if (gapFillError) gapFillError.textContent = '';
-    if (gapCityInput) gapCityInput.value = '';
-  }
+  // Note: Fill In The Gaps state intentionally persists across Generate Storm
+  // Profile clicks. It only resets when the user starts a new storm (Clear All
+  // or template load), so the Add All one-shot rule holds.
 }
 
 /* ---- Random Storm Generator ---- */
@@ -2880,6 +2886,7 @@ function runTestLadder() {
   const anchor = CITY_DB.reduce((best, c) => (c.snow || 0) > (best.snow || 0) ? c : best, CITY_DB[0]);
   const factor = getResilienceFactor(anchor.snow, anchor.lat);
   cities.length = 0;
+  resetGapFillState();
   TEST_LADDER_TARGETS.forEach(target => {
     const rawSnow = Math.round(target * factor * 100) / 100;
     const phases = [{ type: 'snow', amount: Math.max(0, rawSnow) }];
@@ -2967,6 +2974,7 @@ function generateRandomStorm() {
   // Assign snowfall: first ~30% get center amounts, rest get fringe
   const centerCount = Math.max(1, Math.round(chosen.length * 0.3));
   cities.length = 0;
+  resetGapFillState();
 
   // Pick a precipitation mix template for this storm (weighted random)
   function pickPrecipMix(mixArr) {
@@ -3608,6 +3616,7 @@ function parseParagraphInput() {
 
   // ---- 9. Build city list ----
   cities.length = 0;
+  resetGapFillState();
   let chosen;
   let count;
 
@@ -4101,6 +4110,7 @@ function tuneToTargetRSI(targetRSI, template) {
 
   function build(count, snowAmount) {
     cities.length = 0;
+    resetGapFillState();
     const picked = regionPool.slice(0, count);
     picked.forEach((c, i) => {
       // Light fringe gradient: center cities 100%, last city 60%
@@ -4231,6 +4241,7 @@ const gapFillBtn = document.getElementById('gapFillBtn');
 const gapFillError = document.getElementById('gapFillError');
 const gapFillResults = document.getElementById('gapFillResults');
 const gapFillEntries = [];
+let gapFillUsedForStorm = false;
 
 function milesBetween(lat1, lon1, lat2, lon2) {
   const R = 3959;
@@ -4293,10 +4304,10 @@ function estimateSnowForCity(candidate) {
   const centerLat = anchors.reduce((s,a) => s + a.lat, 0) / anchors.length;
   const centerLon = anchors.reduce((s,a) => s + a.lon, 0) / anchors.length;
   const spanRadius = Math.max(...anchors.map(a => milesBetween(centerLat, centerLon, a.lat, a.lon)));
-  const falloffScale = Math.max(180, spanRadius * 0.7);
+  const falloffScale = Math.max(180, spanRadius * 0.5);
 
-  // Hard cutoff: beyond 2.5x the scale, the storm simply does not reach.
-  if (minDist > 2.5 * falloffScale) {
+  // Hard cutoff: beyond 1.6x the scale, the storm simply does not reach.
+  if (minDist > 1.6 * falloffScale) {
     return { snow: 0, snowEquivalent: 0, phases: [], recordCold: false, coldTemp: null, windSpeed: null, gustSpeed: null, minDistance: minDist, falloff: 0, climateFactor: 0, outOfReach: true };
   }
   const falloff = Math.exp(-Math.pow(minDist / falloffScale, 2));
@@ -4452,6 +4463,10 @@ gapFillBtn.addEventListener('click', runGapFill);
 const gapFillAllBtn = document.getElementById('gapFillAllBtn');
 function runGapFillAll() {
   gapFillError.textContent = '';
+  if (gapFillUsedForStorm) {
+    gapFillError.textContent = 'No Additional Cities Possible';
+    return;
+  }
   if (!cities.length) {
     gapFillError.textContent = 'Add cities to the storm first, then try again.';
     return;
@@ -4511,7 +4526,12 @@ function addAllGapFillToSim() {
   gapFillEntries.length = 0;
   renderGapFillEntries();
   renderCityList();
-  gapFillError.textContent = added ? '' : 'All estimated cities are already in the storm.';
+  if (added) {
+    gapFillUsedForStorm = true;
+    gapFillError.textContent = '';
+  } else {
+    gapFillError.textContent = 'All estimated cities are already in the storm.';
+  }
 }
 gapFillAddAllBtn.addEventListener('click', addAllGapFillToSim);
 
