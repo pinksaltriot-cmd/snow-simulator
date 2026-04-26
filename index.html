@@ -718,6 +718,7 @@
         </div>
         <button type="button" class="btn-add" id="gapFillBtn" style="margin:0">Estimate</button>
         <button type="button" class="btn-add" id="gapFillAllBtn" style="margin:0">Compute All</button>
+        <button type="button" class="btn-add" id="gapFillAddAllBtn" style="margin:0" disabled>Add All to Simulation</button>
       </div>
       <div class="error-msg" id="gapFillError"></div>
       <div id="gapFillResults" class="gap-fill-results"></div>
@@ -4348,6 +4349,7 @@ function estimateSnowForCity(candidate) {
 }
 
 function renderGapFillEntries() {
+  if (gapFillAddAllBtn) gapFillAddAllBtn.disabled = !gapFillEntries.length;
   gapFillResults.innerHTML = gapFillEntries.map((e, i) => {
     const impSnow = e.snowUnrounded ?? e.snow;
     const impEquiv = e.snowEquivalentUnrounded ?? e.snowEquivalent;
@@ -4479,6 +4481,39 @@ function runGapFillAll() {
   gapAcList.classList.remove('open');
 }
 gapFillAllBtn.addEventListener('click', runGapFillAll);
+
+const gapFillAddAllBtn = document.getElementById('gapFillAddAllBtn');
+function addAllGapFillToSim() {
+  if (!gapFillEntries.length) return;
+  let added = 0;
+  for (const e of gapFillEntries) {
+    if (cities.some(c => c.name === e.candidate.n)) continue;
+    let phases = (e.phases && e.phases.length) ? e.phases.map(p => ({ ...p })) : null;
+    if (!phases) {
+      const amt = Math.max(0.01, Math.round((e.snowUnrounded || 0) * 100) / 100);
+      phases = [{ type: 'snow', amount: amt }];
+    }
+    cities.push({
+      name: e.candidate.n,
+      phases,
+      snow: e.snow,
+      snowEquivalent: e.snowEquivalent,
+      pop: e.candidate.pop,
+      region: e.candidate.r,
+      annualSnow: e.candidate.snow,
+      recordCold: e.recordCold,
+      coldTemp: e.coldTemp,
+      windSpeed: e.windSpeed,
+      gustSpeed: e.gustSpeed
+    });
+    added++;
+  }
+  gapFillEntries.length = 0;
+  renderGapFillEntries();
+  renderCityList();
+  gapFillError.textContent = added ? '' : 'All estimated cities are already in the storm.';
+}
+gapFillAddAllBtn.addEventListener('click', addAllGapFillToSim);
 
 /* ---- Populate Historic Reference list (sorted low to high RSI) ---- */
 (function populateHistoricList() {
