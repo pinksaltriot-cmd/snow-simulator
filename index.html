@@ -717,6 +717,7 @@
           <div class="autocomplete-list" id="gapAcList"></div>
         </div>
         <button type="button" class="btn-add" id="gapFillBtn" style="margin:0">Estimate</button>
+        <button type="button" class="btn-add" id="gapFillAllBtn" style="margin:0">Compute All</button>
       </div>
       <div class="error-msg" id="gapFillError"></div>
       <div id="gapFillResults" class="gap-fill-results"></div>
@@ -4312,8 +4313,10 @@ function estimateSnowForCity(candidate) {
     climateFactor = Math.min(1, Math.max(0.1, 0.2 + ratio * 0.8));
   }
 
-  const snow = Math.max(0, Math.round(rawSnow * falloff * climateFactor * 10) / 10);
-  const snowEquivalent = Math.max(0, Math.round(rawEquiv * falloff * climateFactor * 100) / 100);
+  const snowUnrounded = Math.max(0, rawSnow * falloff * climateFactor);
+  const snowEquivalentUnrounded = Math.max(0, rawEquiv * falloff * climateFactor);
+  const snow = Math.round(snowUnrounded * 10) / 10;
+  const snowEquivalent = Math.round(snowEquivalentUnrounded * 100) / 100;
 
   // Proportionally split into phases by mix
   const phaseSum = Object.values(phaseMix).reduce((s,v) => s+v, 0);
@@ -4341,12 +4344,14 @@ function estimateSnowForCity(candidate) {
   const windSpeed = windShare > 0.3 ? weightedMean(windReports) : null;
   const gustSpeed = windShare > 0.3 ? weightedMean(gustReports) : null;
 
-  return { snow, snowEquivalent, phases, recordCold, coldTemp, windSpeed, gustSpeed, minDistance: minDist, falloff, climateFactor };
+  return { snow, snowEquivalent, snowUnrounded, snowEquivalentUnrounded, phases, recordCold, coldTemp, windSpeed, gustSpeed, minDistance: minDist, falloff, climateFactor };
 }
 
 function renderGapFillEntries() {
   gapFillResults.innerHTML = gapFillEntries.map((e, i) => {
-    const imp = getImpact(e.snow, e.candidate.snow, e.recordCold, e.coldTemp, e.snowEquivalent, e.windSpeed, e.gustSpeed, e.candidate.lat);
+    const impSnow = e.snowUnrounded ?? e.snow;
+    const impEquiv = e.snowEquivalentUnrounded ?? e.snowEquivalent;
+    const imp = getImpact(impSnow, e.candidate.snow, e.recordCold, e.coldTemp, impEquiv, e.windSpeed, e.gustSpeed, e.candidate.lat);
     const res = getResilienceLabel(e.candidate.snow, e.candidate.lat);
     const phaseTxt = (e.phases || []).map(p => `${PRECIP_ICONS[p.type]} ${p.amount.toFixed(1)}"`).join(' + ') || '0.0"';
     const coldTxt = e.recordCold ? ` &middot; \u{1F976} ${e.coldTemp}\u00b0F` : '';
@@ -4390,6 +4395,13 @@ function runGapFill() {
   }
   const est = estimateSnowForCity(candidate);
   if (!est) { gapFillError.textContent = 'Could not estimate &mdash; no entered cities have coordinates.'; return; }
+  const impSnow = est.snowUnrounded ?? est.snow;
+  const impEquiv = est.snowEquivalentUnrounded ?? est.snowEquivalent;
+  const imp = getImpact(impSnow, candidate.snow, est.recordCold, est.coldTemp, impEquiv, est.windSpeed, est.gustSpeed, candidate.lat);
+  if (imp.level === 'None') {
+    gapFillError.textContent = `${candidate.n} would see no impact from this storm.`;
+    return;
+  }
   gapFillEntries.push({ candidate, ...est });
   renderGapFillEntries();
   gapCityInput.value = '';
@@ -4434,6 +4446,39 @@ document.addEventListener('click', e => {
   }
 });
 gapFillBtn.addEventListener('click', runGapFill);
+
+const gapFillAllBtn = document.getElementById('gapFillAllBtn');
+function runGapFillAll() {
+  gapFillError.textContent = '';
+  if (!cities.length) {
+    gapFillError.textContent = 'Add cities to the storm first, then try again.';
+    return;
+  }
+  const enteredNames = new Set(cities.map(c => c.name));
+  const additions = [];
+  for (const candidate of CITY_DB) {
+    if (enteredNames.has(candidate.n)) continue;
+    if (candidate.lat == null || candidate.lon == null) continue;
+    const est = estimateSnowForCity(candidate);
+    if (!est) continue;
+    const impSnow = est.snowUnrounded ?? est.snow;
+    const impEquiv = est.snowEquivalentUnrounded ?? est.snowEquivalent;
+    const imp = getImpact(impSnow, candidate.snow, est.recordCold, est.coldTemp, impEquiv, est.windSpeed, est.gustSpeed, candidate.lat);
+    if (imp.level === 'None') continue;
+    additions.push({ candidate, ...est });
+  }
+  if (!additions.length) {
+    gapFillError.textContent = 'No additional cities would see any impact from this storm.';
+    return;
+  }
+  additions.sort((a, b) => (b.snowEquivalent ?? b.snow) - (a.snowEquivalent ?? a.snow));
+  gapFillEntries.length = 0;
+  gapFillEntries.push(...additions);
+  renderGapFillEntries();
+  gapCityInput.value = '';
+  gapAcList.classList.remove('open');
+}
+gapFillAllBtn.addEventListener('click', runGapFillAll);
 
 /* ---- Populate Historic Reference list (sorted low to high RSI) ---- */
 (function populateHistoricList() {
