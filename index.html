@@ -4270,11 +4270,11 @@ function estimateSnowForCity(candidate) {
     climateFactor: 0, outOfReach: true
   });
 
-  // Hemisphere / latitude-band guard. Real synoptic storms ride a single
-  // jet-stream branch; their snow swath spans roughly ±10° of latitude.
-  // A nor'easter at 40-45°N cannot deposit snow in São Paulo at -23°.
+  // Hemisphere / latitude-band guard. Real synoptic storms ride the jet
+  // stream; their snow swath spans at most ~20° of latitude. A nor'easter
+  // at 40-45°N cannot deposit snow in São Paulo at -23°.
   const minLatDiff = Math.min(...anchors.map(a => Math.abs(a.lat - candidate.lat)));
-  if (minLatDiff > 12) return outOfReach();
+  if (minLatDiff > 20) return outOfReach();
   // Hard hemispheric block — no anchor is in the candidate's hemisphere.
   if (anchors.every(a => Math.sign(a.lat) !== Math.sign(candidate.lat) && Math.abs(candidate.lat) > 5)) return outOfReach();
 
