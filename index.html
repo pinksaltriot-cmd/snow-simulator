@@ -4422,8 +4422,8 @@ function runGapFill() {
   const impSnow = est.snowUnrounded ?? est.snow;
   const impEquiv = est.snowEquivalentUnrounded ?? est.snowEquivalent;
   const imp = getImpact(impSnow, candidate.snow, est.recordCold, est.coldTemp, impEquiv, est.windSpeed, est.gustSpeed, candidate.lat);
-  if (imp.level === 'None') {
-    gapFillError.textContent = `${candidate.n} would see no impact from this storm.`;
+  if (imp.level === 'None' || imp.level === 'Trace' || imp.level === 'Dusting') {
+    gapFillError.textContent = `${candidate.n} would see no meaningful impact from this storm.`;
     return;
   }
   gapFillEntries.push({ candidate, ...est });
@@ -4492,7 +4492,7 @@ function runGapFillAll() {
     const impSnow = est.snowUnrounded ?? est.snow;
     const impEquiv = est.snowEquivalentUnrounded ?? est.snowEquivalent;
     const imp = getImpact(impSnow, candidate.snow, est.recordCold, est.coldTemp, impEquiv, est.windSpeed, est.gustSpeed, candidate.lat);
-    if (imp.level === 'None') continue;
+    if (imp.level === 'None' || imp.level === 'Trace' || imp.level === 'Dusting') continue;
     additions.push({ candidate, ...est });
   }
   if (!additions.length) {
