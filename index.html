@@ -198,6 +198,40 @@
   .impact-omega-point  { background: radial-gradient(circle,#fff,#cbd5e1); color: #000; border: 3px solid #fbbf24; text-shadow: 0 0 8px rgba(251,191,36,1); animation: pulse-glow 0.8s infinite; }
   @keyframes pulse-glow { 0%,100% { box-shadow: 0 0 5px rgba(255,255,255,0.3); } 50% { box-shadow: 0 0 20px rgba(255,255,255,0.6); } }
 
+  /* Rain Impact levels — water/flood palette for rain-only events */
+  .impact-rain-none          { background: #0f172a; color: #334155; }
+  .impact-rain-trace         { background: #11202e; color: #4b6680; }
+  .impact-rain-sprinkle      { background: #15273a; color: #6b8eb0; }
+  .impact-rain-drizzle       { background: #163245; color: #7fb3cc; }
+  .impact-rain-light         { background: #143a45; color: #67e8f9; }
+  .impact-rain-moderate      { background: #103e4a; color: #22d3ee; }
+  .impact-rain-notable       { background: #0b3a52; color: #38bdf8; }
+  .impact-rain-soaking       { background: #0a3560; color: #60a5fa; }
+  .impact-rain-heavy         { background: #0a2a5e; color: #93c5fd; }
+  .impact-rain-drenching     { background: #102060; color: #a5b4fc; }
+  .impact-rain-flood-watch   { background: #3a3a18; color: #fde047; }
+  .impact-rain-flash         { background: #3a2a0a; color: #fbbf24; }
+  .impact-rain-major-flood   { background: #3d2010; color: #fb923c; }
+  .impact-rain-severe-flood  { background: #421510; color: #f97316; }
+  .impact-rain-critical      { background: #401010; color: #f87171; }
+  .impact-rain-devastating   { background: #3b1024; color: #ef4c7a; }
+  .impact-rain-catastrophic  { background: #350a2e; color: #f472b6; }
+  .impact-rain-calamitous    { background: #2e1035; color: #c084fc; }
+  .impact-rain-submersion    { background: #2a0a3e; color: #b478ff; }
+  .impact-rain-historic      { background: #200a3a; color: #c4a6ff; border: 1px solid #7c3aed; }
+  .impact-rain-apocalyptic   { background: linear-gradient(135deg,#3b1010,#0a1a4a); color: #fde68a; border: 1px solid #f59e0b; }
+  .impact-rain-harvey        { background: linear-gradient(135deg,#3a2a0a,#0a2a5a); color: #fef08a; border: 1px solid #eab308; }
+  .impact-rain-dystopian     { background: linear-gradient(135deg,#3a0a1a,#1a1a4a); color: #fbcfe8; border: 1px solid #db2777; }
+  .impact-rain-civ-ender     { background: linear-gradient(135deg,#400a0a,#0a1a4a); color: #fde68a; border: 2px solid #38bdf8; }
+  .impact-rain-post-civ      { background: linear-gradient(135deg,#0a1a4a,#3a0a1a); color: #bae6fd; border: 2px solid #0ea5e9; }
+  .impact-rain-inland-sea    { background: linear-gradient(135deg,#0a2a5a,#1e3a8a); color: #7dd3fc; border: 2px solid #38bdf8; }
+  .impact-rain-tethys        { background: linear-gradient(135deg,#0b2555,#2a0a5a); color: #a5d8ff; border: 2px solid #6366f1; }
+  .impact-rain-hydrosphere   { background: linear-gradient(135deg,#0a1a3e,#1a0505); color: #93c5fd; border: 2px solid #3b82f6; text-shadow: 0 0 8px rgba(147,197,253,0.6); }
+  .impact-rain-biblical      { background: linear-gradient(135deg,#0a0a2a,#3a2a0a); color: #fbbf24; border: 2px solid #f59e0b; text-shadow: 0 0 8px rgba(251,191,36,0.5); }
+  .impact-rain-mythic-deluge { background: linear-gradient(135deg,#0a0a2e,#1a0505); color: #ffd166; border: 2px solid #f59e0b; text-shadow: 0 0 10px rgba(255,209,102,0.6); }
+  .impact-rain-floodpoc-omega{ background: radial-gradient(circle,#0a1e4a,#000); color: #7dd3fc; border: 2px solid #38bdf8; text-shadow: 0 0 12px rgba(125,211,252,0.8); animation: pulse-glow 2s infinite; }
+  .impact-rain-omega-flood   { background: radial-gradient(circle,#bae6fd,#1e3a8a); color: #000; border: 3px solid #fff; text-shadow: 0 0 8px rgba(255,255,255,1); animation: pulse-glow 0.8s infinite; }
+
   /* Resilience levels (36 tiers) */
   .res-absolute-zero   { background: radial-gradient(circle,#fff,#bae6fd); color: #000; border: 3px solid #60a5fa; text-shadow: 0 0 8px rgba(255,255,255,1); animation: pulse-glow 1.2s infinite; }
   .res-cryogenic       { background: linear-gradient(135deg,#bae6fd,#60a5fa); color: #0a1e4a; border: 3px solid #e0f2fe; text-shadow: 0 0 6px rgba(255,255,255,0.8); }
@@ -228,6 +262,27 @@
   .res-virtually-none  { background: #440a0a; color: #fca5a5; border: 1px solid #dc2626; }
   .res-none            { background: #450a0a; color: #fca5a5; border: 1px solid #dc2626; }
   .res-nonexistent     { background: linear-gradient(135deg,#450a0a,#2a0505); color: #fde68a; border: 2px solid #dc2626; }
+
+  /* Rain Resilience levels — water palette mirrors snow Resilience density */
+  .res-rain-mariana    { background: radial-gradient(circle,#a5d8ff,#0a1e4a); color: #fff; border: 3px solid #38bdf8; text-shadow: 0 0 8px rgba(56,189,248,1); animation: pulse-glow 1.4s infinite; }
+  .res-rain-monsoon    { background: linear-gradient(135deg,#0a1e4a,#0e7490); color: #a5d8ff; border: 3px solid #06b6d4; text-shadow: 0 0 6px rgba(165,216,255,0.8); }
+  .res-rain-hurricane  { background: linear-gradient(135deg,#0e7490,#0c2d5a); color: #67e8f9; border: 2px solid #06b6d4; text-shadow: 0 0 8px rgba(103,232,249,0.7); }
+  .res-rain-cyclone    { background: linear-gradient(135deg,#0c2d5a,#155e75); color: #7dd3fc; border: 2px solid #0891b2; }
+  .res-rain-bayou      { background: linear-gradient(135deg,#0c4a6e,#1e3a5f); color: #67e8f9; border: 2px solid #0ea5e9; }
+  .res-rain-subtropwet { background: #0c4a6e; color: #7dd3fc; border: 1px solid #0ea5e9; }
+  .res-rain-humid      { background: #155e75; color: #a5d8ff; border: 1px solid rgba(165,216,255,0.4); }
+  .res-rain-wettemp    { background: #1e3a5f; color: #67e8f9; }
+  .res-rain-above-avg  { background: #1a3a4a; color: #5eead4; }
+  .res-rain-average    { background: #1a3a3a; color: #5eead4; }
+  .res-rain-mild-wet   { background: #243a35; color: #86efac; }
+  .res-rain-modest     { background: #2a3a25; color: #bef264; }
+  .res-rain-light      { background: #353a1a; color: #fde047; }
+  .res-rain-semiarid   { background: #3a3318; color: #fbbf24; }
+  .res-rain-steppe     { background: #3a2a18; color: #fbbf24; }
+  .res-rain-arid       { background: #3a2010; color: #fb923c; }
+  .res-rain-desert     { background: #3b1a10; color: #fb7e24; }
+  .res-rain-hyper-arid { background: #3d1510; color: #f97316; border: 1px solid rgba(249,115,22,0.4); }
+  .res-rain-atacama    { background: linear-gradient(135deg,#3d1510,#1a0a05); color: #fde68a; border: 2px solid #ea580c; }
   .res-subtropical     { background: linear-gradient(135deg,#4a1a00,#5a2a00); color: #fed7aa; border: 1px solid #ea580c; }
   .res-tropical-margin { background: linear-gradient(135deg,#5a1a00,#6a2500); color: #fdba74; border: 1px solid #f97316; }
   .res-outer-tropical  { background: linear-gradient(135deg,#6a1500,#4a2a00); color: #fdba74; border: 1px solid #fb923c; }
@@ -505,6 +560,27 @@
   <div class="ladder-item res-tropical">Tropical</div>
   <div class="ladder-item res-deep-tropical">Deep Tropical</div>
   <div class="ladder-item res-equatorial">Equatorial</div>
+
+  <div class="ladder-title" style="margin-top:14px">Rain Resilience</div>
+  <div class="ladder-item res-rain-mariana">Mariana Trench</div>
+  <div class="ladder-item res-rain-monsoon">Monsoon Forge</div>
+  <div class="ladder-item res-rain-hurricane">Hurricane Coast</div>
+  <div class="ladder-item res-rain-cyclone">Cyclone Hardened</div>
+  <div class="ladder-item res-rain-bayou">Bayou Adapted</div>
+  <div class="ladder-item res-rain-subtropwet">Gulf Saturated</div>
+  <div class="ladder-item res-rain-humid">Humid Coastal</div>
+  <div class="ladder-item res-rain-wettemp">Drip-Tested</div>
+  <div class="ladder-item res-rain-above-avg">Sodden</div>
+  <div class="ladder-item res-rain-average">Soaked Standard</div>
+  <div class="ladder-item res-rain-mild-wet">Damp Belt</div>
+  <div class="ladder-item res-rain-modest">Mistlands</div>
+  <div class="ladder-item res-rain-light">Dryweather</div>
+  <div class="ladder-item res-rain-semiarid">Semi-Arid</div>
+  <div class="ladder-item res-rain-steppe">Steppe</div>
+  <div class="ladder-item res-rain-arid">Arid</div>
+  <div class="ladder-item res-rain-desert">Desert</div>
+  <div class="ladder-item res-rain-hyper-arid">Hyper-Arid</div>
+  <div class="ladder-item res-rain-atacama">Atacama-Class</div>
 </aside>
 
 <aside class="tier-ladder right" id="impactLadder" aria-label="Impact tier ladder">
@@ -554,6 +630,41 @@
   <div class="ladder-item impact-trace-impact">Trace</div>
   <div class="ladder-item impact-dusting">Dusting</div>
   <div class="ladder-item impact-none-impact">None</div>
+
+  <div class="ladder-title" style="margin-top:14px">Rain Impact</div>
+  <div class="ladder-item impact-rain-omega-flood">Ocean Singularity</div>
+  <div class="ladder-item impact-rain-floodpoc-omega">Floodpocalypse Omega</div>
+  <div class="ladder-item impact-rain-mythic-deluge">Diluvian Cataclysm</div>
+  <div class="ladder-item impact-rain-biblical">Noachian Flood</div>
+  <div class="ladder-item impact-rain-hydrosphere">Hydrosphere Failure</div>
+  <div class="ladder-item impact-rain-tethys">Tethys Resurgence</div>
+  <div class="ladder-item impact-rain-inland-sea">Inland Sea Onset</div>
+  <div class="ladder-item impact-rain-post-civ">Drowned Era</div>
+  <div class="ladder-item impact-rain-civ-ender">Atlantis Event</div>
+  <div class="ladder-item impact-rain-dystopian">Aqualyptic Plunge</div>
+  <div class="ladder-item impact-rain-harvey">Harvey-Class</div>
+  <div class="ladder-item impact-rain-apocalyptic">Drowning of Records</div>
+  <div class="ladder-item impact-rain-historic">Centurial Surge</div>
+  <div class="ladder-item impact-rain-submersion">Aquapolis</div>
+  <div class="ladder-item impact-rain-calamitous">Riverine Wrath</div>
+  <div class="ladder-item impact-rain-catastrophic">Maelstrom</div>
+  <div class="ladder-item impact-rain-devastating">Cataract</div>
+  <div class="ladder-item impact-rain-critical">Overspill</div>
+  <div class="ladder-item impact-rain-severe-flood">Deluge</div>
+  <div class="ladder-item impact-rain-major-flood">Inundation</div>
+  <div class="ladder-item impact-rain-flash">Torrent</div>
+  <div class="ladder-item impact-rain-flood-watch">Surge Watch</div>
+  <div class="ladder-item impact-rain-drenching">Cloudburst</div>
+  <div class="ladder-item impact-rain-heavy">Downpour</div>
+  <div class="ladder-item impact-rain-soaking">Sluice</div>
+  <div class="ladder-item impact-rain-notable">Wet Cycle</div>
+  <div class="ladder-item impact-rain-moderate">Splash Zone</div>
+  <div class="ladder-item impact-rain-light">Steady Drip</div>
+  <div class="ladder-item impact-rain-light">Pitter-Patter</div>
+  <div class="ladder-item impact-rain-drizzle">Drizzle</div>
+  <div class="ladder-item impact-rain-sprinkle">Spitting</div>
+  <div class="ladder-item impact-rain-trace">Mist</div>
+  <div class="ladder-item impact-rain-none">Bone Dry</div>
 </aside>
 
 <div class="container">
@@ -1016,6 +1127,30 @@ const RAW_CITIES = [
   ["Taos Ski Valley, NM",0.06,null,230,36.60,-105.45],         // Cosmic
 
   // ==================================================================
+  // ---- EXTREME RAINFALL REFERENCES ----
+  // Wettest and driest places on Earth, included so the rain-resilience
+  // tier ladder reaches its endpoints. Annual rainfall is encoded via
+  // lat/lon-keyed overrides in estimateAnnualRain (the city array itself
+  // only stores annual SNOW). Snow values here are real for Alaska
+  // panhandle entries; tropical/desert entries are 0.
+  // ==================================================================
+  // --- Wettest places on Earth ---
+  ["Mawsynram, India",1,null,0,25.30,91.58],                   // ~467"/yr — Mariana Trench
+  ["Cherrapunji, India",14,null,0,25.27,91.71],                // ~467"/yr — Mariana Trench
+  ["Tutunendo, Colombia",0.6,null,0,5.71,-76.55],              // ~530"/yr — Mariana Trench
+  ["Mt. Waialeale, Kauai, HI",0,null,0,22.07,-159.50],         // ~460"/yr — Mariana Trench (uninhabited)
+  ["Quibdo, Colombia",130,null,0,5.69,-76.66],                 // ~320"/yr — Mariana Trench
+  ["Buenaventura, Colombia",460,null,0,3.88,-77.03],           // ~250"/yr — Mariana Trench
+  ["Yakutat, AK",0.6,null,219,59.55,-139.73],                  // ~155"/yr rain — Monsoon Forge
+  ["Ketchikan, AK",8.2,null,37,55.34,-131.65],                 // ~141"/yr — Hurricane Coast
+  ["Sitka, AK",8.6,null,39,57.05,-135.33],                     // ~84"/yr — Bayou Adapted
+  // --- Driest places on Earth (existing Arica/Iquique already get
+  // overridden via the point-overrides table; only adding entries
+  // that aren't elsewhere in the DB) ---
+  ["Pelican Point, Namibia",0.05,null,0,-22.89,14.45],         // ~0.4"/yr — Atacama-Class (driest in Africa)
+  ["Aoulef, Algeria",6,null,0,26.97,1.08],                     // ~0.5"/yr — Atacama-Class (driest in Sahara)
+
+  // ==================================================================
   // ---- SOUTHERN HEMISPHERE EXPANSION (~470 cities) ----
   // Match Northern Hemisphere density so Omega Continental Blizzard
   // Outbreak (regions:'all-continental') reaches both hemispheres.
@@ -1461,17 +1596,31 @@ const HISTORIC_STORMS = [
   { name:'Mar 2025 Nor\'easter',rsi:5.9 },
   { name:'Great Lakes Clipper Barrage (Dec 2024)',rsi:3.8 },
   { name:'Ohio Valley Ice Event (Jan 2025)',rsi:5.1 },
-  // === 2025-26 Winter Season ===
-  { name:'Nov 2025 Great Lakes Blizzard',rsi:8.2 },
-  { name:'Dec 2025 Midwest Ice Storm',rsi:4.5 },
-  { name:'Holiday Blizzard (Dec 2025)',rsi:15.3 },
-  { name:'Jan 2026 Polar Plunge Nor\'easter',rsi:11.7 },
-  { name:'Feb 2026 Southeast Snow Event',rsi:6.1 },
-  { name:'Valentine\'s Day Storm (Feb 2026)',rsi:13.8 },
-  { name:'Mar 2026 Spring Surprise Blizzard',rsi:7.4 },
-  { name:'Jan 2026 Plains Whiteout',rsi:10.2 },
-  { name:'Dec 2025 Southern Ice Siege',rsi:5.7 },
-  { name:'Feb 2026 Ohio Valley Wallop',rsi:9.9 },
+  // === 2025-26 Winter Season (sourced from Wikipedia: 2025-26 North American winter
+  //     and March 2026 North American blizzard articles). RSI values are the exact
+  //     numbers stated in the source where given; events with no stated RSI
+  //     (cold waves, atmospheric rivers, post-tropical/lake-effect events, and
+  //     "Nuisance"-category storms) are tagged with low estimates consistent
+  //     with their listed category and reported snowfall/damage. ===
+  { name:'Mid-October Nor\'easter (Oct 2025)',rsi:0.4 },              // Cat 0 Nuisance · $225M · 1 fatality
+  { name:'Post-Tropical Cyclone Halong (Oct 2025)',rsi:0.1 },         // wind/rain-dominant · $125M · 1 fatality
+  { name:'Early November Lake-Effect Snow (Nov 2025)',rsi:0.3 },      // 9-12" Great Lakes
+  { name:'US Thanksgiving Week Blizzard (Nov 2025)',rsi:1.8 },        // Cat 0 Nuisance · 33" Gile, WI
+  { name:'Late November Winter Storm (Nov 2025)',rsi:3.994 },         // Cat 1 Significant · 16.5" Fort Dodge, IA
+  { name:'Early December Winter Storm (Dec 2025)',rsi:1.073 },        // Notable · 17.3" Cattaraugus, NY
+  { name:'December Cold Wave (Dec 2025)',rsi:0 },                     // cold-only event, RSI N/A
+  { name:'Mid-December Winter Storm (Dec 2025)',rsi:0.7 },            // Cat 0 Nuisance · 23.7" Perrysburg, NY
+  { name:'Pre-Winter Solstice Storm (Dec 2025)',rsi:0.3 },            // Cat 0 Nuisance · 12" Dupuyer, MT
+  { name:'Late December U.S. Bomb Cyclone (Dec 2025)',rsi:1.5 },      // 24.5" Eckerman, MI · $170M (US+Canada)
+  { name:'January-February Cold Wave (Jan-Feb 2026)',rsi:0 },         // cold-only event · 22 fatalities
+  { name:'Late January Winter Storm (Jan 2026)',rsi:6.739 },          // Cat 2 Major · 31" max
+  { name:'Pre-Groundhog Day Nor\'easter (Feb 2026)',rsi:5.348 },      // Cat 1 Significant · 22.3" max
+  { name:'February West Coast Atmospheric Rivers (Feb 2026)',rsi:0 }, // Western event, NOAA RSI N/A · 115" Dodge Ridge, CA
+  { name:'Late February Blizzard (Feb 2026)',rsi:9.69 },              // Cat 2 Major · 37.9" max
+  { name:'Early March Winter Storm (Mar 2026)',rsi:0.5 },             // Cat 0 Nuisance · $1.9B
+  { name:'Mid-March Blizzard (Mar 2026)',rsi:26.97 },                 // Cat 5 Extreme · 52" Round Lake, MI
+  { name:'Early April Storm Complex - First (Apr 2026)',rsi:0.5 },    // article section truncated — placeholder
+  { name:'Early April Storm Complex - Second (Apr 2026)',rsi:0.5 },   // article section truncated — placeholder
   // === Low-RSI composites for comparison coverage ===
   { name:'Flurry (composite)',rsi:0.03 },
   { name:'Average Snow Event (composite)',rsi:0.08 },
@@ -1778,6 +1927,212 @@ function getImpact(snow, annualSnow, recordCold, coldTemp, snowEquivalent, windS
   return result;
 }
 
+/* ======================================================================
+   RAIN RESILIENCE SYSTEM
+   Parallel to snow Resilience but keyed to estimated annual rainfall.
+   CITY_DB has no rain column, so we approximate from region + latitude.
+   This is coarse — Phoenix and Atlanta both ~33°N have wildly different
+   real annual rainfall — but it captures broad climate bands well enough
+   for a first-pass label. Tier names are intentionally distinct from
+   snow Resilience tiers (no Above-Avg / Subtropical / Trace overlaps).
+   ====================================================================== */
+// Single-point rainfall overrides for places where bounding-box rules
+// would mis-classify a microclimate. Format: [lat, lon, annualInches].
+// Matched if the candidate is within ~25 mi (0.4°) of the listed point.
+const RAIN_POINT_OVERRIDES = [
+  // Hawaii — windward vs. leeward differ by ~100"
+  [22.07, -159.50, 460],  // Mt. Waialeale, Kauai (one of wettest spots on Earth)
+  [19.72, -155.09, 126],  // Hilo, HI windward (Big Island)
+  [21.30, -157.85,  17],  // Honolulu, HI leeward (would be 28 via fallback)
+  // SE Alaska panhandle — varies by 80" between adjacent towns
+  [59.55, -139.73, 155],  // Yakutat, AK
+  [55.34, -131.65, 141],  // Ketchikan, AK
+  [57.05, -135.33,  84],  // Sitka, AK
+  [58.30, -134.40,  62],  // Juneau, AK
+  // Atacama coastal driest cities (real <0.5"/yr)
+  [-18.48, -70.32, 0.03], // Arica, Chile core (driest inhabited place)
+  [-20.22, -70.14,  0.2], // Iquique, Chile core
+  // Other extreme-dry references
+  [-22.89,  14.45,  0.4], // Pelican Point, Namibia
+  [ 26.97,   1.08,  0.5], // Aoulef, Algeria (Sahara core)
+];
+
+function estimateAnnualRain(lat, lon, region) {
+  if (lat === null || lat === undefined) return 35;
+  const absLat = Math.abs(lat);
+
+  if (lon !== null && lon !== undefined) {
+    // Specific extreme-rainfall point overrides — matched within ~25 mi
+    // (≈0.4°). Used where a single city sits in a microclimate that a
+    // bounding box would mis-classify (Hawaii leeward vs windward, etc.).
+    for (const [oLat, oLon, val] of RAIN_POINT_OVERRIDES) {
+      if (Math.abs(lat - oLat) < 0.4 && Math.abs(lon - oLon) < 0.4) return val;
+    }
+
+    // Ultra-wet bounding boxes (checked before arid boxes since they're
+    // narrower and more specific).
+    // NE India Khasi Hills (Cherrapunji / Mawsynram orographic monsoon zone)
+    if (lat >= 25 && lat <= 26.5 && lon >= 90 && lon <= 93) return 400;
+    // Pacific Colombia / Chocó rainforest (Tutunendó / Quibdó / Buenaventura)
+    if (lat >= 3 && lat <= 8 && lon >= -78 && lon <= -76) return 280;
+    // SE Alaska panhandle wet zone (general — overrides for Yakutat/Sitka/Ketchikan
+    // are in the point-overrides table for finer granularity)
+    if (lat >= 55 && lat <= 60 && lon >= -140 && lon <= -130) return 100;
+
+    // Arid/desert bounding-box overrides — checked next so they apply
+    // regardless of any region tag. Annual values are NOAA climate normals
+    // averaged across the named zone (representative, not city-specific).
+    // US Southwest deserts: Sonoran, Mojave, Chihuahuan, southern Great Basin
+    // Covers Phoenix 8", Tucson 12", Las Vegas 4", Albuquerque 9", El Paso 9",
+    // Reno 7", Santa Fe 14". Flagstaff at 7k ft elevation is an exception
+    // (~22" actual) and will be slightly underestimated here.
+    if (lat >= 31 && lat <= 40 && lon >= -120 && lon <= -103) return 10;
+    // California Central Valley & southern interior — Mediterranean dry
+    // (Bakersfield 6", Fresno 11", LA basin ~14")
+    if (lat >= 33 && lat <= 40 && lon >= -122.5 && lon <= -118) return 12;
+    // Pacific Northwest interior rain shadow (Yakima 8", Bend 12", Spokane 17")
+    if (lat >= 42 && lat <= 49 && lon >= -122 && lon <= -116) return 13;
+    // Atacama Desert coastal core (Arica → Antofagasta strip — driest
+    // inhabited stretch on Earth, often <0.5"/yr)
+    if (lat <= -17 && lat >= -25 && lon >= -71 && lon <= -69.5) return 0.3;
+    // Wider Atacama / Andean altiplano (still very dry but slightly wetter)
+    if (lat <= -15 && lat >= -28 && lon >= -73 && lon <= -67) return 1;
+    // Patagonia rain shadow (east of Andes)
+    if (lat <= -36 && lat >= -52 && lon >= -73 && lon <= -65) return 8;
+    // Sahara + Arabian Peninsula
+    if (lat >= 15 && lat <= 32 && lon >= -18 && lon <= 60) return 3;
+    // Central Asian deserts (Gobi, Karakum, Kyzylkum, Taklamakan)
+    if (lat >= 35 && lat <= 50 && lon >= 50 && lon <= 110) return 7;
+    // Australian Outback interior
+    if (lat <= -20 && lat >= -32 && lon >= 120 && lon <= 145) return 10;
+    // Horn of Africa / East African dry belt (Mogadishu, Djibouti)
+    if (lat >= -2 && lat <= 14 && lon >= 38 && lon <= 52) return 8;
+  }
+
+  // US region-specific anchors (NOAA climate normals, approximate)
+  if (region === 'SE') return 52;       // Southeast humid subtropical
+  if (region === 'NE') return 45;       // Northeast
+  if (region === 'OV') return 42;       // Ohio Valley
+  if (region === 'UM') return 32;       // Upper Midwest
+  if (region === 'SO') return absLat < 30 ? 50 : 22; // Gulf wet vs. Plains semi-arid
+  if (region === 'NR') return 18;       // Northern Rockies / interior West
+
+  // Latitude bands for international cities (after arid overrides)
+  if (absLat < 5)   return 90;   // equatorial wet zone
+  if (absLat < 12)  return 65;   // tropical
+  if (absLat < 20)  return 45;   // outer tropical
+  if (absLat < 28)  return 28;   // subtropical (non-desert)
+  if (absLat < 38)  return 38;   // warm temperate (non-desert)
+  if (absLat < 50)  return 36;   // temperate
+  if (absLat < 60)  return 28;   // cool temperate
+  return 12;                     // subarctic / arctic
+}
+
+function getRainResilienceLabel(annualRain, lat) {
+  if (annualRain >= 200) return { label:'Mariana Trench',   css:'rain-mariana',    icon:'\u{1F30A}\u{1F30A}\u{1F30A}⭐' };
+  if (annualRain >= 150) return { label:'Monsoon Forge',    css:'rain-monsoon',    icon:'\u{1F30A}\u{1F30A}\u{1F30A}' };
+  if (annualRain >= 110) return { label:'Hurricane Coast',  css:'rain-hurricane',  icon:'\u{1F32A}️\u{1F32A}️' };
+  if (annualRain >= 90)  return { label:'Cyclone Hardened', css:'rain-cyclone',    icon:'\u{1F32A}️' };
+  if (annualRain >= 75)  return { label:'Bayou Adapted',    css:'rain-bayou',      icon:'\u{1F30A}\u{1F30A}' };
+  if (annualRain >= 60)  return { label:'Gulf Saturated',   css:'rain-subtropwet', icon:'\u{1F30A}+' };
+  if (annualRain >= 50)  return { label:'Humid Coastal',    css:'rain-humid',      icon:'\u{1F30A}' };
+  if (annualRain >= 45)  return { label:'Drip-Tested',      css:'rain-wettemp',    icon:'\u{1F4A6}+' };
+  if (annualRain >= 40)  return { label:'Sodden',           css:'rain-above-avg',  icon:'\u{1F4A6}' };
+  if (annualRain >= 35)  return { label:'Soaked Standard',  css:'rain-average',    icon:'\u{1F327}️' };
+  if (annualRain >= 30)  return { label:'Damp Belt',        css:'rain-mild-wet',   icon:'\u{1F327}️' };
+  if (annualRain >= 25)  return { label:'Mistlands',        css:'rain-modest',     icon:'\u{1F326}️' };
+  if (annualRain >= 20)  return { label:'Dryweather',       css:'rain-light',      icon:'\u{1F324}️' };
+  if (annualRain >= 15)  return { label:'Semi-Arid',        css:'rain-semiarid',   icon:'\u{1F32B}️' };
+  if (annualRain >= 10)  return { label:'Steppe',           css:'rain-steppe',     icon:'\u{1F33E}' };
+  if (annualRain >= 5)   return { label:'Arid',             css:'rain-arid',       icon:'\u{1F335}' };
+  if (annualRain >= 2)   return { label:'Desert',           css:'rain-desert',     icon:'\u{1F3DC}️' };
+  if (annualRain >= 0.5) return { label:'Hyper-Arid',       css:'rain-hyper-arid', icon:'\u{1F525}' };
+  return                        { label:'Atacama-Class',   css:'rain-atacama',    icon:'\u{1F525}\u{1F525}' };
+}
+
+/* ======================================================================
+   RAIN IMPACT SYSTEM
+   Parallel tier system for rain-only events. Snow-style "whiteout" / "snow
+   day" descriptions don't apply when nothing freezes; this scale is keyed
+   to total rainfall (inches) over the event and describes flooding,
+   drainage failure, water rescue, and inundation outcomes instead.
+
+   Wind amplifies rain impact too (debris, downed trees, surge into storm
+   drains), so we reuse getWindMultiplier. There's no resilience analog —
+   we don't track annual rainfall per city — but latitude is used to bump
+   tropical / arid regions where infrastructure rarely sees soaking rains.
+   ====================================================================== */
+function getRainImpact(rainInches, lat, windSpeed, gustSpeed) {
+  const windMult = getWindMultiplier(windSpeed, gustSpeed);
+  // Latitude bump: arid subtropical / desert belts and tropical-margin
+  // cities have minimal storm-drain capacity. Cities at |lat|<35 with
+  // little annual rain prep get a modest amplification.
+  let latMult = 1.0;
+  if (lat !== null && lat !== undefined) {
+    const absLat = Math.abs(lat);
+    if (absLat < 25)      latMult = 1.15;  // tropical / outer-tropical
+    else if (absLat < 32) latMult = 1.08;  // subtropical / arid belt
+  }
+  const effective = (rainInches || 0) * windMult * latMult;
+
+  let result;
+  if (effective === 0)            result = { level:'Bone Dry',            css:'rain-none',           desc:'No precipitation. Clear skies.',                                                  school:'0-minute delay; normal schedule.' };
+  else if (effective <= 0.005)    result = { level:'Mist',                css:'rain-trace',          desc:'A few drops; ground stays dry.',                                                 school:'0-minute delay; normal schedule.' };
+  else if (effective <= 0.02)     result = { level:'Spitting',            css:'rain-sprinkle',       desc:'Brief sprinkle; pavement barely darkens.',                                       school:'0-minute delay; normal schedule.' };
+  else if (effective <= 0.05)     result = { level:'Drizzle',             css:'rain-drizzle',        desc:'Light mist; umbrellas optional; cars wet briefly.',                              school:'0-minute delay; normal schedule.' };
+  else if (effective <= 0.15)     result = { level:'Pitter-Patter',       css:'rain-light',          desc:'Steady drizzle; ground wet, no puddles.',                                        school:'0-minute delay; normal schedule.' };
+  else if (effective <= 0.3)      result = { level:'Steady Drip',         css:'rain-light',          desc:'Wet roads; first puddles in low spots; wipers on.',                              school:'0-minute delay; normal schedule.' };
+  else if (effective <= 0.6)      result = { level:'Splash Zone',         css:'rain-moderate',       desc:'Standing water in low spots; storm drains active; highway spray noticeable.',    school:'0-minute delay; normal schedule.' };
+  else if (effective <= 1.0)      result = { level:'Wet Cycle',           css:'rain-notable',        desc:'Drains backing up; minor street ponding; rush hour slows.',                       school:'0-minute delay; normal schedule.' };
+  else if (effective <= 1.6)      result = { level:'Sluice',              css:'rain-soaking',        desc:'Yards saturated; small streams running high; ground soaked deep.',               school:'15-minute delay possible in low-lying districts.' };
+  else if (effective <= 2.2)      result = { level:'Downpour',            css:'rain-heavy',          desc:'Underpasses flooding; ponded intersections; first flood watches issued.',         school:'30-minute delay; bus reroutes around low spots.' };
+  else if (effective <= 3.0)      result = { level:'Cloudburst',          css:'rain-drenching',      desc:'Localized flash-flood watches; some road closures; basements vulnerable.',        school:'1-hour delay; some buses canceled.' };
+  else if (effective <= 4.0)      result = { level:'Surge Watch',         css:'rain-flood-watch',    desc:'Streams overtopping banks; flash-flood watches widespread; first stream rescues.', school:'2-hour delay; flooded districts close early.' };
+  else if (effective <= 5.5)      result = { level:'Torrent',             css:'rain-flash',          desc:'Flash Flood Warning; first water rescues; multiple roads closed; cars stranded.', school:'1 flood day for affected districts.' };
+  else if (effective <= 7.0)      result = { level:'Inundation',          css:'rain-major-flood',    desc:'Widespread road closures; basements flooded; voluntary evacs along streams.',     school:'1–2 flood days; many districts closed.' };
+  else if (effective <= 9.0)      result = { level:'Deluge',              css:'rain-severe-flood',   desc:'Neighborhoods isolated; bridges unsafe; first mandatory evacuations.',           school:'2 flood days; all districts closed.' };
+  else if (effective <= 11.0)     result = { level:'Overspill',           css:'rain-critical',       desc:'Mandatory evacs along rivers; highways submerged; National Guard activating.',    school:'2–3 flood days.' };
+  else if (effective <= 13.5)     result = { level:'Cataract',            css:'rain-devastating',    desc:'Levees stressed; rescues by boat; whole subdivisions underwater.',                school:'3–5 flood days; some buildings condemned.' };
+  else if (effective <= 16.5)     result = { level:'Maelstrom',           css:'rain-catastrophic',   desc:'FEMA mobilizing; National Guard deployed; downtown flooding.',                    school:'5–7 flood days.' };
+  else if (effective <= 20.0)     result = { level:'Riverine Wrath',      css:'rain-calamitous',     desc:'Federal disaster declaration; downtowns fully underwater; first dam concerns.',   school:'7–10 flood days; structural damage region-wide.' };
+  else if (effective <= 25.0)     result = { level:'Aquapolis',           css:'rain-submersion',     desc:'Cities fully submerged; multi-week recovery; reservoirs overflowing.',           school:'10–14 flood days; many schools serve as shelters.' };
+  else if (effective <= 32.0)     result = { level:'Centurial Surge',     css:'rain-historic',       desc:'Generational once-a-century event; levees breaching; metro paralysis.',          school:'14–21 flood days; semester at risk.' };
+  else if (effective <= 40.0)     result = { level:'Drowning of Records', css:'rain-apocalyptic',    desc:'Beyond any record; mass relocations; coastlines reshaped; weeks-long crisis.',    school:'21–30 flood days.' };
+  else if (effective <= 55.0)     result = { level:'Harvey-Class',        css:'rain-harvey',         desc:'Houston-2017-scale: metro paralyzed for months; hundreds of thousands displaced.', school:'30–60 flood days; semester lost.' };
+  else if (effective <= 75.0)     result = { level:'Aqualyptic Plunge',   css:'rain-dystopian',      desc:'Permanent water damage; whole districts uninhabitable; mold and disease spread.', school:'60–120 flood days; year disrupted.' };
+  else if (effective <= 100.0)    result = { level:'Atlantis Event',      css:'rain-civ-ender',      desc:'Coastal cities permanently lost; mass migrations inland.',                       school:'120–180 flood days; full school year canceled.' };
+  else if (effective <= 140.0)    result = { level:'Drowned Era',         css:'rain-post-civ',       desc:'Society retreats to highlands; lowland infrastructure abandoned.',                school:'180–365 flood days; survival schools only.' };
+  else if (effective <= 200.0)    result = { level:'Inland Sea Onset',    css:'rain-inland-sea',     desc:'New seas form on continental interiors; geography rewritten this season.',        school:'365–730 flood days; buildings condemned.' };
+  else if (effective <= 300.0)    result = { level:'Tethys Resurgence',   css:'rain-tethys',         desc:'Continental floods; mountain passes are the only refuge; civilization fragments.', school:'730+ flood days; most surface dwellings lost.' };
+  else if (effective <= 450.0)    result = { level:'Hydrosphere Failure', css:'rain-hydrosphere',    desc:'Atmosphere can’t physically hold this much water; thermodynamic anomaly.',   school:'No reopening foreseen.' };
+  else if (effective <= 700.0)    result = { level:'Noachian Flood',      css:'rain-biblical',       desc:'Noah’s Ark literally; entire continents submerged; only mountaintops remain.', school:'Concept of school lost.' };
+  else if (effective <= 1500.0)   result = { level:'Diluvian Cataclysm',  css:'rain-mythic-deluge',  desc:'Mountain ranges submerged; entire climate zones drowned; legends written anew.', school:'Only oral histories remain.' };
+  else if (effective <= 3000.0)   result = { level:'Floodpocalypse Omega', css:'rain-floodpoc-omega', desc:'All landmass submerged; Earth becomes a water world.',                          school:'Permanent flood; humanity aquatic.' };
+  else                            result = { level:'Ocean Singularity',   css:'rain-omega-flood',    desc:'Final hydric singularity; every molecule of water joined into one event.',       school:'∞ flood days; end of all narrative.' };
+
+  result.effective = effective;
+  result.windMult = windMult;
+  result.latMult = latMult;
+  return result;
+}
+
+/* ======================================================================
+   CITY-LEVEL CLASSIFICATION
+   Decide whether a city's experience of an event is "rain-only" — i.e.
+   no frozen-precip phases at all. Such cities use the Rain Impact tier
+   system; everyone else uses the snow Impact system (which already
+   handles rain-melt-then-refreeze sequence modifiers).
+   ====================================================================== */
+function isRainOnly(phases) {
+  if (!phases || !phases.length) return false;
+  return phases.every(p => p.type === 'rain' && p.amount > 0);
+}
+
+function totalRainInches(phases) {
+  if (!phases || !phases.length) return 0;
+  return phases.filter(p => p.type === 'rain').reduce((s, p) => s + (p.amount || 0), 0);
+}
+
 /* ====================================================================== */
 const cities = [];
 let acIndex = -1;
@@ -1966,7 +2321,9 @@ function addCity() {
   const derived = computeDerivedPrecip(phases);
   cities.push({
     name, phases, snow: derived.snow, snowEquivalent: derived.snowEquivalent,
-    pop: db?db.pop:null, region: db?db.r:null, annualSnow: db?db.snow:null, recordCold, coldTemp,
+    pop: db?db.pop:null, region: db?db.r:null, annualSnow: db?db.snow:null,
+    lat: db?db.lat:null, lon: db?db.lon:null,
+    recordCold, coldTemp,
     windSpeed, gustSpeed: gustSpeedVal
   });
   cityInput.value = ''; clearPhaseBuilder(); coldCheck.checked = false; coldField.classList.remove('visible'); coldInput.value = ''; windInput.value = ''; gustInput.value = ''; cityInput.focus();
@@ -2265,8 +2622,13 @@ function generateProfile() {
   }
 
   const rows = sorted.map(c => {
-    const imp = getImpact(c.snow, c.annualSnow, c.recordCold, c.coldTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat);
-    const res = getResilienceLabel(c.annualSnow, c.lat);
+    const rainOnly = isRainOnly(c.phases);
+    const imp = rainOnly
+      ? getRainImpact(totalRainInches(c.phases), c.lat, c.windSpeed, c.gustSpeed)
+      : getImpact(c.snow, c.annualSnow, c.recordCold, c.coldTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat);
+    const res = rainOnly
+      ? getRainResilienceLabel(estimateAnnualRain(c.lat, c.lon, c.region), c.lat)
+      : getResilienceLabel(c.annualSnow, c.lat);
     const rn = regionName(c.region);
     const locTag = rn ? `<span style="opacity:0.35;font-size:0.7rem;margin-left:3px">${rn}</span>` : '';
 
@@ -2285,31 +2647,44 @@ function generateProfile() {
 
     // Build detail text
     let detail = imp.desc;
-    if (c.annualSnow !== null && imp.factor !== 1.0) {
-      if (imp.factor <= 0.3) detail += ` <em style="opacity:0.6">(Massively amplified \u2014 this area almost never sees snow)</em>`;
-      else if (imp.factor <= 0.55) detail += ` <em style="opacity:0.6">(Heavily amplified \u2014 this area very rarely sees snow)</em>`;
-      else if (imp.factor <= 0.8) detail += ` <em style="opacity:0.6">(Impact amplified \u2014 this area rarely sees snow)</em>`;
-      else if (imp.factor >= 1.9) detail += ` <em style="opacity:0.6">(Greatly reduced \u2014 elite snow-handling infrastructure)</em>`;
-      else if (imp.factor >= 1.4) detail += ` <em style="opacity:0.6">(Impact reduced \u2014 this area handles snow well)</em>`;
-    }
-    // Show snow-equivalent note for mixed precip
-    if (c.phases && c.phases.length > 1 && c.snowEquivalent !== c.snow) {
-      detail += ` <em style="opacity:0.6">(Snow-equivalent impact: ${c.snowEquivalent.toFixed(1)}\u2033)</em>`;
-    }
-    if (c.recordCold) {
-      if (imp.coldDriven) {
-        detail += ` <em style="color:#93c5fd">\u{1F976} Impact driven by record cold of ${c.coldTemp}\u00b0F \u2014 extreme freeze in an unprepared area</em>`;
-      } else {
-        detail += ` <em style="color:#93c5fd">\u{1F976} Record cold of ${c.coldTemp}\u00b0F amplifies impact (\u00d7${imp.coldMult.toFixed(2)})</em>`;
+    if (rainOnly) {
+      if (imp.latMult > 1.0) {
+        const why = imp.latMult >= 1.15 ? 'tropical/arid region rarely sees soaking rain' : 'subtropical region with limited drainage';
+        detail += ` <em style="opacity:0.6">(Flood impact amplified \u2014 ${why})</em>`;
       }
-    }
-    if (c.windSpeed && imp.windMult > 1.0) {
-      const wl = getWindLabel(c.windSpeed, c.gustSpeed);
-      let windDesc = `\u{1F4A8} ${wl.label} winds of ${c.windSpeed} mph`;
-      if (c.gustSpeed) windDesc += `, gusting to ${c.gustSpeed} mph`;
-      windDesc += ` amplify impact (\u00d7${imp.windMult.toFixed(2)})`;
-      if (c.windSpeed >= 35) windDesc += ' \u2014 blizzard conditions with falling/blowing snow';
-      detail += ` <em style="color:#a5b4fc">${windDesc}</em>`;
+      if (c.windSpeed && imp.windMult > 1.0) {
+        const wl = getWindLabel(c.windSpeed, c.gustSpeed);
+        let windDesc = `\u{1F4A8} ${wl.label} winds of ${c.windSpeed} mph`;
+        if (c.gustSpeed) windDesc += `, gusting to ${c.gustSpeed} mph`;
+        windDesc += ` amplify flood impact (\u00d7${imp.windMult.toFixed(2)}) \u2014 downed trees, debris in storm drains`;
+        detail += ` <em style="color:#a5b4fc">${windDesc}</em>`;
+      }
+    } else {
+      if (c.annualSnow !== null && imp.factor !== 1.0) {
+        if (imp.factor <= 0.3) detail += ` <em style="opacity:0.6">(Massively amplified \u2014 this area almost never sees snow)</em>`;
+        else if (imp.factor <= 0.55) detail += ` <em style="opacity:0.6">(Heavily amplified \u2014 this area very rarely sees snow)</em>`;
+        else if (imp.factor <= 0.8) detail += ` <em style="opacity:0.6">(Impact amplified \u2014 this area rarely sees snow)</em>`;
+        else if (imp.factor >= 1.9) detail += ` <em style="opacity:0.6">(Greatly reduced \u2014 elite snow-handling infrastructure)</em>`;
+        else if (imp.factor >= 1.4) detail += ` <em style="opacity:0.6">(Impact reduced \u2014 this area handles snow well)</em>`;
+      }
+      if (c.phases && c.phases.length > 1 && c.snowEquivalent !== c.snow) {
+        detail += ` <em style="opacity:0.6">(Snow-equivalent impact: ${c.snowEquivalent.toFixed(1)}\u2033)</em>`;
+      }
+      if (c.recordCold) {
+        if (imp.coldDriven) {
+          detail += ` <em style="color:#93c5fd">\u{1F976} Impact driven by record cold of ${c.coldTemp}\u00b0F \u2014 extreme freeze in an unprepared area</em>`;
+        } else {
+          detail += ` <em style="color:#93c5fd">\u{1F976} Record cold of ${c.coldTemp}\u00b0F amplifies impact (\u00d7${imp.coldMult.toFixed(2)})</em>`;
+        }
+      }
+      if (c.windSpeed && imp.windMult > 1.0) {
+        const wl = getWindLabel(c.windSpeed, c.gustSpeed);
+        let windDesc = `\u{1F4A8} ${wl.label} winds of ${c.windSpeed} mph`;
+        if (c.gustSpeed) windDesc += `, gusting to ${c.gustSpeed} mph`;
+        windDesc += ` amplify impact (\u00d7${imp.windMult.toFixed(2)})`;
+        if (c.windSpeed >= 35) windDesc += ' \u2014 blizzard conditions with falling/blowing snow';
+        detail += ` <em style="color:#a5b4fc">${windDesc}</em>`;
+      }
     }
 
     // Timeline cell — show per-phase breakdown
@@ -2334,7 +2709,9 @@ function generateProfile() {
 
   // Peak impact across all cities (drives record-shattering fun facts)
   const peakCity = sorted.reduce((best, c) => {
-    const imp = getImpact(c.snow, c.annualSnow, c.recordCold, c.coldTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat);
+    const imp = isRainOnly(c.phases)
+      ? getRainImpact(totalRainInches(c.phases), c.lat, c.windSpeed, c.gustSpeed)
+      : getImpact(c.snow, c.annualSnow, c.recordCold, c.coldTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat);
     return imp.effective > best.eff ? { eff: imp.effective, level: imp.level, name: c.name } : best;
   }, { eff: 0, level: 'None', name: '' });
   const peakEffective = peakCity.eff;
@@ -2899,6 +3276,7 @@ function runTestLadder() {
       pop: anchor.pop,
       region: anchor.r,
       annualSnow: anchor.snow,
+      lat: anchor.lat, lon: anchor.lon,
       recordCold: false,
       coldTemp: null,
       windSpeed: null,
@@ -3053,6 +3431,7 @@ function generateRandomStorm() {
       pop: c.pop,
       region: c.r,
       annualSnow: c.snow,
+      lat: c.lat, lon: c.lon,
       recordCold,
       coldTemp,
       windSpeed,
@@ -3915,6 +4294,7 @@ function parseParagraphInput() {
       name: c.n, phases,
       snow: derived.snow, snowEquivalent: derived.snowEquivalent,
       pop: c.pop, region: c.r, annualSnow: c.snow,
+      lat: c.lat, lon: c.lon,
       recordCold, coldTemp, windSpeed, gustSpeed: gustSpeedVal
     });
   });
@@ -4127,6 +4507,7 @@ function tuneToTargetRSI(targetRSI, template) {
         snow: derived.snow,
         snowEquivalent: derived.snowEquivalent,
         pop: c.pop, region: c.r, annualSnow: c.snow,
+        lat: c.lat, lon: c.lon,
         recordCold: hadCold, coldTemp: origColdTemp,
         windSpeed: origWind, gustSpeed: origGust
       });
@@ -4375,8 +4756,13 @@ function renderGapFillEntries() {
   gapFillResults.innerHTML = gapFillEntries.map((e, i) => {
     const impSnow = e.snowUnrounded ?? e.snow;
     const impEquiv = e.snowEquivalentUnrounded ?? e.snowEquivalent;
-    const imp = getImpact(impSnow, e.candidate.snow, e.recordCold, e.coldTemp, impEquiv, e.windSpeed, e.gustSpeed, e.candidate.lat);
-    const res = getResilienceLabel(e.candidate.snow, e.candidate.lat);
+    const rainOnly = isRainOnly(e.phases);
+    const imp = rainOnly
+      ? getRainImpact(totalRainInches(e.phases), e.candidate.lat, e.windSpeed, e.gustSpeed)
+      : getImpact(impSnow, e.candidate.snow, e.recordCold, e.coldTemp, impEquiv, e.windSpeed, e.gustSpeed, e.candidate.lat);
+    const res = rainOnly
+      ? getRainResilienceLabel(estimateAnnualRain(e.candidate.lat, e.candidate.r), e.candidate.lat)
+      : getResilienceLabel(e.candidate.snow, e.candidate.lat);
     const phaseTxt = (e.phases || []).map(p => `${PRECIP_ICONS[p.type]} ${p.amount.toFixed(1)}"`).join(' + ') || '0.0"';
     const coldTxt = e.recordCold ? ` &middot; \u{1F976} ${e.coldTemp}\u00b0F` : '';
     const windTxt = e.windSpeed ? ` &middot; \u{1F4A8} ${e.windSpeed}${e.gustSpeed?'/G'+e.gustSpeed:''} mph` : '';
@@ -4421,8 +4807,10 @@ function runGapFill() {
   if (!est) { gapFillError.textContent = 'Could not estimate &mdash; no entered cities have coordinates.'; return; }
   const impSnow = est.snowUnrounded ?? est.snow;
   const impEquiv = est.snowEquivalentUnrounded ?? est.snowEquivalent;
-  const imp = getImpact(impSnow, candidate.snow, est.recordCold, est.coldTemp, impEquiv, est.windSpeed, est.gustSpeed, candidate.lat);
-  if (imp.level === 'None' || imp.level === 'Trace' || imp.level === 'Dusting') {
+  const imp = isRainOnly(est.phases)
+    ? getRainImpact(totalRainInches(est.phases), candidate.lat, est.windSpeed, est.gustSpeed)
+    : getImpact(impSnow, candidate.snow, est.recordCold, est.coldTemp, impEquiv, est.windSpeed, est.gustSpeed, candidate.lat);
+  if (imp.level === 'None' || imp.level === 'Trace' || imp.level === 'Dusting' || imp.level === 'Bone Dry' || imp.level === 'Mist' || imp.level === 'Spitting' || imp.level === 'Drizzle') {
     gapFillError.textContent = `${candidate.n} would see no meaningful impact from this storm.`;
     return;
   }
@@ -4491,8 +4879,10 @@ function runGapFillAll() {
     if (!est) continue;
     const impSnow = est.snowUnrounded ?? est.snow;
     const impEquiv = est.snowEquivalentUnrounded ?? est.snowEquivalent;
-    const imp = getImpact(impSnow, candidate.snow, est.recordCold, est.coldTemp, impEquiv, est.windSpeed, est.gustSpeed, candidate.lat);
-    if (imp.level === 'None' || imp.level === 'Trace' || imp.level === 'Dusting') continue;
+    const imp = isRainOnly(est.phases)
+      ? getRainImpact(totalRainInches(est.phases), candidate.lat, est.windSpeed, est.gustSpeed)
+      : getImpact(impSnow, candidate.snow, est.recordCold, est.coldTemp, impEquiv, est.windSpeed, est.gustSpeed, candidate.lat);
+    if (imp.level === 'None' || imp.level === 'Trace' || imp.level === 'Dusting' || imp.level === 'Bone Dry' || imp.level === 'Mist' || imp.level === 'Spitting' || imp.level === 'Drizzle') continue;
     additions.push({ candidate, ...est });
   }
   if (!additions.length) {
@@ -4527,6 +4917,7 @@ function addAllGapFillToSim() {
       pop: e.candidate.pop,
       region: e.candidate.r,
       annualSnow: e.candidate.snow,
+      lat: e.candidate.lat, lon: e.candidate.lon,
       recordCold: e.recordCold,
       coldTemp: e.coldTemp,
       windSpeed: e.windSpeed,
