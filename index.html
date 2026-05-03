@@ -800,7 +800,7 @@
       <div class="pressure-field">
         <div>
           <label for="pressureInput">Barometric pressure</label>
-          <input type="number" id="pressureInput" placeholder="e.g. 980" min="800" max="1080" step="0.1">
+          <input type="number" id="pressureInput" placeholder="e.g. 980" step="0.1">
         </div>
         <span class="unit">mb</span>
         <span class="help-text">Sea-level. Normal ~1013 mb. Lower = stronger storm = higher impact. Bomb cyclones &lt;980 mb. Hurricanes &lt;960 mb.</span>
@@ -1859,15 +1859,63 @@ function computeDerivedPrecip(phases) {
   };
 }
 
-/* ---- Impact with resilience (13 tiers) ---- */
+/* ---- Cold Impact System ----
+   Extended ladder mirrors the snow/rain impact tiers — anchored in real
+   physical regimes (Arctic to Vostok to absolute zero) and extended into
+   theoretical / cosmic regimes for full coherence with the Omega-scale
+   precipitation tiers. */
 function getColdMultiplier(coldTemp) {
-  if (coldTemp === null || coldTemp === undefined) return 1.0;
-  if (coldTemp <= -20) return 1.8;
-  if (coldTemp <= -10) return 1.6;
-  if (coldTemp <= 0)   return 1.4;
-  if (coldTemp <= 10)  return 1.25;
-  if (coldTemp <= 20)  return 1.15;
-  return 1.1;
+  if (coldTemp === null || coldTemp === undefined || isNaN(coldTemp)) return 1.0;
+  if (coldTemp >  20) return 1.10;   // Cool
+  if (coldTemp >  10) return 1.15;   // Cold
+  if (coldTemp >   0) return 1.25;   // Bitter
+  if (coldTemp > -10) return 1.40;   // Hard Freeze
+  if (coldTemp > -20) return 1.60;   // Severe Cold
+  if (coldTemp > -40) return 1.80;   // Extreme Cold (lower-48 records)
+  if (coldTemp > -60) return 2.10;   // Brutal Cold (Alaska interior)
+  if (coldTemp > -80) return 2.50;   // Polar Vortex Core
+  if (coldTemp > -100) return 2.95;  // Antarctic-Class
+  if (coldTemp > -130) return 3.50;  // Vostok-Class (Earth's coldest)
+  if (coldTemp > -160) return 4.20;  // Beyond Earth Records
+  if (coldTemp > -200) return 5.10;  // Stratopause-Class
+  if (coldTemp > -250) return 6.30;  // Cryogenic
+  if (coldTemp > -300) return 7.80;  // Deep Cryogenic
+  if (coldTemp > -350) return 9.80;  // Lunar-Surface-Class
+  if (coldTemp > -400) return 12.5;  // Approaching Liquid-N₂
+  if (coldTemp > -440) return 16.0;  // Below Absolute Zero (unphysical)
+  if (coldTemp > -500) return 21.0;  // Negative Kelvin Regime
+  if (coldTemp > -700) return 28.0;  // Quantum Coldlock
+  if (coldTemp > -1000) return 40.0; // Stellar-Void Cold
+  if (coldTemp > -2000) return 60.0; // Cosmic Frost Wall
+  if (coldTemp > -5000) return 90.0; // Pre-Big-Bang Heat Death
+  return 150.0;                      // Omega Frost Singularity
+}
+
+function getColdLabel(coldTemp) {
+  if (coldTemp === null || coldTemp === undefined || isNaN(coldTemp)) return null;
+  if (coldTemp >  20) return { label: 'Cool',                    icon: '\u{1F321}️' };
+  if (coldTemp >  10) return { label: 'Cold',                    icon: '\u{1F976}' };
+  if (coldTemp >   0) return { label: 'Bitter Cold',             icon: '\u{1F976}' };
+  if (coldTemp > -10) return { label: 'Hard Freeze',             icon: '❄️' };
+  if (coldTemp > -20) return { label: 'Severe Cold',             icon: '❄️❄️' };
+  if (coldTemp > -40) return { label: 'Extreme Cold',            icon: '\u{1F9CA}' };
+  if (coldTemp > -60) return { label: 'Brutal Cold',             icon: '\u{1F9CA}\u{1F9CA}' };
+  if (coldTemp > -80) return { label: 'Polar Vortex Core',       icon: '\u{1F300}' };
+  if (coldTemp > -100) return { label: 'Antarctic-Class',        icon: '\u{1F9CA}\u{1F9CA}\u{1F9CA}' };
+  if (coldTemp > -130) return { label: 'Vostok-Class',           icon: '\u{1F30D}\u{1F9CA}' };
+  if (coldTemp > -160) return { label: 'Beyond Earth Records',   icon: '\u{1F6A8}' };
+  if (coldTemp > -200) return { label: 'Stratopause-Class',      icon: '\u{1F31F}' };
+  if (coldTemp > -250) return { label: 'Cryogenic',              icon: '\u{1F9EA}' };
+  if (coldTemp > -300) return { label: 'Deep Cryogenic',         icon: '\u{1F9EA}\u{1F9EA}' };
+  if (coldTemp > -350) return { label: 'Lunar-Surface-Class',    icon: '\u{1F315}' };
+  if (coldTemp > -400) return { label: 'Approaching Liquid-N₂', icon: '⚠️\u{1F9CA}' };
+  if (coldTemp > -440) return { label: 'Below Absolute Zero',    icon: '⛔\u{1F9CA}' };
+  if (coldTemp > -500) return { label: 'Negative Kelvin Regime', icon: '♾️' };
+  if (coldTemp > -700) return { label: 'Quantum Coldlock',       icon: '⚛️' };
+  if (coldTemp > -1000) return { label: 'Stellar-Void Cold',     icon: '\u{1F30C}' };
+  if (coldTemp > -2000) return { label: 'Cosmic Frost Wall',     icon: '\u{1F30C}\u{1F30C}' };
+  if (coldTemp > -5000) return { label: 'Pre-Big-Bang Heat Death', icon: '\u{1F4A0}' };
+  return                       { label: 'Omega Frost Singularity', icon: '\u{1F300}\u{1F300}\u{1F300}' };
 }
 
 /* ---- Wind Impact System ----
@@ -1880,25 +1928,48 @@ function getWindMultiplier(windSpeed, gustSpeed) {
   const ws = windSpeed || 0;
   const gs = gustSpeed || ws;
 
-  // Sustained wind multiplier
+  // Sustained wind multiplier \u2014 extended ladder past Saffir-Simpson into
+  // tornadic, hypersonic, and atmospheric-stripping regimes for parity with
+  // the cosmic-scale snow/rain impact tiers.
   let windMult = 1.0;
-  if (ws >= 60)      windMult = 2.0;   // Hurricane-force: extreme drifting, structural damage
-  else if (ws >= 45) windMult = 1.7;   // Violent: whiteout, impossible travel
-  else if (ws >= 35) windMult = 1.5;   // Blizzard criteria: near-zero visibility with snow
-  else if (ws >= 25) windMult = 1.3;   // High wind: significant drifting
-  else if (ws >= 15) windMult = 1.15;  // Moderate: noticeable drifting
-  else if (ws >= 10) windMult = 1.05;  // Light: minor drifting
+  if (ws >= 10000)      windMult = 100.0; // Omega Wind Singularity
+  else if (ws >= 5000)  windMult = 60.0;  // Planetary Vortex
+  else if (ws >= 2500)  windMult = 36.0;  // Atmospheric Stripping
+  else if (ws >= 1500)  windMult = 22.0;  // Stratospheric Tear
+  else if (ws >= 1000)  windMult = 14.0;  // Mesospheric Shear
+  else if (ws >= 700)   windMult = 10.0;  // Hypersonic Maelstrom
+  else if (ws >= 500)   windMult = 7.5;   // Sonic Wind Wall
+  else if (ws >= 360)   windMult = 5.5;   // F5+ Embedded
+  else if (ws >= 280)   windMult = 4.5;   // EF5 Tornado-Scale
+  else if (ws >= 220)   windMult = 3.8;   // Super Cyclone (>=220)
+  else if (ws >= 180)   windMult = 3.2;   // Cat 5 Catastrophic
+  else if (ws >= 140)   windMult = 2.8;   // Cat 4 Devastating
+  else if (ws >= 110)   windMult = 2.4;   // Cat 3 Major Hurricane
+  else if (ws >= 80)    windMult = 2.15;  // Cat 1-2 Hurricane
+  else if (ws >= 60)    windMult = 2.0;   // Hurricane-force minimum
+  else if (ws >= 45)    windMult = 1.7;   // Violent: whiteout, impossible travel
+  else if (ws >= 35)    windMult = 1.5;   // Blizzard criteria: near-zero visibility with snow
+  else if (ws >= 25)    windMult = 1.3;   // High wind: significant drifting
+  else if (ws >= 15)    windMult = 1.15;  // Moderate: noticeable drifting
+  else if (ws >= 10)    windMult = 1.05;  // Light: minor drifting
   // Below 10 mph: negligible wind effect
 
-  // Gust bonus: gusts cause momentary spikes that damage trees, power lines
-  // Only counts the excess above sustained speed
+  // Gust bonus: gusts cause momentary spikes that damage trees, power lines.
+  // Only counts the excess above sustained speed. Extended for parity.
   const gustExcess = Math.max(0, gs - ws);
   let gustBonus = 0;
-  if (gustExcess >= 30)      gustBonus = 0.3;  // Extreme gusts
-  else if (gustExcess >= 20) gustBonus = 0.2;  // Very strong gusts
-  else if (gustExcess >= 15) gustBonus = 0.12; // Strong gusts
-  else if (gustExcess >= 10) gustBonus = 0.07; // Moderate gusts
-  else if (gustExcess >= 5)  gustBonus = 0.03; // Light gusts
+  if (gustExcess >= 5000)      gustBonus = 30.0; // Omega gusts
+  else if (gustExcess >= 2000) gustBonus = 18.0; // Stratospheric gusts
+  else if (gustExcess >= 1000) gustBonus = 10.0; // Hypersonic gusts
+  else if (gustExcess >= 500)  gustBonus = 6.0;  // Sonic-shock gusts
+  else if (gustExcess >= 200)  gustBonus = 3.0;  // Tornadic gusts
+  else if (gustExcess >= 100)  gustBonus = 1.5;  // Cat 5 gusts
+  else if (gustExcess >= 50)   gustBonus = 0.8;  // Cat 1-3 gusts
+  else if (gustExcess >= 30)   gustBonus = 0.3;  // Extreme gusts
+  else if (gustExcess >= 20)   gustBonus = 0.2;  // Very strong gusts
+  else if (gustExcess >= 15)   gustBonus = 0.12; // Strong gusts
+  else if (gustExcess >= 10)   gustBonus = 0.07; // Moderate gusts
+  else if (gustExcess >= 5)    gustBonus = 0.03; // Light gusts
 
   return windMult + gustBonus;
 }
@@ -1906,14 +1977,28 @@ function getWindMultiplier(windSpeed, gustSpeed) {
 function getWindLabel(windSpeed, gustSpeed) {
   const ws = windSpeed || 0;
   const gs = gustSpeed || 0;
-  if (ws >= 60)      return { label: 'Hurricane-Force', icon: '\u{1F32A}\uFE0F\u{1F32A}\uFE0F' };
-  if (ws >= 45)      return { label: 'Violent',         icon: '\u{1F32A}\uFE0F' };
-  if (ws >= 35)      return { label: 'Blizzard-Force',  icon: '\u{1F4A8}\u{1F4A8}' };
-  if (ws >= 25)      return { label: 'High Wind',       icon: '\u{1F4A8}' };
-  if (ws >= 15)      return { label: 'Breezy',          icon: '\u{1F343}' };
-  if (ws >= 10)      return { label: 'Light Wind',      icon: '~' };
-  if (gs >= 30)      return { label: 'Gusty',           icon: '\u{1F4A8}' };
-  return                     { label: 'Calm',            icon: '' };
+  if (ws >= 10000) return { label: 'Omega Wind Singularity',  icon: '\u{1F300}\u{1F300}\u{1F300}' };
+  if (ws >= 5000)  return { label: 'Planetary Vortex',        icon: '\u{1F30D}\u{1F32A}\uFE0F' };
+  if (ws >= 2500)  return { label: 'Atmospheric Stripping',   icon: '\u{1F4A5}\u{1F30D}' };
+  if (ws >= 1500)  return { label: 'Stratospheric Tear',      icon: '\u{1F30C}' };
+  if (ws >= 1000)  return { label: 'Mesospheric Shear',       icon: '\u{1F320}' };
+  if (ws >= 700)   return { label: 'Hypersonic Maelstrom',    icon: '\u{1F680}\u{1F680}' };
+  if (ws >= 500)   return { label: 'Sonic Wind Wall',         icon: '\u{1F680}' };
+  if (ws >= 360)   return { label: 'F5+ Embedded',            icon: '\u{1F32A}\uFE0F\u{1F32A}\uFE0F\u{1F32A}\uFE0F' };
+  if (ws >= 280)   return { label: 'EF5 Tornado-Scale',       icon: '\u{1F32A}\uFE0F\u{1F4A5}' };
+  if (ws >= 220)   return { label: 'Super Cyclone',           icon: '\u{1F30A}\u{1F32A}\uFE0F' };
+  if (ws >= 180)   return { label: 'Cat 5 Catastrophic',      icon: '\u{1F32A}\uFE0F\u{1F32A}\uFE0F\u{1F32A}\uFE0F' };
+  if (ws >= 140)   return { label: 'Cat 4 Devastating',       icon: '\u{1F32A}\uFE0F\u{1F32A}\uFE0F\u{1F4A5}' };
+  if (ws >= 110)   return { label: 'Cat 3 Major Hurricane',   icon: '\u{1F32A}\uFE0F\u{1F32A}\uFE0F' };
+  if (ws >= 80)    return { label: 'Cat 1-2 Hurricane',       icon: '\u{1F32A}\uFE0F' };
+  if (ws >= 60)    return { label: 'Hurricane-Force',         icon: '\u{1F32A}\uFE0F' };
+  if (ws >= 45)    return { label: 'Violent',                 icon: '\u{1F4A8}\u{1F4A8}\u{1F4A8}' };
+  if (ws >= 35)    return { label: 'Blizzard-Force',          icon: '\u{1F4A8}\u{1F4A8}' };
+  if (ws >= 25)    return { label: 'High Wind',               icon: '\u{1F4A8}' };
+  if (ws >= 15)    return { label: 'Breezy',                  icon: '\u{1F343}' };
+  if (ws >= 10)    return { label: 'Light Wind',              icon: '~' };
+  if (gs >= 30)    return { label: 'Gusty',                   icon: '\u{1F4A8}' };
+  return                  { label: 'Calm',                    icon: '' };
 }
 
 /* ---- Barometric Pressure Impact System ----
@@ -1927,34 +2012,60 @@ function getWindLabel(windSpeed, gustSpeed) {
 function getPressureMultiplier(pressure) {
   if (pressure === null || pressure === undefined || isNaN(pressure)) return 1.0;
   if (pressure >= 1015) return 1.0;
-  if (pressure >= 1005) return 1.05;  // Modest low
-  if (pressure >= 995)  return 1.10;  // Notable low
-  if (pressure >= 985)  return 1.18;  // Deepening low
-  if (pressure >= 975)  return 1.28;  // Strong nor'easter / sub-960 cutoff
-  if (pressure >= 965)  return 1.40;  // Bomb cyclone territory
-  if (pressure >= 955)  return 1.55;  // Extreme extra-tropical
-  if (pressure >= 945)  return 1.70;  // Major hurricane equivalent
-  if (pressure >= 925)  return 1.90;  // Cat 4-5 hurricane
-  if (pressure >= 900)  return 2.15;  // Record-territory
-  if (pressure >= 870)  return 2.45;  // Beyond modern records
-  return 2.80;                        // Unphysical / fictional
+  if (pressure >= 1005) return 1.05;   // Modest low
+  if (pressure >= 995)  return 1.10;   // Notable low
+  if (pressure >= 985)  return 1.18;   // Deepening low
+  if (pressure >= 975)  return 1.28;   // Strong nor'easter / sub-960 cutoff
+  if (pressure >= 965)  return 1.40;   // Bomb cyclone territory
+  if (pressure >= 955)  return 1.55;   // Extreme extra-tropical
+  if (pressure >= 945)  return 1.70;   // Major hurricane equivalent
+  if (pressure >= 925)  return 1.90;   // Cat 4-5 hurricane
+  if (pressure >= 900)  return 2.15;   // Record-territory
+  if (pressure >= 870)  return 2.50;   // Beyond modern records (Wilma 882 mb)
+  if (pressure >= 825)  return 2.95;   // Theoretical Limit
+  if (pressure >= 750)  return 3.60;   // Mesoscale Vacuum
+  if (pressure >= 650)  return 4.50;   // Stratospheric Hole
+  if (pressure >= 500)  return 5.80;   // Deep Atmospheric Voiding
+  if (pressure >= 300)  return 7.80;   // Surface Vacuum
+  if (pressure >= 100)  return 11.0;   // Near-Total Vacuum
+  if (pressure >= 10)   return 16.0;   // Exospheric Pressure
+  if (pressure >= 1)    return 23.0;   // Approaching Hard Vacuum
+  if (pressure >= 0)    return 32.0;   // Hard Vacuum
+  if (pressure >= -100) return 48.0;   // Negative Pressure (unphysical)
+  if (pressure >= -500) return 72.0;   // Reality Inversion
+  if (pressure >= -2000) return 110.0; // Tachyonic Anti-Pressure
+  if (pressure >= -10000) return 175.0;// Cosmic Pressure Wall
+  return 280.0;                        // Omega Pressure Singularity
 }
 
 function getPressureLabel(pressure) {
   if (pressure === null || pressure === undefined || isNaN(pressure)) return null;
-  if (pressure >= 1025) return { label: 'High Pressure',    icon: '\u2600\uFE0F' };
-  if (pressure >= 1015) return { label: 'Normal',           icon: '' };
-  if (pressure >= 1005) return { label: 'Modest Low',       icon: '\u{1F326}\uFE0F' };
-  if (pressure >= 995)  return { label: 'Notable Low',      icon: '\u{1F327}\uFE0F' };
-  if (pressure >= 985)  return { label: 'Deepening Low',    icon: '\u{1F328}\uFE0F' };
-  if (pressure >= 975)  return { label: 'Strong Low',       icon: '\u{1F32C}\uFE0F' };
-  if (pressure >= 965)  return { label: 'Bomb Cyclone',     icon: '\u{1F4A5}' };
-  if (pressure >= 955)  return { label: 'Extreme Low',      icon: '\u{1F4A5}\u{1F4A5}' };
-  if (pressure >= 945)  return { label: 'Major Hurricane',  icon: '\u{1F32A}\uFE0F' };
-  if (pressure >= 925)  return { label: 'Cat 4-5 Hurricane',icon: '\u{1F32A}\uFE0F\u{1F32A}\uFE0F' };
-  if (pressure >= 900)  return { label: 'Record Low',       icon: '\u{1F6A8}' };
-  if (pressure >= 870)  return { label: 'Beyond Records',   icon: '\u26A0\uFE0F' };
-  return                       { label: 'Unphysical',       icon: '\u{1F300}' };
+  if (pressure >= 1025) return { label: 'High Pressure',          icon: '\u2600\uFE0F' };
+  if (pressure >= 1015) return { label: 'Normal',                 icon: '' };
+  if (pressure >= 1005) return { label: 'Modest Low',             icon: '\u{1F326}\uFE0F' };
+  if (pressure >= 995)  return { label: 'Notable Low',            icon: '\u{1F327}\uFE0F' };
+  if (pressure >= 985)  return { label: 'Deepening Low',          icon: '\u{1F328}\uFE0F' };
+  if (pressure >= 975)  return { label: 'Strong Low',             icon: '\u{1F32C}\uFE0F' };
+  if (pressure >= 965)  return { label: 'Bomb Cyclone',           icon: '\u{1F4A5}' };
+  if (pressure >= 955)  return { label: 'Extreme Low',            icon: '\u{1F4A5}\u{1F4A5}' };
+  if (pressure >= 945)  return { label: 'Major Hurricane',        icon: '\u{1F32A}\uFE0F' };
+  if (pressure >= 925)  return { label: 'Cat 4-5 Hurricane',      icon: '\u{1F32A}\uFE0F\u{1F32A}\uFE0F' };
+  if (pressure >= 900)  return { label: 'Record Low',             icon: '\u{1F6A8}' };
+  if (pressure >= 870)  return { label: 'Beyond Records',         icon: '\u26A0\uFE0F' };
+  if (pressure >= 825)  return { label: 'Theoretical Limit',      icon: '\u{1F300}' };
+  if (pressure >= 750)  return { label: 'Mesoscale Vacuum',       icon: '\u{1F300}\u{1F300}' };
+  if (pressure >= 650)  return { label: 'Stratospheric Hole',     icon: '\u{1F320}' };
+  if (pressure >= 500)  return { label: 'Deep Atmospheric Voiding',icon: '\u{1F30C}' };
+  if (pressure >= 300)  return { label: 'Surface Vacuum',         icon: '\u{1F30C}\u{1F320}' };
+  if (pressure >= 100)  return { label: 'Near-Total Vacuum',      icon: '\u{1F315}' };
+  if (pressure >= 10)   return { label: 'Exospheric Pressure',    icon: '\u{1F311}' };
+  if (pressure >= 1)    return { label: 'Approaching Hard Vacuum',icon: '\u{1F315}\u{1F31A}' };
+  if (pressure >= 0)    return { label: 'Hard Vacuum',            icon: '\u269B\uFE0F' };
+  if (pressure >= -100) return { label: 'Negative Pressure',      icon: '\u267E\uFE0F' };
+  if (pressure >= -500) return { label: 'Reality Inversion',      icon: '\u{1F300}\u{1F300}\u{1F300}' };
+  if (pressure >= -2000) return { label: 'Tachyonic Anti-Pressure',icon: '\u{1F4A0}' };
+  if (pressure >= -10000) return { label: 'Cosmic Pressure Wall', icon: '\u{1F30C}\u{1F30C}' };
+  return                       { label: 'Omega Pressure Singularity', icon: '\u{1F300}\u{1F300}\u{1F300}' };
 }
 
 function getImpact(snow, annualSnow, recordCold, coldTemp, snowEquivalent, windSpeed, gustSpeed, lat, pressure) {
@@ -2430,7 +2541,6 @@ function addCity() {
   if (gustSpeedVal !== null && isNaN(gustSpeedVal)) { inputError.textContent = 'Enter a valid gust speed.'; return; }
   const pressure = pressureInput.value ? parseFloat(pressureInput.value) : null;
   if (pressure !== null && isNaN(pressure)) { inputError.textContent = 'Enter a valid barometric pressure (mb).'; return; }
-  if (pressure !== null && (pressure < 800 || pressure > 1080)) { inputError.textContent = 'Pressure must be between 800 and 1080 mb.'; return; }
   const derived = computeDerivedPrecip(phases);
   cities.push({
     name, phases, snow: derived.snow, snowEquivalent: derived.snowEquivalent,
@@ -3133,7 +3243,7 @@ const STORM_TEMPLATES = [
     { label:'Flurry Dud', centerSnow:[0.1,0.5],  fringe:[0,0.15], cityCount:[1,2],  coldChance:0.08, coldRange:[22,30] },
     { label:'Flurry Dud', centerSnow:[0.15,0.6], fringe:[0,0.2],  cityCount:[1,2],  coldChance:0.1,  coldRange:[20,30] },
   ]},
-  { type:'Omega Continental Blizzard Outbreak', regions:'all-continental', typicalDirections:['W_E','SW_NE'], windProfile:{base:[120,180],severe:[180,260],gustAdd:[60,120],chance:1.0}, precipMix:[
+  { type:'Omega Continental Blizzard Outbreak', regions:'all-continental', typicalDirections:['W_E','SW_NE'], windProfile:{base:[400,800],severe:[3000,12000],gustAdd:[500,5000],chance:1.0}, precipMix:[
     { phases:[{type:'snow',pct:1.0}], weight:8 },
     { phases:[{type:'snow',pct:0.92},{type:'sleet',pct:0.08}], weight:1 },
     { phases:[{type:'snow',pct:0.93},{type:'ice',pct:0.07}], weight:1 },
@@ -3278,7 +3388,7 @@ const STORM_TEMPLATES = [
     { label:'Sprinkle Dud', centerSnow:[0.08,0.25],fringe:[0,0.10], cityCount:[1,2],  coldChance:0.07, coldRange:[40,60] },
     { label:'Sprinkle Dud', centerSnow:[0.10,0.30],fringe:[0,0.12], cityCount:[1,2],  coldChance:0.08, coldRange:[40,60] },
   ]},
-  { type:'Omega Continental Mega-Deluge', regions:'all-continental', typicalDirections:['W_E','SW_NE'], windProfile:{base:[120,180],severe:[180,260],gustAdd:[60,120],chance:1.0}, precipMix:[
+  { type:'Omega Continental Mega-Deluge', regions:'all-continental', typicalDirections:['W_E','SW_NE'], windProfile:{base:[400,800],severe:[3000,12000],gustAdd:[500,5000],chance:1.0}, precipMix:[
     { phases:[{type:'rain',pct:1.0}], weight:1 },
   ], severities:[
     // Mirrors Omega Blizzard scaling — every severity saturates every rain tier
@@ -3821,7 +3931,9 @@ function generateRandomStorm() {
       let basePress = 1013 - peakWind * 0.42;          // 100 mph wind -> ~971 mb
       if (!isCenter) basePress += rand(6, 14);          // outer rim higher
       basePress += rand(-4, 4);                         // small jitter
-      pressure = Math.max(850, Math.min(1030, Math.round(basePress * 10) / 10));
+      // Soft floor at -50000 mb so Omega/cosmic templates can push into the
+      // unphysical/Singularity tiers without being clamped to a Saffir-Simpson cap.
+      pressure = Math.max(-50000, Math.min(1040, Math.round(basePress * 10) / 10));
     }
 
     cities.push({
@@ -4700,7 +4812,9 @@ function parseParagraphInput() {
       let basePress = 1013 - peakWind * 0.42;
       if (i >= centerCount) basePress += rand(6, 14);
       basePress += rand(-4, 4);
-      pressure = Math.max(850, Math.min(1030, Math.round(basePress * 10) / 10));
+      // Soft floor at -50000 mb so Omega/cosmic templates can push into the
+      // unphysical/Singularity tiers without being clamped to a Saffir-Simpson cap.
+      pressure = Math.max(-50000, Math.min(1040, Math.round(basePress * 10) / 10));
     }
 
     cities.push({
