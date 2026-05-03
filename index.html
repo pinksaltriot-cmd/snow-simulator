@@ -3234,6 +3234,23 @@ const STORM_TEMPLATES = [
     { label:'Major',       centerSnow:[2.5,6],  fringe:[0.5,2.5],cityCount:[6,11], coldChance:0.9,  coldRange:[-15,8] },
     { label:'Extreme',     centerSnow:[4,9],    fringe:[1,4],    cityCount:[9,14], coldChance:0.95, coldRange:[-25,0] },
   ]},
+  // Snowmageddon 2.0: a continent-spanning, multi-week record-breaker covering
+  // most of North America (anomalously deep into the Sun Belt) plus much of
+  // Western Europe. Unlike Omega, this is a "biggest in recorded history"
+  // event — devastating but not civilization-ending. Pressures dip into bomb-
+  // cyclone territory; winds reach Cat 1-3; snow totals push 60-90" in the
+  // hardest-hit corridor. cityCount is large but bounded.
+  { type:'Snowmageddon 2.0', regions:'na-and-weur', typicalDirections:['W_E','SW_NE','NW_SE'], windProfile:{base:[20,40],severe:[55,95],gustAdd:[20,55],chance:0.95}, precipMix:[
+    { phases:[{type:'snow',pct:1.0}], weight:8 },
+    { phases:[{type:'snow',pct:0.9},{type:'sleet',pct:0.1}], weight:2 },
+    { phases:[{type:'snow',pct:0.92},{type:'ice',pct:0.08}], weight:1 },
+  ], severities:[
+    { label:'Minor',       centerSnow:[10,18], fringe:[3,8],   cityCount:[15,30],  coldChance:0.6,  coldRange:[-5,18] },
+    { label:'Moderate',    centerSnow:[18,28], fringe:[6,14],  cityCount:[25,50],  coldChance:0.75, coldRange:[-15,12] },
+    { label:'Significant', centerSnow:[28,42], fringe:[10,22], cityCount:[40,75],  coldChance:0.85, coldRange:[-22,5] },
+    { label:'Major',       centerSnow:[42,60], fringe:[16,32], cityCount:[55,95],  coldChance:0.92, coldRange:[-30,-2] },
+    { label:'Extreme',     centerSnow:[60,90], fringe:[25,50], cityCount:[70,130], coldChance:0.97, coldRange:[-42,-8] },
+  ]},
   { type:'Flurry Dud', regions:'weighted-single', typicalDirections:['W_E','NW_SE','SW_NE'], windProfile:{base:[0,5],severe:[0,8],gustAdd:[0,5],chance:0.1}, precipMix:[
     { phases:[{type:'snow',pct:1.0}], weight:1 },
   ], severities:[
@@ -3378,6 +3395,21 @@ const STORM_TEMPLATES = [
     { label:'Major',       centerSnow:[12.0,20.0],fringe:[4.0,9.0], cityCount:[4,9],  coldChance:0.12, coldRange:[48,62] },
     { label:'Extreme',     centerSnow:[20.0,35.0],fringe:[7.0,15.0],cityCount:[6,12], coldChance:0.18, coldRange:[45,60] },
   ]},
+  // Rainmageddon 2.0: rain parallel to Snowmageddon 2.0. Atmospheric-river +
+  // tropical-tap convergence stalls over NA + Western Europe. Continental-scale
+  // rainfall in the Harvey-Class to Drowning-of-Records range — biggest in
+  // recorded history but still recoverable. cityCount, regions, wind, and
+  // pressure profile mirror the snow version.
+  { type:'Rainmageddon 2.0', regions:'na-and-weur', typicalDirections:['W_E','SW_NE','S_N'], windProfile:{base:[20,40],severe:[55,95],gustAdd:[20,55],chance:0.95}, precipMix:[
+    { phases:[{type:'rain',pct:1.0}], weight:9 },
+    { phases:[{type:'rain',pct:0.9},{type:'snow',pct:0.1}], weight:1 },
+  ], severities:[
+    { label:'Minor',       centerSnow:[3,8],   fringe:[1,3],   cityCount:[15,30],  coldChance:0.10, coldRange:[40,58] },
+    { label:'Moderate',    centerSnow:[8,16],  fringe:[3,7],   cityCount:[25,50],  coldChance:0.15, coldRange:[38,55] },
+    { label:'Significant', centerSnow:[16,28], fringe:[6,14],  cityCount:[40,75],  coldChance:0.20, coldRange:[36,52] },
+    { label:'Major',       centerSnow:[28,45], fringe:[12,22], cityCount:[55,95],  coldChance:0.25, coldRange:[34,50] },
+    { label:'Extreme',     centerSnow:[45,80], fringe:[22,40], cityCount:[70,130], coldChance:0.30, coldRange:[32,48] },
+  ]},
   { type:'Sprinkle Dud', regions:'weighted-single', typicalDirections:['W_E','NW_SE','SW_NE'], windProfile:{base:[0,5],severe:[0,8],gustAdd:[0,5],chance:0.1}, precipMix:[
     { phases:[{type:'rain',pct:1.0}], weight:1 },
   ], severities:[
@@ -3441,6 +3473,16 @@ STORM_DIRECTIONS.forEach((d, i) => {
 
 // Storm speed in miles per hour
 const STORM_SPEED_MPH = { slow: 15, medium: 30, fast: 50 };
+
+// Snowmageddon-2.0 scope: cities in North America OR Western Europe.
+// Bounding boxes generously cover Mexico through Greenland in NA, and
+// Iberia through southern Scandinavia / Vienna in Western Europe.
+function isInSnowmageddonScope(c) {
+  if (c.lat == null || c.lon == null) return false;
+  const inNA   = c.lat >= 18 && c.lat <= 75  && c.lon >= -170 && c.lon <= -50;
+  const inWEur = c.lat >= 35 && c.lat <= 65  && c.lon >= -11  && c.lon <= 20;
+  return inNA || inWEur;
+}
 
 // Spread Level — controls how far snow reaches beyond entered cities.
 // Index = slider value (1-5). Multipliers scale the distance falloff and
@@ -3830,14 +3872,27 @@ function generateRandomStorm() {
   } else if (template.regions === 'all-continental') {
     activeRegions = null; // use all cities
     isAllContinental = true;
+  } else if (template.regions === 'na-and-weur') {
+    // Snowmageddon-2.0 scope: every NA city (US RSI regions, Canada, Alaska,
+    // Mexico) plus Western Europe (UK, France, Iberia, Benelux, DACH,
+    // Scandinavia south of the Arctic Circle, Italy north of Naples).
+    // Selected by lat/lon bounding boxes so non-RSI cities (Canada, Europe)
+    // are included even though they have c.r === null.
+    activeRegions = null;
+    isAllContinental = true;
   } else {
     activeRegions = template.regions;
   }
 
   // Gather eligible cities
-  const eligible = isAllContinental
-    ? [...CITY_DB]
-    : CITY_DB.filter(c => activeRegions.includes(c.r));
+  let eligible;
+  if (template.regions === 'na-and-weur') {
+    eligible = CITY_DB.filter(c => isInSnowmageddonScope(c));
+  } else if (isAllContinental) {
+    eligible = [...CITY_DB];
+  } else {
+    eligible = CITY_DB.filter(c => activeRegions.includes(c.r));
+  }
   if (eligible.length === 0) return;
 
   // Shuffle and pick cities
