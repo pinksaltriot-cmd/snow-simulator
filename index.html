@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Snow Event Profile Maker 3.14</title>
+<title>Snow Event Profile Maker 3.1.4</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -90,6 +90,30 @@
   .storm-track-row select { padding: 8px 12px; border-radius: 8px; background: rgba(0,0,0,0.25); color: #fff; border: 1px solid rgba(255,255,255,0.2); font-size: 0.88rem; outline: none; }
   .storm-track-row select:focus { border-color: #5b9cf5; }
   .storm-track-row .help-text { font-size: 0.7rem; opacity: 0.4; margin-top: 3px; }
+
+  .spread-row { margin-top: 14px; }
+  .spread-row label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.5; display: block; margin-bottom: 6px; }
+  .spread-row .spread-header { display: flex; justify-content: space-between; align-items: baseline; }
+  .spread-row .spread-value { font-size: 0.82rem; font-weight: 600; color: #93c5fd; opacity: 0.95; letter-spacing: 0.3px; text-transform: none; }
+  .spread-row input[type="range"] {
+    width: 100%; -webkit-appearance: none; appearance: none; height: 6px;
+    border-radius: 3px; background: linear-gradient(90deg,#1e40af,#5b9cf5,#fbbf24,#f97316,#dc2626);
+    outline: none; cursor: pointer; margin: 6px 0 4px;
+  }
+  .spread-row input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none; width: 18px; height: 18px;
+    border-radius: 50%; background: #fff; border: 2px solid #5b9cf5;
+    cursor: pointer; box-shadow: 0 0 4px rgba(0,0,0,0.4);
+  }
+  .spread-row input[type="range"]::-moz-range-thumb {
+    width: 18px; height: 18px; border-radius: 50%; background: #fff;
+    border: 2px solid #5b9cf5; cursor: pointer; box-shadow: 0 0 4px rgba(0,0,0,0.4);
+  }
+  .spread-row .spread-ticks {
+    display: flex; justify-content: space-between; font-size: 0.65rem;
+    opacity: 0.45; margin-top: 2px; letter-spacing: 0.3px;
+  }
+  .spread-row .help-text { font-size: 0.7rem; opacity: 0.4; margin-top: 4px; }
   .timeline-cell { font-size: 0.72rem; line-height: 1.6; white-space: nowrap; }
   .timeline-cell .tl-first { color: #93c5fd; }
   .timeline-cell .tl-peak { color: #fbbf24; font-weight: 600; }
@@ -668,7 +692,7 @@
 </aside>
 
 <div class="container">
-  <h1>Snow Event Profile Maker 3.14</h1>
+  <h1>Snow Event Profile Maker 3.1.4</h1>
   <p class="subtitle">Powered by real NOAA RSI methodology with location-based impact scaling</p>
 
   <div class="card">
@@ -788,6 +812,17 @@
         <div class="help-text">How fast the storm moves</div>
       </div>
     </div>
+    <div class="spread-row">
+      <div class="spread-header">
+        <label for="stormSpread">Spread Level</label>
+        <span class="spread-value" id="stormSpreadValue">Moderate</span>
+      </div>
+      <input type="range" id="stormSpread" min="1" max="5" step="1" value="3">
+      <div class="spread-ticks">
+        <span>Minimal</span><span>Low</span><span>Moderate</span><span>Wide</span><span>Extreme</span>
+      </div>
+      <div class="help-text">How far the storm reaches beyond the entered cities. Nor'easters and lake-effect bands are tight (Minimal/Low); continental outbreaks are broad (Wide/Extreme).</div>
+    </div>
     <div style="display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;">
       <button class="btn-generate" id="generateBtn" disabled>Generate Storm Profile</button>
       <button class="btn-clear" id="clearBtn">Clear All</button>
@@ -871,6 +906,9 @@ const RAW_CITIES = [
   ["Hickory, NC",40,"SE",8,35.7,-81.3],["Florence, SC",38,"SE",2,34.2,-79.8],
   ["Bainbridge, GA",13,"SE",0.5,30.9,-84.6],["Albany, GA",77,"SE",1,31.6,-84.2],["Tallahassee, FL",196,"SE",0.1,30.4,-84.3],["Orlando, FL",310,"SE",0,28.5,-81.4],["Miami, FL",470,"SE",0,25.8,-80.2],
   ["Tampa, FL",399,"SE",0,27.95,-82.5],["Fort Lauderdale, FL",183,"SE",0,26.1,-80.1],["West Palm Beach, FL",118,"SE",0,26.7,-80.05],
+  ["Cape Hatteras, NC",0.5,"SE",0.5,35.22,-75.63],["New Bern, NC",31,"SE",2,35.11,-77.04],["Kinston, NC",19,"SE",3,35.26,-77.58],["Manteo, NC",1.5,"SE",2,35.91,-75.67],
+  ["Columbus, GA",206,"SE",0.5,32.46,-84.99],["Brunswick, GA",16,"SE",0.1,31.15,-81.49],["Alma, GA",3.4,"SE",0.3,31.54,-82.46],["Waycross, GA",13,"SE",0.5,31.21,-82.36],
+  ["Gainesville, FL",145,"SE",0.1,29.65,-82.32],["Daytona Beach, FL",73,"SE",0,29.21,-81.02],["Apalachicola, FL",2.3,"SE",0,29.73,-84.99],["Pensacola, FL",54,"SE",0.2,30.42,-87.22],["Crestview, FL",28,"SE",0.4,30.76,-86.57],
   // ---- OHIO VALLEY ----
   ["Chicago, IL",2697,"OV",36,41.9,-87.6],["Detroit, MI",639,"OV",43,42.3,-83.0],["Columbus, OH",905,"OV",28,40.0,-82.9],
   ["Indianapolis, IN",887,"OV",26,39.8,-86.2],["Cleveland, OH",373,"OV",63,41.5,-81.7],["Cincinnati, OH",309,"OV",23,39.1,-84.5],
@@ -1552,6 +1590,11 @@ const HISTORIC_STORMS = [
   { name:'Megalopolitan Snowstorm (Feb 1983)',rsi:17.2 },
   { name:'Veterans Day Blizzard (Nov 1987, Plains)',rsi:8.1 },
   { name:'East Coast Bomb Cyclone (Mar 1984)',rsi:9.5 },
+  // Source: NWS Wilmington NC — weather.gov/ilm/ChristmasSnow1989
+  // "Largest snowstorm in history for the Southeast U.S. coast." 19.5" Longwood NC,
+  // 17.5" Wilmington NC area, 14" Myrtle Beach SC, 8" Charleston SC, 6" Cairo GA,
+  // 3" Live Oak FL; flurries to Tampa. Cat-3 (Major) RSI in the SE region.
+  { name:'Christmas Snowstorm (Dec 1989, SE Coast)',rsi:11.9 },
   // === 1990s ===
   { name:'Nor\'easter of Mar 1993 (pre-Superstorm)',rsi:11.4 },
   { name:'Superstorm of 1993 (Storm of the Century)',rsi:24.43 },
@@ -1570,6 +1613,10 @@ const HISTORIC_STORMS = [
   { name:'Thundersnow Blizzard (Feb 2011, Chicago)',rsi:12.6 },
   { name:'Halloween Nor\'easter (Oct 2011)',rsi:7.2 },
   { name:'Winter Storm Nemo (Feb 2013)',rsi:11.0 },
+  // Source: NWS Tulsa OK — weather.gov/tsa/weather-event_2013may2
+  // Latest snow on record for both Tulsa (since 1900) and Arkansas. 5" near Decatur AR,
+  // 3" Westville OK, 3" Siloam Springs/Gentry AR. Tiny footprint, historic for the date.
+  { name:'May Surprise Snowstorm (May 2013, Ozarks)',rsi:1.2 },
   { name:'Polar Vortex Blizzard (Jan 2014)',rsi:9.3 },
   { name:'Lake Effect Apocalypse (Nov 2014, Buffalo)',rsi:9.8 },
   { name:'Blizzard Juno (Jan 2015)',rsi:8.4 },
@@ -2777,7 +2824,7 @@ function generateProfile() {
     ff.push('\u26AA <strong>The White Void:</strong> All matter in the affected region has been converted to snow. Light does not escape the snowpack. Time appears to be paused.');
   }
   if (peakEffective >= 10000) {
-    ff.push('\u2728 <strong>Omega Point Frost:</strong> The universe achieves maximal crystallinity. This is the final unified snow state. No further meteorological events are possible. Thank you for using the Snow Event Profile Maker 3.14.');
+    ff.push('\u2728 <strong>Omega Point Frost:</strong> The universe achieves maximal crystallinity. This is the final unified snow state. No further meteorological events are possible. Thank you for using the Snow Event Profile Maker 3.1.4.');
   }
 
   // Ice-specific fun facts
@@ -3056,6 +3103,33 @@ STORM_DIRECTIONS.forEach((d, i) => {
 
 // Storm speed in miles per hour
 const STORM_SPEED_MPH = { slow: 15, medium: 30, fast: 50 };
+
+// Spread Level — controls how far snow reaches beyond entered cities.
+// Index = slider value (1-5). Multipliers scale the distance falloff and
+// the hard out-of-reach cutoff in estimateSnowForCity().
+const SPREAD_LEVELS = [
+  null,
+  { label: 'Minimal',  mult: 0.40 }, // tight nor'easter / lake-effect band
+  { label: 'Low',      mult: 0.65 }, // typical coastal swath
+  { label: 'Moderate', mult: 1.00 }, // default — historical baseline
+  { label: 'Wide',     mult: 1.55 }, // broad continental storm
+  { label: 'Extreme',  mult: 2.30 }  // multi-region polar outbreak
+];
+function getSpreadMultiplier() {
+  const el = document.getElementById('stormSpread');
+  const idx = el ? parseInt(el.value, 10) : 3;
+  return (SPREAD_LEVELS[idx] || SPREAD_LEVELS[3]).mult;
+}
+const spreadSlider = document.getElementById('stormSpread');
+const spreadValueEl = document.getElementById('stormSpreadValue');
+if (spreadSlider && spreadValueEl) {
+  const updateSpreadLabel = () => {
+    const lvl = SPREAD_LEVELS[parseInt(spreadSlider.value, 10)] || SPREAD_LEVELS[3];
+    spreadValueEl.textContent = lvl.label;
+  };
+  spreadSlider.addEventListener('input', updateSpreadLabel);
+  updateSpreadLabel();
+}
 
 // Fixed-severity storm types: severity dropdown is irrelevant for these
 const FIXED_SEVERITY_TYPES = { 'Flurry Dud': true, 'Omega Continental Blizzard Outbreak': true, 'Test Ladder': true };
@@ -4697,11 +4771,15 @@ function estimateSnowForCity(candidate) {
   const centerLat = anchors.reduce((s,a) => s + a.lat, 0) / anchors.length;
   const centerLon = anchors.reduce((s,a) => s + a.lon, 0) / anchors.length;
   const spanRadius = Math.max(...anchors.map(a => milesBetween(centerLat, centerLon, a.lat, a.lon)));
-  const falloffScale = Math.max(110, spanRadius * 0.35);
+  // Spread Level multiplier — user-controlled "how far the storm reaches"
+  // (1=Minimal nor'easter swath, 3=Moderate default, 5=Extreme continental outbreak).
+  const spreadMult = getSpreadMultiplier();
+  const falloffScale = Math.max(110, spanRadius * 0.35) * spreadMult;
 
-  // Hard cutoff: beyond 1.4× scale OR an absolute 800-mile ceiling from the
-  // nearest anchor, the storm simply does not reach.
-  if (minDist > 1.4 * falloffScale || minDist > 800) {
+  // Hard cutoff: beyond 1.4× scale OR an absolute distance ceiling that also
+  // scales with spread (260 mi at Minimal up to 1400 mi at Extreme).
+  const distCeiling = 800 * spreadMult;
+  if (minDist > 1.4 * falloffScale || minDist > distCeiling) {
     return { ...outOfReach(), minDistance: minDist };
   }
   const falloff = Math.exp(-Math.pow(minDist / falloffScale, 2));
