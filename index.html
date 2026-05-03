@@ -400,6 +400,13 @@
   .wind-field input { width: 80px; }
   .wind-field .unit { font-size: 0.82rem; opacity: 0.6; padding-bottom: 10px; }
 
+  /* Barometric pressure input row — same skin as wind */
+  .pressure-row { display: flex; gap: 12px; align-items: flex-end; margin-top: 10px; flex-wrap: wrap; }
+  .pressure-field { display: flex; align-items: flex-end; gap: 6px; }
+  .pressure-field input { width: 95px; }
+  .pressure-field .unit { font-size: 0.82rem; opacity: 0.6; padding-bottom: 10px; }
+  .pressure-field .help-text { font-size: 0.7rem; opacity: 0.4; margin-left: 6px; padding-bottom: 12px; }
+
   /* Input mode toggle & paragraph mode */
   .mode-toggle { display: flex; gap: 8px; }
   .mode-btn {
@@ -787,6 +794,16 @@
           <input type="number" id="gustInput" placeholder="e.g. 45" min="0">
         </div>
         <span class="unit">mph</span>
+      </div>
+    </div>
+    <div class="pressure-row">
+      <div class="pressure-field">
+        <div>
+          <label for="pressureInput">Barometric pressure</label>
+          <input type="number" id="pressureInput" placeholder="e.g. 980" min="800" max="1080" step="0.1">
+        </div>
+        <span class="unit">mb</span>
+        <span class="help-text">Sea-level. Normal ~1013 mb. Lower = stronger storm = higher impact. Bomb cyclones &lt;980 mb. Hurricanes &lt;960 mb.</span>
       </div>
     </div>
     <div id="inputError" class="error-msg"></div>
@@ -1899,10 +1916,52 @@ function getWindLabel(windSpeed, gustSpeed) {
   return                     { label: 'Calm',            icon: '' };
 }
 
-function getImpact(snow, annualSnow, recordCold, coldTemp, snowEquivalent, windSpeed, gustSpeed, lat) {
+/* ---- Barometric Pressure Impact System ----
+   Lower sea-level pressure correlates with deeper, more energetic storms.
+   Pressure also drives wind, surge, and overall destructive potential
+   independent of precipitation amount. Standard sea-level pressure is
+   ~1013 mb; bomb cyclones are <980 mb; major hurricanes <950 mb; the
+   strongest extra-tropical storm on record (1913 Great Lakes) was ~970 mb;
+   Hurricane Wilma (2005, lowest Atlantic) was 882 mb.
+   Multiplier scales with how anomalously low the pressure is. */
+function getPressureMultiplier(pressure) {
+  if (pressure === null || pressure === undefined || isNaN(pressure)) return 1.0;
+  if (pressure >= 1015) return 1.0;
+  if (pressure >= 1005) return 1.05;  // Modest low
+  if (pressure >= 995)  return 1.10;  // Notable low
+  if (pressure >= 985)  return 1.18;  // Deepening low
+  if (pressure >= 975)  return 1.28;  // Strong nor'easter / sub-960 cutoff
+  if (pressure >= 965)  return 1.40;  // Bomb cyclone territory
+  if (pressure >= 955)  return 1.55;  // Extreme extra-tropical
+  if (pressure >= 945)  return 1.70;  // Major hurricane equivalent
+  if (pressure >= 925)  return 1.90;  // Cat 4-5 hurricane
+  if (pressure >= 900)  return 2.15;  // Record-territory
+  if (pressure >= 870)  return 2.45;  // Beyond modern records
+  return 2.80;                        // Unphysical / fictional
+}
+
+function getPressureLabel(pressure) {
+  if (pressure === null || pressure === undefined || isNaN(pressure)) return null;
+  if (pressure >= 1025) return { label: 'High Pressure',    icon: '\u2600\uFE0F' };
+  if (pressure >= 1015) return { label: 'Normal',           icon: '' };
+  if (pressure >= 1005) return { label: 'Modest Low',       icon: '\u{1F326}\uFE0F' };
+  if (pressure >= 995)  return { label: 'Notable Low',      icon: '\u{1F327}\uFE0F' };
+  if (pressure >= 985)  return { label: 'Deepening Low',    icon: '\u{1F328}\uFE0F' };
+  if (pressure >= 975)  return { label: 'Strong Low',       icon: '\u{1F32C}\uFE0F' };
+  if (pressure >= 965)  return { label: 'Bomb Cyclone',     icon: '\u{1F4A5}' };
+  if (pressure >= 955)  return { label: 'Extreme Low',      icon: '\u{1F4A5}\u{1F4A5}' };
+  if (pressure >= 945)  return { label: 'Major Hurricane',  icon: '\u{1F32A}\uFE0F' };
+  if (pressure >= 925)  return { label: 'Cat 4-5 Hurricane',icon: '\u{1F32A}\uFE0F\u{1F32A}\uFE0F' };
+  if (pressure >= 900)  return { label: 'Record Low',       icon: '\u{1F6A8}' };
+  if (pressure >= 870)  return { label: 'Beyond Records',   icon: '\u26A0\uFE0F' };
+  return                       { label: 'Unphysical',       icon: '\u{1F300}' };
+}
+
+function getImpact(snow, annualSnow, recordCold, coldTemp, snowEquivalent, windSpeed, gustSpeed, lat, pressure) {
   const factor = getResilienceFactor(annualSnow, lat);
   const coldMult = recordCold ? getColdMultiplier(coldTemp) : 1.0;
   const windMult = getWindMultiplier(windSpeed, gustSpeed);
+  const pressureMult = getPressureMultiplier(pressure);
   // Use snowEquivalent (precip-type-weighted) when available, otherwise raw snow
   const effectiveSnow = (snowEquivalent !== undefined && snowEquivalent !== null) ? snowEquivalent : snow;
 
@@ -1916,8 +1975,8 @@ function getImpact(snow, annualSnow, recordCold, coldTemp, snowEquivalent, windS
     coldBaseline = rawCold / factor;
   }
 
-  const snowEffective = (effectiveSnow / factor) * coldMult * windMult;
-  const effective = Math.max(snowEffective, coldBaseline);  // Whichever is worse
+  const snowEffective = (effectiveSnow / factor) * coldMult * windMult * pressureMult;
+  const effective = Math.max(snowEffective, coldBaseline * pressureMult);  // Whichever is worse
 
   let result;
   if (effective === 0)          result = { level:'None',              css:'none-impact',         desc:'No precipitation of any kind. Clear skies.',                                          school:'0-minute delay; normal schedule.' };
@@ -1970,6 +2029,7 @@ function getImpact(snow, annualSnow, recordCold, coldTemp, snowEquivalent, windS
   result.factor = factor;
   result.coldMult = coldMult;
   result.windMult = windMult;
+  result.pressureMult = pressureMult;
   result.coldDriven = coldBaseline > 0 && coldBaseline >= snowEffective;
   return result;
 }
@@ -2109,8 +2169,9 @@ function getRainResilienceLabel(annualRain, lat) {
    we don't track annual rainfall per city — but latitude is used to bump
    tropical / arid regions where infrastructure rarely sees soaking rains.
    ====================================================================== */
-function getRainImpact(rainInches, lat, windSpeed, gustSpeed) {
+function getRainImpact(rainInches, lat, windSpeed, gustSpeed, pressure) {
   const windMult = getWindMultiplier(windSpeed, gustSpeed);
+  const pressureMult = getPressureMultiplier(pressure);
   // Latitude bump: arid subtropical / desert belts and tropical-margin
   // cities have minimal storm-drain capacity. Cities at |lat|<35 with
   // little annual rain prep get a modest amplification.
@@ -2120,7 +2181,7 @@ function getRainImpact(rainInches, lat, windSpeed, gustSpeed) {
     if (absLat < 25)      latMult = 1.15;  // tropical / outer-tropical
     else if (absLat < 32) latMult = 1.08;  // subtropical / arid belt
   }
-  const effective = (rainInches || 0) * windMult * latMult;
+  const effective = (rainInches || 0) * windMult * latMult * pressureMult;
 
   let result;
   if (effective === 0)            result = { level:'Bone Dry',            css:'rain-none',           desc:'No precipitation. Clear skies.',                                                  school:'0-minute delay; normal schedule.' };
@@ -2160,6 +2221,7 @@ function getRainImpact(rainInches, lat, windSpeed, gustSpeed) {
   result.effective = effective;
   result.windMult = windMult;
   result.latMult = latMult;
+  result.pressureMult = pressureMult;
   return result;
 }
 
@@ -2191,6 +2253,7 @@ const coldField = document.getElementById('coldField');
 const coldInput = document.getElementById('coldInput');
 const windInput = document.getElementById('windInput');
 const gustInput = document.getElementById('gustInput');
+const pressureInput = document.getElementById('pressureInput');
 const addBtn = document.getElementById('addBtn');
 const phaseBuilder = document.getElementById('phaseBuilder');
 const phasesEmpty = document.getElementById('phasesEmpty');
@@ -2365,15 +2428,19 @@ function addCity() {
   const gustSpeedVal = gustInput.value ? parseFloat(gustInput.value) : null;
   if (windSpeed !== null && isNaN(windSpeed)) { inputError.textContent = 'Enter a valid wind speed.'; return; }
   if (gustSpeedVal !== null && isNaN(gustSpeedVal)) { inputError.textContent = 'Enter a valid gust speed.'; return; }
+  const pressure = pressureInput.value ? parseFloat(pressureInput.value) : null;
+  if (pressure !== null && isNaN(pressure)) { inputError.textContent = 'Enter a valid barometric pressure (mb).'; return; }
+  if (pressure !== null && (pressure < 800 || pressure > 1080)) { inputError.textContent = 'Pressure must be between 800 and 1080 mb.'; return; }
   const derived = computeDerivedPrecip(phases);
   cities.push({
     name, phases, snow: derived.snow, snowEquivalent: derived.snowEquivalent,
     pop: db?db.pop:null, region: db?db.r:null, annualSnow: db?db.snow:null,
     lat: db?db.lat:null, lon: db?db.lon:null,
     recordCold, coldTemp,
-    windSpeed, gustSpeed: gustSpeedVal
+    windSpeed, gustSpeed: gustSpeedVal,
+    pressure
   });
-  cityInput.value = ''; clearPhaseBuilder(); coldCheck.checked = false; coldField.classList.remove('visible'); coldInput.value = ''; windInput.value = ''; gustInput.value = ''; cityInput.focus();
+  cityInput.value = ''; clearPhaseBuilder(); coldCheck.checked = false; coldField.classList.remove('visible'); coldInput.value = ''; windInput.value = ''; gustInput.value = ''; pressureInput.value = ''; cityInput.focus();
   acList.classList.remove('open');
   renderCityList();
 }
@@ -2393,15 +2460,16 @@ function renderCityList() {
     const meta = [rn||'Non-RSI', `${res.icon} ${res.label}`].join(' | ');
     const coldTag = c.recordCold ? ` <span style="color:#93c5fd;font-size:0.8rem">\u{1F976} ${c.coldTemp}\u00b0F</span>` : '';
     const windTag = c.windSpeed ? ` <span style="color:#a5b4fc;font-size:0.8rem">\u{1F4A8} ${c.windSpeed}${c.gustSpeed ? '/G'+c.gustSpeed : ''} mph</span>` : '';
+    const pressTag = (c.pressure !== null && c.pressure !== undefined) ? ` <span style="color:#fbbf24;font-size:0.8rem">\u{1F32A}\ufe0f ${c.pressure} mb</span>` : '';
     const phaseSummary = formatPhasesSummary(c.phases);
     return `<div class="city-item">
-      <span>${esc(c.name)} &mdash; ${phaseSummary}${coldTag}${windTag} <span class="city-meta">${meta}</span></span>
+      <span>${esc(c.name)} &mdash; ${phaseSummary}${coldTag}${windTag}${pressTag} <span class="city-meta">${meta}</span></span>
       <button class="btn-remove" onclick="removeCity(${i})">&times;</button>
     </div>`;
   }).join('');
 }
 
-function clearAll() { cities.length=0; clearPhaseBuilder(); windInput.value=''; gustInput.value=''; renderCityList(); profileEl.classList.remove('visible'); resetGapFillState(); }
+function clearAll() { cities.length=0; clearPhaseBuilder(); windInput.value=''; gustInput.value=''; pressureInput.value=''; renderCityList(); profileEl.classList.remove('visible'); resetGapFillState(); }
 
 function resetGapFillState() {
   if (typeof gapFillEntries !== 'undefined') {
@@ -2671,8 +2739,8 @@ function generateProfile() {
   const rows = sorted.map(c => {
     const rainOnly = isRainOnly(c.phases);
     const imp = rainOnly
-      ? getRainImpact(totalRainInches(c.phases), c.lat, c.windSpeed, c.gustSpeed)
-      : getImpact(c.snow, c.annualSnow, c.recordCold, c.coldTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat);
+      ? getRainImpact(totalRainInches(c.phases), c.lat, c.windSpeed, c.gustSpeed, c.pressure)
+      : getImpact(c.snow, c.annualSnow, c.recordCold, c.coldTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure);
     const res = rainOnly
       ? getRainResilienceLabel(estimateAnnualRain(c.lat, c.lon, c.region), c.lat)
       : getResilienceLabel(c.annualSnow, c.lat);
@@ -2706,6 +2774,10 @@ function generateProfile() {
         windDesc += ` amplify flood impact (\u00d7${imp.windMult.toFixed(2)}) \u2014 downed trees, debris in storm drains`;
         detail += ` <em style="color:#a5b4fc">${windDesc}</em>`;
       }
+      if (c.pressure != null && imp.pressureMult > 1.0) {
+        const pl = getPressureLabel(c.pressure);
+        detail += ` <em style="color:#fbbf24">\u{1F32A}\ufe0f ${pl.label} (${c.pressure} mb) deepens the storm \u2014 surge, gradient winds, and drainage stress amplify impact (\u00d7${imp.pressureMult.toFixed(2)})</em>`;
+      }
     } else {
       if (c.annualSnow !== null && imp.factor !== 1.0) {
         if (imp.factor <= 0.3) detail += ` <em style="opacity:0.6">(Massively amplified \u2014 this area almost never sees snow)</em>`;
@@ -2732,6 +2804,10 @@ function generateProfile() {
         if (c.windSpeed >= 35) windDesc += ' \u2014 blizzard conditions with falling/blowing snow';
         detail += ` <em style="color:#a5b4fc">${windDesc}</em>`;
       }
+      if (c.pressure != null && imp.pressureMult > 1.0) {
+        const pl = getPressureLabel(c.pressure);
+        detail += ` <em style="color:#fbbf24">\u{1F32A}\ufe0f ${pl.label} (${c.pressure} mb) deepens the storm \u2014 pressure-driven winds, isallobaric forcing, and elevated dynamics amplify impact (\u00d7${imp.pressureMult.toFixed(2)})</em>`;
+      }
     }
 
     // Timeline cell — show per-phase breakdown
@@ -2757,8 +2833,8 @@ function generateProfile() {
   // Peak impact across all cities (drives record-shattering fun facts)
   const peakCity = sorted.reduce((best, c) => {
     const imp = isRainOnly(c.phases)
-      ? getRainImpact(totalRainInches(c.phases), c.lat, c.windSpeed, c.gustSpeed)
-      : getImpact(c.snow, c.annualSnow, c.recordCold, c.coldTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat);
+      ? getRainImpact(totalRainInches(c.phases), c.lat, c.windSpeed, c.gustSpeed, c.pressure)
+      : getImpact(c.snow, c.annualSnow, c.recordCold, c.coldTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure);
     return imp.effective > best.eff ? { eff: imp.effective, level: imp.level, name: c.name } : best;
   }, { eff: 0, level: 'None', name: '' });
   const peakEffective = peakCity.eff;
@@ -3546,7 +3622,8 @@ function runTestLadder(ladderType) {
       recordCold: false,
       coldTemp: null,
       windSpeed: null,
-      gustSpeed: null
+      gustSpeed: null,
+      pressure: null
     });
   });
   document.getElementById('stormName').value = `Test Ladder (${anchor.n})`;
@@ -3587,7 +3664,8 @@ function runRainTestLadder() {
       recordCold: false,
       coldTemp: null,
       windSpeed: null,
-      gustSpeed: null
+      gustSpeed: null,
+      pressure: null
     });
   });
   document.getElementById('stormName').value = `Rain Test Ladder (${anchor.n})`;
@@ -3732,6 +3810,20 @@ function generateRandomStorm() {
       if (windSpeed <= 0) { windSpeed = null; gustSpeedVal = null; }
     }
 
+    // Derive a plausible barometric pressure from the template's wind profile.
+    // Stronger winds correlate with deeper lows; severity scales the depth.
+    // Center cities sit closer to the storm's true low; fringe cities ride
+    // higher pressure on the storm's outer rim.
+    let pressure = null;
+    if (wp) {
+      const sevPctP = sevIdx / 4;
+      const peakWind = wp.base[1] + (wp.severe[1] - wp.base[1]) * sevPctP;
+      let basePress = 1013 - peakWind * 0.42;          // 100 mph wind -> ~971 mb
+      if (!isCenter) basePress += rand(6, 14);          // outer rim higher
+      basePress += rand(-4, 4);                         // small jitter
+      pressure = Math.max(850, Math.min(1030, Math.round(basePress * 10) / 10));
+    }
+
     cities.push({
       name: c.n,
       phases,
@@ -3744,7 +3836,8 @@ function generateRandomStorm() {
       recordCold,
       coldTemp,
       windSpeed,
-      gustSpeed: gustSpeedVal
+      gustSpeed: gustSpeedVal,
+      pressure
     });
   });
 
@@ -4599,12 +4692,23 @@ function parseParagraphInput() {
       if (windSpeed <= 0) { windSpeed = null; gustSpeedVal = null; }
     }
 
+    // Derive pressure from wind for parsed/historic-replay paths too
+    let pressure = null;
+    if (wp) {
+      const sevPctP = sevIdx / 4;
+      const peakWind = wp.base[1] + (wp.severe[1] - wp.base[1]) * sevPctP;
+      let basePress = 1013 - peakWind * 0.42;
+      if (i >= centerCount) basePress += rand(6, 14);
+      basePress += rand(-4, 4);
+      pressure = Math.max(850, Math.min(1030, Math.round(basePress * 10) / 10));
+    }
+
     cities.push({
       name: c.n, phases,
       snow: derived.snow, snowEquivalent: derived.snowEquivalent,
       pop: c.pop, region: c.r, annualSnow: c.snow,
       lat: c.lat, lon: c.lon,
-      recordCold, coldTemp, windSpeed, gustSpeed: gustSpeedVal
+      recordCold, coldTemp, windSpeed, gustSpeed: gustSpeedVal, pressure
     });
   });
 
@@ -4784,6 +4888,7 @@ function tuneToTargetRSI(targetRSI, template) {
   const origColdTemp = cities.find(c => c.recordCold)?.coldTemp ?? null;
   const origWind = origCity.windSpeed ?? null;
   const origGust = origCity.gustSpeed ?? null;
+  const origPressure = origCity.pressure ?? null;
   // Preserve precip mix ratio (if the storm is ice/sleet/snow mix)
   const mixPhases = origCity.phases && origCity.phases.length
     ? origCity.phases.map(p => ({ type: p.type, pct: p.amount }))
@@ -4818,7 +4923,7 @@ function tuneToTargetRSI(targetRSI, template) {
         pop: c.pop, region: c.r, annualSnow: c.snow,
         lat: c.lat, lon: c.lon,
         recordCold: hadCold, coldTemp: origColdTemp,
-        windSpeed: origWind, gustSpeed: origGust
+        windSpeed: origWind, gustSpeed: origGust, pressure: origPressure
       });
     });
   }
@@ -4956,7 +5061,7 @@ function estimateSnowForCity(candidate) {
 
   const outOfReach = () => ({
     snow: 0, snowEquivalent: 0, phases: [], recordCold: false, coldTemp: null,
-    windSpeed: null, gustSpeed: null, minDistance: Infinity, falloff: 0,
+    windSpeed: null, gustSpeed: null, pressure: null, minDistance: Infinity, falloff: 0,
     climateFactor: 0, outOfReach: true
   });
 
@@ -4971,7 +5076,7 @@ function estimateSnowForCity(candidate) {
   // Compute inverse-distance-weighted (power 2) averages
   let totalW = 0, wSnow = 0, wEquiv = 0;
   const phaseMix = {};
-  const coldReports = [], windReports = [], gustReports = [];
+  const coldReports = [], windReports = [], gustReports = [], pressureReports = [];
   let minDist = Infinity;
 
   for (const a of anchors) {
@@ -4983,7 +5088,7 @@ function estimateSnowForCity(candidate) {
         snow: a.snow, snowEquivalent: a.snowEquivalent || a.snow,
         phases: a.phases ? a.phases.map(p => ({ ...p })) : [{ type: 'snow', amount: a.snow }],
         recordCold: a.recordCold, coldTemp: a.coldTemp,
-        windSpeed: a.windSpeed, gustSpeed: a.gustSpeed,
+        windSpeed: a.windSpeed, gustSpeed: a.gustSpeed, pressure: a.pressure ?? null,
         minDistance: 0, falloff: 1, climateFactor: 1, exactMatch: a.name
       };
     }
@@ -4995,6 +5100,7 @@ function estimateSnowForCity(candidate) {
     if (a.recordCold && a.coldTemp != null) coldReports.push({ d, v: a.coldTemp, w });
     if (a.windSpeed) windReports.push({ d, v: a.windSpeed, w });
     if (a.gustSpeed) gustReports.push({ d, v: a.gustSpeed, w });
+    if (a.pressure != null) pressureReports.push({ d, v: a.pressure, w });
   }
 
   const rawSnow = wSnow / totalW;
@@ -5060,8 +5166,16 @@ function estimateSnowForCity(candidate) {
   const coldTemp = recordCold ? weightedMean(coldReports) : null;
   const windSpeed = windShare > 0.3 ? weightedMean(windReports) : null;
   const gustSpeed = windShare > 0.3 ? weightedMean(gustReports) : null;
+  // Pressure: report whenever any anchor reported it (very common in synthetic
+  // storms). Use unrounded weighted mean to one decimal.
+  let pressure = null;
+  if (pressureReports.length) {
+    const pSum = pressureReports.reduce((s,r) => s + r.w, 0);
+    const vSum = pressureReports.reduce((s,r) => s + r.v * r.w, 0);
+    pressure = Math.round((vSum / pSum) * 10) / 10;
+  }
 
-  return { snow, snowEquivalent, snowUnrounded, snowEquivalentUnrounded, phases, recordCold, coldTemp, windSpeed, gustSpeed, minDistance: minDist, falloff, climateFactor };
+  return { snow, snowEquivalent, snowUnrounded, snowEquivalentUnrounded, phases, recordCold, coldTemp, windSpeed, gustSpeed, pressure, minDistance: minDist, falloff, climateFactor };
 }
 
 function renderGapFillEntries() {
@@ -5071,19 +5185,20 @@ function renderGapFillEntries() {
     const impEquiv = e.snowEquivalentUnrounded ?? e.snowEquivalent;
     const rainOnly = isRainOnly(e.phases);
     const imp = rainOnly
-      ? getRainImpact(totalRainInches(e.phases), e.candidate.lat, e.windSpeed, e.gustSpeed)
-      : getImpact(impSnow, e.candidate.snow, e.recordCold, e.coldTemp, impEquiv, e.windSpeed, e.gustSpeed, e.candidate.lat);
+      ? getRainImpact(totalRainInches(e.phases), e.candidate.lat, e.windSpeed, e.gustSpeed, e.pressure)
+      : getImpact(impSnow, e.candidate.snow, e.recordCold, e.coldTemp, impEquiv, e.windSpeed, e.gustSpeed, e.candidate.lat, e.pressure);
     const res = rainOnly
       ? getRainResilienceLabel(estimateAnnualRain(e.candidate.lat, e.candidate.r), e.candidate.lat)
       : getResilienceLabel(e.candidate.snow, e.candidate.lat);
     const phaseTxt = (e.phases || []).map(p => `${PRECIP_ICONS[p.type]} ${p.amount.toFixed(1)}"`).join(' + ') || '0.0"';
     const coldTxt = e.recordCold ? ` &middot; \u{1F976} ${e.coldTemp}\u00b0F` : '';
     const windTxt = e.windSpeed ? ` &middot; \u{1F4A8} ${e.windSpeed}${e.gustSpeed?'/G'+e.gustSpeed:''} mph` : '';
+    const pressTxt = (e.pressure != null) ? ` &middot; <span style="color:#fbbf24">\u{1F32A}\ufe0f ${e.pressure} mb</span>` : '';
     const meta = `Interpolated from ${cities.length} ${cities.length===1?'city':'cities'} &middot; nearest ${Math.round(e.minDistance)} mi &middot; confidence ${Math.round(e.falloff*e.climateFactor*100)}%`;
     const exact = e.exactMatch ? ` <span style="opacity:0.6">(exact match to ${esc(e.exactMatch)})</span>` : '';
     return `<div class="gap-fill-row-item">
       <span class="gf-city">${esc(e.candidate.n)}${exact}</span>
-      <span class="gf-snow">${phaseTxt}${coldTxt}${windTxt}</span>
+      <span class="gf-snow">${phaseTxt}${coldTxt}${windTxt}${pressTxt}</span>
       <span class="gf-impact-pill impact-${imp.css}">${imp.level}</span>
       <span class="gf-impact-pill res-${res.css}">${res.icon} ${res.label}</span>
       <button class="gf-remove" onclick="removeGapFill(${i})" title="Remove">&times;</button>
@@ -5121,8 +5236,8 @@ function runGapFill() {
   const impSnow = est.snowUnrounded ?? est.snow;
   const impEquiv = est.snowEquivalentUnrounded ?? est.snowEquivalent;
   const imp = isRainOnly(est.phases)
-    ? getRainImpact(totalRainInches(est.phases), candidate.lat, est.windSpeed, est.gustSpeed)
-    : getImpact(impSnow, candidate.snow, est.recordCold, est.coldTemp, impEquiv, est.windSpeed, est.gustSpeed, candidate.lat);
+    ? getRainImpact(totalRainInches(est.phases), candidate.lat, est.windSpeed, est.gustSpeed, est.pressure)
+    : getImpact(impSnow, candidate.snow, est.recordCold, est.coldTemp, impEquiv, est.windSpeed, est.gustSpeed, candidate.lat, est.pressure);
   if (imp.level === 'None' || imp.level === 'Trace' || imp.level === 'Dusting' || imp.level === 'Bone Dry' || imp.level === 'Mist' || imp.level === 'Spitting' || imp.level === 'Drizzle') {
     gapFillError.textContent = `${candidate.n} would see no meaningful impact from this storm.`;
     return;
@@ -5193,8 +5308,8 @@ function runGapFillAll() {
     const impSnow = est.snowUnrounded ?? est.snow;
     const impEquiv = est.snowEquivalentUnrounded ?? est.snowEquivalent;
     const imp = isRainOnly(est.phases)
-      ? getRainImpact(totalRainInches(est.phases), candidate.lat, est.windSpeed, est.gustSpeed)
-      : getImpact(impSnow, candidate.snow, est.recordCold, est.coldTemp, impEquiv, est.windSpeed, est.gustSpeed, candidate.lat);
+      ? getRainImpact(totalRainInches(est.phases), candidate.lat, est.windSpeed, est.gustSpeed, est.pressure)
+      : getImpact(impSnow, candidate.snow, est.recordCold, est.coldTemp, impEquiv, est.windSpeed, est.gustSpeed, candidate.lat, est.pressure);
     if (imp.level === 'None' || imp.level === 'Trace' || imp.level === 'Dusting' || imp.level === 'Bone Dry' || imp.level === 'Mist' || imp.level === 'Spitting' || imp.level === 'Drizzle') continue;
     additions.push({ candidate, ...est });
   }
@@ -5234,7 +5349,8 @@ function addAllGapFillToSim() {
       recordCold: e.recordCold,
       coldTemp: e.coldTemp,
       windSpeed: e.windSpeed,
-      gustSpeed: e.gustSpeed
+      gustSpeed: e.gustSpeed,
+      pressure: e.pressure ?? null
     });
     added++;
   }
