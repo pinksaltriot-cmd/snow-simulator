@@ -3069,6 +3069,150 @@ const STORM_TEMPLATES = [
     { label:'Omega Continental Blizzard Outbreak', centerSnow:[28000,45000], fringe:[16000,24000], cityCount:[99999,99999], coldChance:1.0, coldRange:[-700,-400] },
     { label:'Omega Continental Blizzard Outbreak', centerSnow:[45000,80000], fringe:[24000,40000], cityCount:[99999,99999], coldChance:1.0, coldRange:[-999,-600] },
   ]},
+  // ========================================================================
+  // RAIN PARALLELS — exact one-to-one mirrors of the 15 snow templates above.
+  // Same regions, directions, wind profiles, and severity ladder structure;
+  // precipMix replaced with rain (and small admixtures) and "centerSnow"
+  // values rescaled to inches of liquid rainfall calibrated against the Rain
+  // Impact tier system in getRainImpact(). centerSnow/fringe field names are
+  // reused so generateRandomStorm() works unchanged.
+  // ========================================================================
+  { type:"Northeast Coastal Soaker", regions:['NE'], typicalDirections:['SW_NE','S_N'], windProfile:{base:[10,25],severe:[25,50],gustAdd:[10,25],chance:0.7}, precipMix:[
+    { phases:[{type:'rain',pct:1.0}], weight:10 },
+    { phases:[{type:'rain',pct:0.92},{type:'sleet',pct:0.08}], weight:1 },
+  ], severities:[
+    { label:'Minor',       centerSnow:[0.3,1.0], fringe:[0.1,0.4],  cityCount:[1,3],  coldChance:0.05, coldRange:[40,55] },
+    { label:'Moderate',    centerSnow:[1.0,2.5], fringe:[0.3,1.2],  cityCount:[2,5],  coldChance:0.10, coldRange:[38,52] },
+    { label:'Significant', centerSnow:[2.0,5.0], fringe:[0.7,2.5],  cityCount:[3,7],  coldChance:0.15, coldRange:[36,50] },
+    { label:'Major',       centerSnow:[4.0,9.0], fringe:[1.5,4.5],  cityCount:[5,10], coldChance:0.20, coldRange:[34,48] },
+    { label:'Extreme',     centerSnow:[8.0,15.0],fringe:[3.0,8.0],  cityCount:[7,13], coldChance:0.30, coldRange:[32,45] },
+  ]},
+  { type:'Deep South Drenching Front', regions:['SO','SE'], typicalDirections:['N_S','NW_SE'], windProfile:{base:[5,15],severe:[10,30],gustAdd:[10,20],chance:0.5}, precipMix:[
+    { phases:[{type:'rain',pct:1.0}], weight:8 },
+    { phases:[{type:'rain',pct:0.88},{type:'ice',pct:0.12}], weight:1 },
+  ], severities:[
+    { label:'Minor',       centerSnow:[0.3,1.0], fringe:[0.1,0.4],  cityCount:[2,4],  coldChance:0.05, coldRange:[38,52] },
+    { label:'Moderate',    centerSnow:[0.8,2.0], fringe:[0.3,1.0],  cityCount:[3,6],  coldChance:0.10, coldRange:[36,50] },
+    { label:'Significant', centerSnow:[2.0,4.0], fringe:[0.6,2.0],  cityCount:[4,8],  coldChance:0.15, coldRange:[34,48] },
+    { label:'Major',       centerSnow:[4.0,7.0], fringe:[1.5,3.5],  cityCount:[6,11], coldChance:0.20, coldRange:[33,46] },
+    { label:'Extreme',     centerSnow:[7.0,12.0],fringe:[2.5,6.0],  cityCount:[8,15], coldChance:0.30, coldRange:[32,44] },
+  ]},
+  { type:'Midwest Squall Line Deluge', regions:['UM','OV'], typicalDirections:['NW_SE','W_E'], windProfile:{base:[15,35],severe:[30,55],gustAdd:[10,30],chance:0.8}, precipMix:[
+    { phases:[{type:'rain',pct:1.0}], weight:1 },
+  ], severities:[
+    { label:'Minor',       centerSnow:[0.5,1.5], fringe:[0.2,0.6],  cityCount:[2,5],  coldChance:0.05, coldRange:[42,58] },
+    { label:'Moderate',    centerSnow:[1.5,3.0], fringe:[0.5,1.5],  cityCount:[4,8],  coldChance:0.08, coldRange:[40,55] },
+    { label:'Significant', centerSnow:[3.0,6.0], fringe:[1.0,3.0],  cityCount:[6,11], coldChance:0.12, coldRange:[38,52] },
+    { label:'Major',       centerSnow:[6.0,11.0],fringe:[2.5,5.5],  cityCount:[8,14], coldChance:0.18, coldRange:[36,50] },
+    { label:'Extreme',     centerSnow:[11.0,18.0],fringe:[4.0,9.0], cityCount:[10,18],coldChance:0.25, coldRange:[34,48] },
+  ]},
+  { type:'Ohio Valley Rain Wallop', regions:['OV'], typicalDirections:['SW_NE','W_E'], windProfile:{base:[8,20],severe:[20,40],gustAdd:[10,20],chance:0.6}, precipMix:[
+    { phases:[{type:'rain',pct:1.0}], weight:8 },
+    { phases:[{type:'rain',pct:0.9},{type:'sleet',pct:0.1}], weight:1 },
+  ], severities:[
+    { label:'Minor',       centerSnow:[0.5,1.5], fringe:[0.2,0.6],  cityCount:[2,4],  coldChance:0.05, coldRange:[40,55] },
+    { label:'Moderate',    centerSnow:[1.5,3.5], fringe:[0.5,1.5],  cityCount:[3,7],  coldChance:0.08, coldRange:[38,52] },
+    { label:'Significant', centerSnow:[3.0,6.0], fringe:[1.0,3.0],  cityCount:[5,10], coldChance:0.12, coldRange:[36,50] },
+    { label:'Major',       centerSnow:[6.0,10.0],fringe:[2.0,5.0],  cityCount:[7,13], coldChance:0.18, coldRange:[34,48] },
+    { label:'Extreme',     centerSnow:[10.0,16.0],fringe:[4.0,8.0], cityCount:[10,17],coldChance:0.25, coldRange:[33,46] },
+  ]},
+  { type:'Southern Rainpocalypse', regions:['SO'], typicalDirections:['N_S','NW_SE'], windProfile:{base:[5,15],severe:[15,35],gustAdd:[10,20],chance:0.5}, precipMix:[
+    { phases:[{type:'rain',pct:1.0}], weight:9 },
+    { phases:[{type:'rain',pct:0.92},{type:'sleet',pct:0.08}], weight:1 },
+  ], severities:[
+    { label:'Minor',       centerSnow:[0.5,1.5], fringe:[0.2,0.6],  cityCount:[2,4],  coldChance:0.04, coldRange:[42,58] },
+    { label:'Moderate',    centerSnow:[2.0,4.0], fringe:[0.6,2.0],  cityCount:[3,7],  coldChance:0.07, coldRange:[40,55] },
+    { label:'Significant', centerSnow:[4.0,8.0], fringe:[1.5,4.0],  cityCount:[5,10], coldChance:0.12, coldRange:[38,52] },
+    { label:'Major',       centerSnow:[8.0,14.0],fringe:[3.0,7.0],  cityCount:[7,13], coldChance:0.18, coldRange:[36,50] },
+    { label:'Extreme',     centerSnow:[14.0,22.0],fringe:[5.0,11.0],cityCount:[10,17],coldChance:0.25, coldRange:[34,48] },
+  ]},
+  { type:'Gulf Coast Tropical Deluge', regions:['SO','SE'], typicalDirections:['S_N','SW_NE'], windProfile:{base:[20,40],severe:[40,90],gustAdd:[15,40],chance:0.85}, precipMix:[
+    { phases:[{type:'rain',pct:1.0}], weight:1 },
+  ], severities:[
+    { label:'Minor',       centerSnow:[1.0,3.0], fringe:[0.3,1.2],  cityCount:[3,6],  coldChance:0.02, coldRange:[55,72] },
+    { label:'Moderate',    centerSnow:[3.0,7.0], fringe:[1.0,3.0],  cityCount:[5,9],  coldChance:0.04, coldRange:[52,70] },
+    { label:'Significant', centerSnow:[7.0,14.0],fringe:[2.5,6.5],  cityCount:[7,13], coldChance:0.06, coldRange:[50,68] },
+    { label:'Major',       centerSnow:[14.0,25.0],fringe:[5.0,12.0],cityCount:[10,17],coldChance:0.10, coldRange:[48,66] },
+    { label:'Extreme',     centerSnow:[25.0,45.0],fringe:[10.0,22.0],cityCount:[14,22],coldChance:0.15, coldRange:[45,64] },
+  ]},
+  { type:'Southeast Soaker Surprise', regions:['SE'], typicalDirections:['SW_NE','W_E'], windProfile:{base:[5,15],severe:[15,30],gustAdd:[10,20],chance:0.4}, precipMix:[
+    { phases:[{type:'rain',pct:1.0}], weight:1 },
+  ], severities:[
+    { label:'Minor',       centerSnow:[0.4,1.2], fringe:[0.15,0.5], cityCount:[2,4],  coldChance:0.04, coldRange:[42,58] },
+    { label:'Moderate',    centerSnow:[1.2,3.0], fringe:[0.4,1.5],  cityCount:[3,7],  coldChance:0.07, coldRange:[40,55] },
+    { label:'Significant', centerSnow:[3.0,6.0], fringe:[1.0,3.0],  cityCount:[5,10], coldChance:0.10, coldRange:[38,52] },
+    { label:'Major',       centerSnow:[6.0,10.0],fringe:[2.0,5.0],  cityCount:[7,13], coldChance:0.15, coldRange:[36,50] },
+    { label:'Extreme',     centerSnow:[10.0,16.0],fringe:[3.5,8.0], cityCount:[10,17],coldChance:0.22, coldRange:[34,48] },
+  ]},
+  { type:'Northern Rockies Atmospheric River', regions:['NR'], typicalDirections:['W_E','SW_NE'], windProfile:{base:[10,25],severe:[25,50],gustAdd:[10,25],chance:0.6}, precipMix:[
+    { phases:[{type:'rain',pct:1.0}], weight:8 },
+    { phases:[{type:'rain',pct:0.85},{type:'snow',pct:0.15}], weight:2 },
+  ], severities:[
+    { label:'Minor',       centerSnow:[0.5,2.0], fringe:[0.2,0.8],  cityCount:[2,4],  coldChance:0.06, coldRange:[36,52] },
+    { label:'Moderate',    centerSnow:[2.0,5.0], fringe:[0.7,2.5],  cityCount:[3,6],  coldChance:0.10, coldRange:[34,50] },
+    { label:'Significant', centerSnow:[5.0,10.0],fringe:[2.0,5.0],  cityCount:[4,8],  coldChance:0.15, coldRange:[33,48] },
+    { label:'Major',       centerSnow:[10.0,18.0],fringe:[4.0,9.0], cityCount:[6,11], coldChance:0.22, coldRange:[32,46] },
+    { label:'Extreme',     centerSnow:[18.0,30.0],fringe:[7.0,15.0],cityCount:[8,14], coldChance:0.30, coldRange:[30,44] },
+  ]},
+  { type:'Frontal Sweeper', regions:['UM','OV','NE'], typicalDirections:['W_E','NW_SE'], windProfile:{base:[10,25],severe:[20,40],gustAdd:[10,20],chance:0.6}, precipMix:[
+    { phases:[{type:'rain',pct:1.0}], weight:9 },
+    { phases:[{type:'rain',pct:0.92},{type:'sleet',pct:0.08}], weight:1 },
+  ], severities:[
+    { label:'Minor',       centerSnow:[0.2,0.7], fringe:[0.05,0.25],cityCount:[2,5],  coldChance:0.05, coldRange:[40,55] },
+    { label:'Moderate',    centerSnow:[0.7,1.5], fringe:[0.2,0.7],  cityCount:[4,8],  coldChance:0.08, coldRange:[38,52] },
+    { label:'Significant', centerSnow:[1.5,3.0], fringe:[0.5,1.5],  cityCount:[5,11], coldChance:0.12, coldRange:[36,50] },
+    { label:'Major',       centerSnow:[3.0,5.0], fringe:[1.0,2.5],  cityCount:[7,14], coldChance:0.18, coldRange:[34,48] },
+    { label:'Extreme',     centerSnow:[5.0,8.0], fringe:[2.0,4.0],  cityCount:[9,17], coldChance:0.25, coldRange:[33,46] },
+  ]},
+  { type:'Historic East Coast Hurricane', regions:['NE','SE','OV'], typicalDirections:['S_N','SW_NE'], windProfile:{base:[25,50],severe:[60,140],gustAdd:[20,60],chance:0.95}, precipMix:[
+    { phases:[{type:'rain',pct:1.0}], weight:1 },
+  ], severities:[
+    { label:'Minor',       centerSnow:[1.0,3.0], fringe:[0.3,1.2],  cityCount:[3,6],  coldChance:0.04, coldRange:[55,72] },
+    { label:'Moderate',    centerSnow:[3.0,7.0], fringe:[1.0,3.0],  cityCount:[5,10], coldChance:0.06, coldRange:[52,70] },
+    { label:'Significant', centerSnow:[7.0,12.0],fringe:[2.5,6.0],  cityCount:[8,14], coldChance:0.10, coldRange:[50,68] },
+    { label:'Major',       centerSnow:[12.0,22.0],fringe:[4.5,11.0],cityCount:[11,18],coldChance:0.15, coldRange:[48,66] },
+    { label:'Extreme',     centerSnow:[22.0,40.0],fringe:[9.0,20.0],cityCount:[15,24],coldChance:0.20, coldRange:[45,64] },
+  ]},
+  { type:'Atmospheric River Outbreak', regions:['UM','OV','SO','NE'], typicalDirections:['W_E','SW_NE'], windProfile:{base:[15,30],severe:[30,55],gustAdd:[10,25],chance:0.7}, precipMix:[
+    { phases:[{type:'rain',pct:1.0}], weight:9 },
+    { phases:[{type:'rain',pct:0.9},{type:'snow',pct:0.1}], weight:1 },
+  ], severities:[
+    { label:'Minor',       centerSnow:[0.5,1.5], fringe:[0.15,0.6], cityCount:[3,6],  coldChance:0.06, coldRange:[36,52] },
+    { label:'Moderate',    centerSnow:[1.5,4.0], fringe:[0.5,1.8],  cityCount:[5,10], coldChance:0.10, coldRange:[34,50] },
+    { label:'Significant', centerSnow:[4.0,8.0], fringe:[1.5,4.0],  cityCount:[7,14], coldChance:0.15, coldRange:[33,48] },
+    { label:'Major',       centerSnow:[8.0,14.0],fringe:[3.0,7.0],  cityCount:[10,18],coldChance:0.22, coldRange:[32,46] },
+    { label:'Extreme',     centerSnow:[14.0,24.0],fringe:[5.5,12.0],cityCount:[14,24],coldChance:0.30, coldRange:[30,44] },
+  ]},
+  { type:'Texas Flash Flood Emergency', regions:['SO'], typicalDirections:['SW_NE','S_N'], windProfile:{base:[10,25],severe:[25,50],gustAdd:[15,30],chance:0.6}, precipMix:[
+    { phases:[{type:'rain',pct:1.0}], weight:1 },
+  ], severities:[
+    { label:'Minor',       centerSnow:[1.0,3.0], fringe:[0.3,1.2],  cityCount:[1,3],  coldChance:0.03, coldRange:[55,72] },
+    { label:'Moderate',    centerSnow:[3.0,6.0], fringe:[1.0,2.5],  cityCount:[2,5],  coldChance:0.05, coldRange:[52,68] },
+    { label:'Significant', centerSnow:[6.0,12.0],fringe:[2.0,5.0],  cityCount:[3,7],  coldChance:0.08, coldRange:[50,65] },
+    { label:'Major',       centerSnow:[12.0,20.0],fringe:[4.0,9.0], cityCount:[4,9],  coldChance:0.12, coldRange:[48,62] },
+    { label:'Extreme',     centerSnow:[20.0,35.0],fringe:[7.0,15.0],cityCount:[6,12], coldChance:0.18, coldRange:[45,60] },
+  ]},
+  { type:'Sprinkle Dud', regions:'weighted-single', typicalDirections:['W_E','NW_SE','SW_NE'], windProfile:{base:[0,5],severe:[0,8],gustAdd:[0,5],chance:0.1}, precipMix:[
+    { phases:[{type:'rain',pct:1.0}], weight:1 },
+  ], severities:[
+    // Fixed-severity: a sprinkle is a sprinkle. All five rows hover under 0.3" total.
+    { label:'Sprinkle Dud', centerSnow:[0.02,0.10],fringe:[0,0.05], cityCount:[1,1],  coldChance:0.05, coldRange:[40,60] },
+    { label:'Sprinkle Dud', centerSnow:[0.05,0.15],fringe:[0,0.06], cityCount:[1,1],  coldChance:0.05, coldRange:[40,60] },
+    { label:'Sprinkle Dud', centerSnow:[0.05,0.20],fringe:[0,0.08], cityCount:[1,2],  coldChance:0.06, coldRange:[40,60] },
+    { label:'Sprinkle Dud', centerSnow:[0.08,0.25],fringe:[0,0.10], cityCount:[1,2],  coldChance:0.07, coldRange:[40,60] },
+    { label:'Sprinkle Dud', centerSnow:[0.10,0.30],fringe:[0,0.12], cityCount:[1,2],  coldChance:0.08, coldRange:[40,60] },
+  ]},
+  { type:'Omega Continental Mega-Deluge', regions:'all-continental', typicalDirections:['W_E','SW_NE'], windProfile:{base:[120,180],severe:[180,260],gustAdd:[60,120],chance:1.0}, precipMix:[
+    { phases:[{type:'rain',pct:1.0}], weight:1 },
+  ], severities:[
+    // Mirrors Omega Blizzard scaling — every severity saturates every rain tier
+    // up to and beyond Ocean Singularity (>3000"). All cities, every time.
+    { label:'Omega Continental Mega-Deluge', centerSnow:[3000,5000],   fringe:[1500,3000],  cityCount:[99999,99999], coldChance:1.0, coldRange:[55,80] },
+    { label:'Omega Continental Mega-Deluge', centerSnow:[5000,9000],   fringe:[3000,5000],  cityCount:[99999,99999], coldChance:1.0, coldRange:[55,80] },
+    { label:'Omega Continental Mega-Deluge', centerSnow:[9000,15000],  fringe:[5000,9000],  cityCount:[99999,99999], coldChance:1.0, coldRange:[55,80] },
+    { label:'Omega Continental Mega-Deluge', centerSnow:[15000,25000], fringe:[9000,15000], cityCount:[99999,99999], coldChance:1.0, coldRange:[55,80] },
+    { label:'Omega Continental Mega-Deluge', centerSnow:[25000,50000], fringe:[15000,25000],cityCount:[99999,99999], coldChance:1.0, coldRange:[55,80] },
+  ]},
   // Test Ladder: diagnostic template. Picks the snowiest city in the database
   // and enters it 45 times — once at every impact tier from None to Omega Point
   // Frost. Used to visually verify the impact ladder renders correctly.
@@ -3076,6 +3220,14 @@ const STORM_TEMPLATES = [
     { phases:[{type:'snow',pct:1.0}], weight:1 },
   ], severities:[
     { label:'Test Ladder', centerSnow:[0,0], fringe:[0,0], cityCount:[45,45], coldChance:0, coldRange:[32,32] },
+  ]},
+  // Rain Test Ladder: rain analog of Test Ladder. Picks the wettest city in the
+  // database and enters it 33 times — once at every Rain Impact tier from
+  // Bone Dry through Ocean Singularity.
+  { type:'Rain Test Ladder', testLadder:true, ladderType:'rain', regions:'test', typicalDirections:['W_E'], windProfile:{base:[0,0],severe:[0,0],gustAdd:[0,0],chance:0}, precipMix:[
+    { phases:[{type:'rain',pct:1.0}], weight:1 },
+  ], severities:[
+    { label:'Rain Test Ladder', centerSnow:[0,0], fringe:[0,0], cityCount:[33,33], coldChance:0, coldRange:[60,60] },
   ]},
 ];
 
@@ -3132,7 +3284,7 @@ if (spreadSlider && spreadValueEl) {
 }
 
 // Fixed-severity storm types: severity dropdown is irrelevant for these
-const FIXED_SEVERITY_TYPES = { 'Flurry Dud': true, 'Omega Continental Blizzard Outbreak': true, 'Test Ladder': true };
+const FIXED_SEVERITY_TYPES = { 'Flurry Dud': true, 'Omega Continental Blizzard Outbreak': true, 'Test Ladder': true, 'Sprinkle Dud': true, 'Omega Continental Mega-Deluge': true, 'Rain Test Ladder': true };
 const severitySelect = document.getElementById('severitySelect');
 const severityNote = document.getElementById('severityNote');
 
@@ -3332,7 +3484,47 @@ const TEST_LADDER_TARGETS = [
   15000,  // Omega Point Frost(>=10000)
 ];
 
-function runTestLadder() {
+// Rain Impact tier midpoints — one per tier in getRainImpact (Bone Dry .. Ocean
+// Singularity). Used by Rain Test Ladder to spawn one entry per tier so the
+// rain impact ladder can be visually verified end-to-end.
+const TEST_LADDER_RAIN_TARGETS = [
+  0,        // Bone Dry
+  0.003,    // Mist          (<=0.005)
+  0.012,    // Spitting      (<=0.02)
+  0.035,    // Drizzle       (<=0.05)
+  0.10,     // Pitter-Patter (<=0.15)
+  0.22,     // Steady Drip   (<=0.3)
+  0.45,     // Splash Zone   (<=0.6)
+  0.80,     // Wet Cycle     (<=1.0)
+  1.30,     // Sluice        (<=1.6)
+  1.90,     // Downpour      (<=2.2)
+  2.60,     // Cloudburst    (<=3.0)
+  3.50,     // Surge Watch   (<=4.0)
+  4.75,     // Torrent       (<=5.5)
+  6.25,     // Inundation    (<=7.0)
+  8.00,     // Deluge        (<=9.0)
+  10.00,    // Overspill     (<=11.0)
+  12.25,    // Cataract      (<=13.5)
+  15.00,    // Maelstrom     (<=16.5)
+  18.00,    // Riverine Wrath(<=20.0)
+  22.50,    // Aquapolis     (<=25.0)
+  28.50,    // Centurial Surge(<=32.0)
+  36.00,    // Drowning of Records(<=40.0)
+  47.50,    // Harvey-Class  (<=55.0)
+  65.00,    // Aqualyptic Plunge(<=75.0)
+  87.50,    // Atlantis Event(<=100.0)
+  120.00,   // Drowned Era   (<=140.0)
+  170.00,   // Inland Sea Onset(<=200.0)
+  250.00,   // Tethys Resurgence(<=300.0)
+  375.00,   // Hydrosphere Failure(<=450.0)
+  575.00,   // Noachian Flood(<=700.0)
+  1100.00,  // Diluvian Cataclysm(<=1500.0)
+  2200.00,  // Floodpocalypse Omega(<=3000.0)
+  5000.00,  // Ocean Singularity(>3000.0)
+];
+
+function runTestLadder(ladderType) {
+  if (ladderType === 'rain') return runRainTestLadder();
   // Snowiest city in the database (by annual snowfall)
   const anchor = CITY_DB.reduce((best, c) => (c.snow || 0) > (best.snow || 0) ? c : best, CITY_DB[0]);
   const factor = getResilienceFactor(anchor.snow, anchor.lat);
@@ -3369,6 +3561,47 @@ function runTestLadder() {
   if (dirOptionIdx >= 0) dirSelect.value = dirOptionIdx;
 }
 
+function runRainTestLadder() {
+  // Wettest city in the database (highest estimated annual rainfall)
+  const anchor = CITY_DB.reduce((best, c) => {
+    if (c.lat == null || c.lon == null) return best;
+    const r = estimateAnnualRain(c.lat, c.lon, c.r);
+    return r > (best._rain || -1) ? Object.assign({}, c, { _rain: r }) : best;
+  }, { _rain: -1 });
+  if (!anchor || anchor._rain < 0) return;
+  cities.length = 0;
+  resetGapFillState();
+  TEST_LADDER_RAIN_TARGETS.forEach(target => {
+    const rawRain = Math.round(target * 100) / 100;
+    const phases = [{ type: 'rain', amount: Math.max(0, rawRain) }];
+    const derived = computeDerivedPrecip(phases);
+    cities.push({
+      name: anchor.n,
+      phases,
+      snow: derived.snow,
+      snowEquivalent: derived.snowEquivalent,
+      pop: anchor.pop,
+      region: anchor.r,
+      annualSnow: anchor.snow,
+      lat: anchor.lat, lon: anchor.lon,
+      recordCold: false,
+      coldTemp: null,
+      windSpeed: null,
+      gustSpeed: null
+    });
+  });
+  document.getElementById('stormName').value = `Rain Test Ladder (${anchor.n})`;
+  const dateInput = document.getElementById('stormDate');
+  if (!dateInput.value) {
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    dateInput.value = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  }
+  const dirSelect = document.getElementById('stormDirection');
+  const dirOptionIdx = STORM_DIRECTIONS.findIndex(d => d.code === 'W_E');
+  if (dirOptionIdx >= 0) dirSelect.value = dirOptionIdx;
+}
+
 /* ---- Random Storm Generator ---- */
 function generateRandomStorm() {
   const typeIdx = parseInt(stormTypeSelect.value);
@@ -3377,7 +3610,7 @@ function generateRandomStorm() {
 
   // Test Ladder short-circuits normal storm generation
   if (template.testLadder) {
-    runTestLadder();
+    runTestLadder(template.ladderType);
     renderCityList();
     generateProfile();
     return;
@@ -3464,8 +3697,10 @@ function generateRandomStorm() {
     const mixTemplate = pickPrecipMix(template.precipMix);
     let phases;
     if (totalAmount <= 0.05) {
-      // Trace: just snow
-      phases = [{ type: 'snow', amount: totalAmount }];
+      // Trace: use the template's dominant phase type so rain templates
+      // produce rain trace, not snow trace.
+      const dominant = mixTemplate.reduce((b, p) => p.pct > b.pct ? p : b, mixTemplate[0]);
+      phases = [{ type: dominant.type, amount: totalAmount }];
     } else {
       phases = mixTemplate.map(mp => ({
         type: mp.type,
