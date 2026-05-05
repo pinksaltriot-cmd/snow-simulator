@@ -828,6 +828,11 @@
         </select>
         <div class="help-text">How fast the storm moves</div>
       </div>
+      <div id="radialCoreField" style="display:none">
+        <label for="radialCore">Radial core city</label>
+        <select id="radialCore"></select>
+        <div class="help-text">Snow starts here and radiates outward.</div>
+      </div>
     </div>
     <div class="spread-row">
       <div class="spread-header">
@@ -1539,6 +1544,10 @@ const STORM_DIRECTIONS = [
   { code: 'SE_NW', label: 'SE \u2192 NW (backdoor cold)', vector: [-1, 1] },
   { code: 'NE_SW', label: 'NE \u2192 SW (retrograde)', vector: [-1, -1] },
   { code: 'E_W',   label: 'E \u2192 W (coastal inland)', vector: [-1, 0] },
+  // Radial \u2014 no axis. Snow starts at a chosen core city and radiates
+  // outward in every direction; arrival time scales with great-circle
+  // distance from the core, not projection along an axis.
+  { code: 'RADIAL', label: '\u{1F300} Radial (from core city)', vector: null, radial: true },
 ];
 
 /* ======================================================================
@@ -2564,6 +2573,8 @@ function formatPhasesSummary(phases) {
 
 function renderCityList() {
   generateBtn.disabled = !cities.length;
+  // Keep the radial-core picker in sync with the current storm cities.
+  if (typeof populateRadialCoreOptions === 'function') populateRadialCoreOptions();
   cityListEl.innerHTML = cities.map((c,i) => {
     const res = getResilienceLabel(c.annualSnow, c.lat);
     const rn = regionName(c.region);
@@ -2805,6 +2816,20 @@ function classifyStormType(cityList) {
 
 /* ---- Generate ---- */
 function generateProfile() {
+  // Radial direction needs a core city in the storm. Validate before any
+  // timeline math so the user gets a clear, actionable error.
+  if (isRadialDirectionSelected()) {
+    if (!cities.length) {
+      inputError.textContent = 'Radial storms need at least one city as the core. Add a city first.';
+      return;
+    }
+    const coreIdx = parseInt(radialCoreSelect.value, 10);
+    if (isNaN(coreIdx) || !cities[coreIdx]) {
+      inputError.textContent = 'Pick a Radial core city — that\'s where the snow starts and radiates from.';
+      return;
+    }
+    inputError.textContent = '';
+  }
   // Compute timelines for all cities before rendering
   computeAllTimelines();
 
@@ -3475,6 +3500,56 @@ STORM_DIRECTIONS.forEach((d, i) => {
   stormDirSelect.appendChild(opt);
 });
 
+/* ---- Radial core picker ----
+   Only meaningful when direction = RADIAL. The core must be one of the
+   storm cities (it's the origin point that snow radiates from), so we
+   populate this select from `cities` and refresh whenever the city list
+   changes. */
+const radialCoreField = document.getElementById('radialCoreField');
+const radialCoreSelect = document.getElementById('radialCore');
+
+function isRadialDirectionSelected() {
+  const idx = parseInt(stormDirSelect.value, 10);
+  const dir = STORM_DIRECTIONS[idx];
+  return !!(dir && dir.radial);
+}
+
+function populateRadialCoreOptions() {
+  const prev = radialCoreSelect.value;
+  radialCoreSelect.innerHTML = '';
+  if (!cities.length) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = '(add a city first)';
+    opt.disabled = true;
+    radialCoreSelect.appendChild(opt);
+    return;
+  }
+  cities.forEach((c, i) => {
+    const opt = document.createElement('option');
+    opt.value = String(i);
+    opt.textContent = c.name;
+    radialCoreSelect.appendChild(opt);
+  });
+  // Preserve previous selection if it still maps to the same city name.
+  const prevIdx = parseInt(prev, 10);
+  if (!isNaN(prevIdx) && cities[prevIdx]) {
+    radialCoreSelect.value = String(prevIdx);
+  }
+}
+
+function updateRadialCoreVisibility() {
+  if (isRadialDirectionSelected()) {
+    radialCoreField.style.display = '';
+    populateRadialCoreOptions();
+  } else {
+    radialCoreField.style.display = 'none';
+  }
+}
+
+stormDirSelect.addEventListener('change', updateRadialCoreVisibility);
+updateRadialCoreVisibility();
+
 // Storm speed in miles per hour
 const STORM_SPEED_MPH = { slow: 15, medium: 30, fast: 50 };
 
@@ -3622,7 +3697,7 @@ function computeAllTimelines() {
   const dir = STORM_DIRECTIONS[dirIdx];
   const speedVal = document.getElementById('stormSpeed').value || 'medium';
   const speedMph = STORM_SPEED_MPH[speedVal] || 30;
-  const vec = dir.vector; // [east, north]
+  const isRadial = !!(dir && dir.radial);
 
   // Convert each city's lat/lon to approximate miles, then project onto the storm axis.
   // 1 degree latitude ≈ 69 miles everywhere.
@@ -3637,25 +3712,51 @@ function computeAllTimelines() {
   const latMi = 69;                                       // miles per degree latitude
   const lonMi = 69 * Math.cos(avgLat * Math.PI / 180);    // miles per degree longitude
 
-  // Project each city onto the storm travel axis in miles
-  const projections = cityCoords.map(c => {
-    const xMiles = c.lon * lonMi;
-    const yMiles = c.lat * latMi;
-    return xMiles * vec[0] + yMiles * vec[1];
-  });
-
-  const minProj = Math.min(...projections);
+  // Compute per-city offset distance in miles. Two modes:
+  //   - Linear (axis): project onto storm-track vector; arrival is along
+  //     the leading edge as it sweeps the corridor.
+  //   - Radial: arrival is the great-circle (Haversine) distance to the
+  //     core city, so the core hits first and outer cities lag by their
+  //     true distance from the core regardless of bearing.
+  let distFromOrigin;
+  if (isRadial) {
+    const coreSelect = document.getElementById('radialCore');
+    let coreIdx = parseInt(coreSelect ? coreSelect.value : '', 10);
+    // Fallback: if the picker has no valid value (shouldn't happen because
+    // generateProfile validates first), use the snowiest city as the core.
+    if (isNaN(coreIdx) || !cities[coreIdx]) {
+      const sorted = [...cities].map((c, i) => ({ i, snow: c.snow || 0 }))
+        .sort((a, b) => b.snow - a.snow);
+      coreIdx = sorted[0].i;
+    }
+    const coreCoord = cityCoords[coreIdx];
+    distFromOrigin = cityCoords.map(c => milesBetween(coreCoord.lat, coreCoord.lon, c.lat, c.lon));
+  } else {
+    const vec = dir.vector; // [east, north]
+    const projections = cityCoords.map(c => {
+      const xMiles = c.lon * lonMi;
+      const yMiles = c.lat * latMi;
+      return xMiles * vec[0] + yMiles * vec[1];
+    });
+    const minProj = Math.min(...projections);
+    distFromOrigin = projections.map(p => p - minProj);
+  }
 
   cities.forEach((c, i) => {
     const isCenter = centerIndices.has(i);
-    // Distance in miles from the first city hit
-    const distMiles = projections[i] - minProj;
+    // Distance in miles from the first city hit (linear) or from the
+    // radial core city.
+    const distMiles = distFromOrigin[i];
     // Arrival offset = distance / speed
     const geoOffset = distMiles / speedMph;
     // Small jitter for realism
     const jitter = rand(-0.5, 0.5);
-    // Center cities see precip slightly after the leading edge passes
-    const centerDelay = isCenter ? rand(0.5, 1.5) : 0;
+    // Center cities see precip slightly after the leading edge passes.
+    // In radial mode the core city itself is index 0 distance and shouldn't
+    // be pushed back by this delay (it's where the storm begins), so skip
+    // the center delay for the core.
+    const isCore = isRadial && distMiles < 1;
+    const centerDelay = (isCenter && !isCore) ? rand(0.5, 1.5) : 0;
     const arrivalOffset = Math.max(0, geoOffset + jitter + centerDelay);
 
     c.timeline = calculateTimeline(c.phases || [{type:'snow', amount:c.snow}], isCenter, stormStart, arrivalOffset);
@@ -5228,26 +5329,33 @@ function estimateSnowForCity(candidate) {
   });
 
   // Hemisphere / latitude-band guard. Real synoptic storms ride the jet
-  // stream; their snow swath spans at most ~20° of latitude. A nor'easter
-  // at 40-45°N cannot deposit snow in São Paulo at -23°.
+  // stream; their precip swath spans at most ~20° of latitude. A nor'easter
+  // at 40-45°N cannot deposit precip in São Paulo at -23°.
   const minLatDiff = Math.min(...anchors.map(a => Math.abs(a.lat - candidate.lat)));
   if (minLatDiff > 20) return outOfReach();
   // Hard hemispheric block — no anchor is in the candidate's hemisphere.
   if (anchors.every(a => Math.sign(a.lat) !== Math.sign(candidate.lat) && Math.abs(candidate.lat) > 5)) return outOfReach();
 
-  // Compute inverse-distance-weighted (power 2) averages
-  let totalW = 0, wSnow = 0, wEquiv = 0;
-  const phaseMix = {};
+  // Per-phase-type inverse-distance-weighted accumulators. Snow / ice /
+  // sleet / rain are interpolated independently so a rain-only or
+  // mixed-precip storm carries each component into the candidate at the
+  // right magnitude (the legacy single-total approach silently zeroed rain
+  // and halved every component of mixed events).
+  const PHASE_TYPES = ['snow', 'ice', 'sleet', 'rain'];
+  const phaseAmounts = { snow: 0, ice: 0, sleet: 0, rain: 0 };
+  let totalW = 0;
   const coldReports = [], windReports = [], gustReports = [], pressureReports = [];
   let minDist = Infinity;
+  let nearestAnchor = null;
 
   for (const a of anchors) {
     const d = milesBetween(candidate.lat, candidate.lon, a.lat, a.lon);
-    if (d < minDist) minDist = d;
+    if (d < minDist) { minDist = d; nearestAnchor = a; }
     // Exact co-location → return anchor directly
     if (d < 1) {
       return {
         snow: a.snow, snowEquivalent: a.snowEquivalent || a.snow,
+        snowUnrounded: a.snow, snowEquivalentUnrounded: a.snowEquivalent || a.snow,
         phases: a.phases ? a.phases.map(p => ({ ...p })) : [{ type: 'snow', amount: a.snow }],
         recordCold: a.recordCold, coldTemp: a.coldTemp,
         windSpeed: a.windSpeed, gustSpeed: a.gustSpeed, pressure: a.pressure ?? null,
@@ -5256,21 +5364,24 @@ function estimateSnowForCity(candidate) {
     }
     const w = 1 / (d * d + 0.01);
     totalW += w;
-    wSnow += w * (a.snow || 0);
-    wEquiv += w * (a.snowEquivalent || a.snow || 0);
-    (a.phases || []).forEach(p => { phaseMix[p.type] = (phaseMix[p.type] || 0) + w * p.amount; });
+    // Sum each phase type independently (an anchor with no phase of a
+    // given type contributes 0 to that type's weighted average — which is
+    // physically right: it's data saying "no rain happened here").
+    for (const type of PHASE_TYPES) {
+      const amt = (a.phases || [])
+        .filter(p => p.type === type)
+        .reduce((s, p) => s + (p.amount || 0), 0);
+      phaseAmounts[type] += w * amt;
+    }
     if (a.recordCold && a.coldTemp != null) coldReports.push({ d, v: a.coldTemp, w });
     if (a.windSpeed) windReports.push({ d, v: a.windSpeed, w });
     if (a.gustSpeed) gustReports.push({ d, v: a.gustSpeed, w });
     if (a.pressure != null) pressureReports.push({ d, v: a.pressure, w });
   }
 
-  const rawSnow = wSnow / totalW;
-  const rawEquiv = wEquiv / totalW;
-
   // Distance falloff scales tightly with the storm's footprint. A real
-  // nor'easter's heavy-snow swath only reaches ~150 miles inland from its
-  // track; even a continental Omega tapers sharply at its edges.
+  // nor'easter's heavy-precip swath only reaches ~150 miles inland from
+  // its track; even a continental Omega tapers sharply at its edges.
   const centerLat = anchors.reduce((s,a) => s + a.lat, 0) / anchors.length;
   const centerLon = anchors.reduce((s,a) => s + a.lon, 0) / anchors.length;
   const spanRadius = Math.max(...anchors.map(a => milesBetween(centerLat, centerLon, a.lat, a.lon)));
@@ -5287,9 +5398,12 @@ function estimateSnowForCity(candidate) {
   }
   const falloff = Math.exp(-Math.pow(minDist / falloffScale, 2));
 
-  // Climate gate: anchors in real snow climates dampen impact for warmer
-  // candidates, but never zero them out — a polar outbreak can still dust
-  // Tampa. Smooth taper with a 0.08 floor.
+  // Climate gate (frozen phases only): anchors in real snow climates dampen
+  // frozen impact for warmer candidates — a polar outbreak can still dust
+  // Tampa, but a Buffalo snow signal shouldn't propagate full-strength to
+  // Miami. Rain phases ride the storm regardless of the candidate's snow
+  // climatology (Atlanta and Tampa both flood from the same tropical
+  // system), so they get distance falloff only.
   const avgAnchorAnnual = anchors.reduce((s,a) => s + (a.annualSnow || 0), 0) / anchors.length;
   const candAnnual = candidate.snow || 0;
   let climateFactor = 1.0;
@@ -5298,22 +5412,50 @@ function estimateSnowForCity(candidate) {
     climateFactor = Math.min(1, Math.max(0.08, 0.15 + ratio * 0.85));
   }
 
-  const snowUnrounded = Math.max(0, rawSnow * falloff * climateFactor);
-  const snowEquivalentUnrounded = Math.max(0, rawEquiv * falloff * climateFactor);
-  const snow = Math.round(snowUnrounded * 10) / 10;
-  const snowEquivalent = Math.round(snowEquivalentUnrounded * 100) / 100;
-
-  // Proportionally split into phases by mix
-  const phaseSum = Object.values(phaseMix).reduce((s,v) => s+v, 0);
-  let phases = [];
-  if (phaseSum > 0 && snow > 0) {
-    for (const [type, acc] of Object.entries(phaseMix)) {
-      const frac = acc / phaseSum;
-      const amt = Math.round(snow * frac * 10) / 10;
-      if (amt > 0.05) phases.push({ type, amount: amt });
+  // Phase ordering: preserve the nearest anchor's sequence (snow→rain vs
+  // rain→snow matters for sequence-modifier impact in computeDerivedPrecip).
+  // Append any types the nearest anchor lacked but other anchors carried.
+  const orderSeen = [];
+  if (nearestAnchor && nearestAnchor.phases) {
+    for (const p of nearestAnchor.phases) {
+      if (!orderSeen.includes(p.type)) orderSeen.push(p.type);
     }
   }
-  if (!phases.length && snow > 0) phases = [{ type: 'snow', amount: snow }];
+  for (const t of PHASE_TYPES) {
+    if (!orderSeen.includes(t)) orderSeen.push(t);
+  }
+
+  // Build interpolated phases. Per-type unrounded amounts are kept for
+  // computeDerivedPrecip so sequence modifiers work on the real magnitudes,
+  // not the display-rounded ones.
+  const interpolatedPhasesUnrounded = [];
+  const phases = [];
+  for (const type of orderSeen) {
+    if (totalW <= 0) break;
+    const raw = phaseAmounts[type] / totalW;
+    const factor = (type === 'rain') ? falloff : (falloff * climateFactor);
+    const amt = Math.max(0, raw * factor);
+    if (amt <= 0) continue;
+    const rounded = Math.round(amt * 10) / 10;
+    if (rounded < 0.1) continue;
+    interpolatedPhasesUnrounded.push({ type, amount: amt });
+    phases.push({ type, amount: rounded });
+  }
+
+  // No surviving phase (everything fell below threshold) → out of reach.
+  if (!phases.length) {
+    return { ...outOfReach(), minDistance: minDist, falloff, climateFactor };
+  }
+
+  // Derive snow / snowEquivalent from the interpolated phases — same path
+  // entered cities take. This makes mixed events (snow→rain, ice+snow,
+  // rain-only, etc.) carry the right sequence-modifier weighting.
+  const derivedRounded = computeDerivedPrecip(phases);
+  const derivedUnrounded = computeDerivedPrecip(interpolatedPhasesUnrounded);
+  const snow = derivedRounded.snow;
+  const snowEquivalent = derivedRounded.snowEquivalent;
+  const snowUnrounded = derivedUnrounded.snow;
+  const snowEquivalentUnrounded = derivedUnrounded.snowEquivalent;
 
   // Interpolated cold/wind — only report if weight-majority of anchors had them
   function weightedMean(reports) {
@@ -5479,7 +5621,12 @@ function runGapFillAll() {
     gapFillError.textContent = 'No additional cities would see any impact from this storm.';
     return;
   }
-  additions.sort((a, b) => (b.snowEquivalent ?? b.snow) - (a.snowEquivalent ?? a.snow));
+  // Rank by overall storm impact. snowEquivalent already weights ice/sleet
+  // properly but treats rain as zero-impact, which would tie every pure-rain
+  // result at 0. Add a rain-magnitude term so rain-dominant events sort by
+  // inches of rain falling.
+  const rankScore = e => (e.snowEquivalent ?? e.snow ?? 0) + totalRainInches(e.phases) * 0.5;
+  additions.sort((a, b) => rankScore(b) - rankScore(a));
   gapFillEntries.length = 0;
   gapFillEntries.push(...additions);
   renderGapFillEntries();
