@@ -2398,7 +2398,11 @@ const acList = document.getElementById('acList');
 
 function parseSnow(val) {
   const v = val.trim();
-  if (v.toLowerCase() === 'trace') return 0.05;
+  // Normalize: lowercase, collapse whitespace, accept dashes as separators
+  // so "Half a Trace", "half-trace", "Trace-0.05", "Trace 0.05" all work.
+  const norm = v.toLowerCase().replace(/[\s\-]+/g, ' ').trim();
+  if (norm === 'trace' || norm === 'trace 0.05') return 0.05;
+  if (norm === 'half a trace' || norm === 'half trace') return 0.025;
   const n = parseFloat(v);
   if (isNaN(n) || n < 0) return null;
   return Math.round(n * 10) / 10;
@@ -2417,7 +2421,7 @@ function renderPhaseRows() {
       <select data-idx="${i}" class="phase-type-sel">
         ${PRECIP_TYPES.map(t => `<option value="${t}" ${t===phase.type?'selected':''}>${PRECIP_ICONS[t]} ${PRECIP_LABELS[t]}</option>`).join('')}
       </select>
-      <input type="text" class="phase-amt-input" data-idx="${i}" value="${phase.amountStr || ''}" placeholder="e.g. 4.0 or Trace">
+      <input type="text" class="phase-amt-input" data-idx="${i}" value="${phase.amountStr || ''}" placeholder="e.g. 4.0, Trace, or Half a Trace">
       <span class="phase-unit">inches</span>
       <div class="phase-arrows">
         <button type="button" data-dir="up" data-idx="${i}" title="Move up">\u25B2</button>
@@ -2487,7 +2491,11 @@ phaseBuilder.addEventListener('click', e => {
   if (arrBtn) { movePhaseRow(parseInt(arrBtn.dataset.idx), arrBtn.dataset.dir); return; }
 });
 addPhaseBtn.addEventListener('click', () => addPhaseRow());
-function formatSnow(inches) { return inches === 0.05 ? 'Trace' : inches.toFixed(1) + '\u2033'; }
+function formatSnow(inches) {
+  if (inches === 0.025) return 'Half Trace';
+  if (inches === 0.05) return 'Trace';
+  return inches.toFixed(1) + '\u2033';
+}
 function formatPop(k) { return k >= 1000 ? (k/1000).toFixed(1)+'M' : Math.round(k)+'K'; }
 function regionName(code) { return RSI_REGIONS[code] ? RSI_REGIONS[code].name : null; }
 function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
@@ -2542,7 +2550,7 @@ function addCity() {
   const name = cityInput.value.trim();
   if (!name) { inputError.textContent = 'Please enter a city name.'; return; }
   const phases = getPhases();
-  if (!phases) { inputError.textContent = 'Add at least one precipitation phase with a valid amount (number or "Trace").'; return; }
+  if (!phases) { inputError.textContent = 'Add at least one precipitation phase with a valid amount (number, "Trace", or "Half a Trace").'; return; }
   if (!phases.length) { inputError.textContent = 'Add at least one precipitation phase.'; return; }
   const db = lookupCity(name);
   const recordCold = coldCheck.checked;
@@ -3071,7 +3079,8 @@ function generateProfile() {
     ff.push(`Cities like <strong>${esc(lowRes[0].name)}</strong> would be disproportionately impacted \u2014 they don't have the plows, salt, or snow tires for this.`);
   }
 
-  const trace = sorted.filter(c => c.snow === 0.05).length;
+  // Treat both 0.025 (Half Trace) and 0.05 (Trace) as trace amounts.
+  const trace = sorted.filter(c => c.snow > 0 && c.snow <= 0.05).length;
   if (trace > 0) ff.push(`${trace} ${trace===1?'city':'cities'} received only a trace of snow.`);
 
   const closest = HISTORIC_STORMS.reduce((b,s) => { const d=Math.abs(s.rsi-rsiResult.totalRSI); return d<b.diff?{storm:s,diff:d}:b; }, {storm:null,diff:Infinity});
