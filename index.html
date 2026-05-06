@@ -2400,9 +2400,15 @@ function parseSnow(val) {
   const v = val.trim();
   // Normalize: lowercase, collapse whitespace, accept dashes as separators
   // so "Half a Trace", "half-trace", "Trace-0.05", "Trace 0.05" all work.
+  // Each sub-trace tier is given a distinct numeric value so its impact
+  // differs from plain Trace's impact at the default resilience factor:
+  //   Half a Trace → 0.025  (Negligible at factor 1.0)
+  //   Trace        → 0.05   (Minimal at factor 1.0)
+  //   Trace-0.05   → 0.075  (Very Light at factor 1.0)
   const norm = v.toLowerCase().replace(/[\s\-]+/g, ' ').trim();
-  if (norm === 'trace' || norm === 'trace 0.05') return 0.05;
+  if (norm === 'trace') return 0.05;
   if (norm === 'half a trace' || norm === 'half trace') return 0.025;
+  if (norm === 'trace 0.05') return 0.075;
   const n = parseFloat(v);
   if (isNaN(n) || n < 0) return null;
   return Math.round(n * 10) / 10;
@@ -2494,6 +2500,7 @@ addPhaseBtn.addEventListener('click', () => addPhaseRow());
 function formatSnow(inches) {
   if (inches === 0.025) return 'Half Trace';
   if (inches === 0.05) return 'Trace';
+  if (inches === 0.075) return 'Trace+';
   return inches.toFixed(1) + '\u2033';
 }
 function formatPop(k) { return k >= 1000 ? (k/1000).toFixed(1)+'M' : Math.round(k)+'K'; }
