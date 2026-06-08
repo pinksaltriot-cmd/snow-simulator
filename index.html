@@ -329,6 +329,14 @@
   .storm-color-mythological { background: #0a0a0a; color: #e879f9; border: 2px solid #a855f7; text-shadow: 0 0 8px rgba(232,121,249,0.5); }
   .storm-color-impossible   { background: radial-gradient(circle,#0a0a1a,#000); color: #fff; border: 2px solid #fff; text-shadow: 0 0 10px rgba(255,255,255,0.7); }
 
+  /* Extended simulator-only sub-Nuisance tail (all within official Cat 0, <1) */
+  .rsi-imperceptible { background: #1e293b; }
+  .rsi-trace         { background: #243044; }
+  .rsi-flurries      { background: #2b384e; }
+  .rsi-dusting       { background: #324057; }
+  .rsi-lightsnow     { background: #394861; }
+  .rsi-minor         { background: #404f68; }
+  .rsi-modest        { background: #4a5a74; }
   .rsi-nuisance    { background: #475569; }
   .rsi-notable     { background: #1e40af; }
   .rsi-significant { background: #854d0e; }
@@ -336,6 +344,14 @@
   .rsi-crippling   { background: #581c87; }
   .rsi-extreme     { background: #831843; }
   .rsi-beyond      { background: linear-gradient(90deg, #831843, #450a0a); }
+  /* Extended simulator-only tiers: blood-red/violet -> glacial blue -> frost-black */
+  .rsi-unprecedented { background: linear-gradient(90deg, #6b0f24, #3a0712); }
+  .rsi-cataclysm   { background: #450a0a; }
+  .rsi-apocalypse  { background: #3b0764; }
+  .rsi-extinction  { background: #1e1b4b; }
+  .rsi-glacial     { background: #0c4a6e; }
+  .rsi-snowball    { background: #075985; }
+  .rsi-absolute    { background: #1e293b; border: 1px solid #7dd3fc; box-shadow: 0 0 10px rgba(125,211,252,0.4); }
 
   .fun-fact {
     margin-top: 16px; padding: 14px 18px;
@@ -1537,7 +1553,33 @@ const RAW_CITIES = [
   ["Stanley, Falkland Islands",2.5,null,3,-51.69,-57.85],
 ];
 
-const CITY_DB = RAW_CITIES.map(c => ({ n: c[0], pop: c[1], r: c[2], snow: c[3], lat: c[4], lon: c[5] }));
+/* ======================================================================
+   STATE -> RSI REGION MAP — AUTHORITATIVE membership (per primary reference).
+   A U.S. city's RSI region is derived from its state, NOT the legacy tag in
+   RAW_CITIES[2] (that 3rd field is now vestigial/reference-only). Any state
+   not listed here is non-RSI (null), including all western U.S. states
+   (CO, UT, ID, NM, AZ, NV, CA, OR, WA, etc.) and everything international.
+   ====================================================================== */
+const STATE_TO_REGION = {
+  // Northern Rockies & Plains
+  WY:'NR', MT:'NR', NE:'NR', SD:'NR', ND:'NR',
+  // Upper Midwest
+  MI:'UM', WI:'UM', MN:'UM', IA:'UM',
+  // South
+  TX:'SO', OK:'SO', KS:'SO', AR:'SO', LA:'SO', MS:'SO',
+  // Ohio Valley
+  MO:'OV', TN:'OV', KY:'OV', IL:'OV', IN:'OV', OH:'OV', WV:'OV',
+  // Southeast
+  FL:'SE', AL:'SE', GA:'SE', SC:'SE', NC:'SE', VA:'SE',
+  // Northeast
+  MD:'NE', DC:'NE', DE:'NE', PA:'NE', NJ:'NE', NY:'NE', MA:'NE', CT:'NE', RI:'NE', VT:'NE', NH:'NE', ME:'NE'
+};
+function regionForCity(name) {
+  const m = String(name).match(/,\s*([A-Z]{2})\s*$/);
+  return m ? (STATE_TO_REGION[m[1]] || null) : null;
+}
+
+const CITY_DB = RAW_CITIES.map(c => ({ n: c[0], pop: c[1], r: regionForCity(c[0]), snow: c[3], lat: c[4], lon: c[5] }));
 
 /* ---- Storm Direction Constants ---- */
 const STORM_DIRECTIONS = [
@@ -1556,7 +1598,14 @@ const STORM_DIRECTIONS = [
 ];
 
 /* ======================================================================
-   RSI CONSTANTS — Squires et al. 2014 (BAMS)
+   RSI CONSTANTS
+   PRIMARY REFERENCE for RSI regions: NOAA Regional Snowfall Index
+     (en.wikipedia.org/wiki/Regional_snowfall_index) — AUTHORITATIVE.
+     Where this disagrees with any other source about the six regions,
+     their thresholds, or baseline area/population, THIS reference wins.
+   Original methodology: Squires et al. 2014 (BAMS), "The Regional Snowfall Index."
+   Six regions, NE thresholds (4/10/20/30) and NE baselines (149,228 mi^2 /
+     51,553,600 pop) verified against this reference 2026-06-08.
    ====================================================================== */
 const RSI_REGIONS = {
   NE: { name: 'Northeast', thresholds: [4,10,20,30], meanArea: [149228,72318,9254,1152], meanPop: [51553600,27571556,2886427,171896] },
@@ -1567,15 +1616,35 @@ const RSI_REGIONS = {
   NR: { name: 'N. Rockies & Plains', thresholds: [3,7,14,21], meanArea: [258882,107222,21356,4968], meanPop: [2683146,1281985,205524,40393] }
 };
 
+// Official RSI scale (per the primary reference above) is six categories,
+// 0-5, with Category 5 = 18.0+ (open-ended). Everything ABOVE 'Generational'
+// (30-45) up through 'Absolute Zero' (1000+) AND the sub-Nuisance tail below
+// (the eight tiers that subdivide the official 0-1 Cat 0 band) is a
+// SIMULATOR-ONLY extension -- NOT part of the official NOAA scale.
 const RSI_CATEGORIES = [
-  { min:0,max:1,cat:0,label:'Nuisance',css:'nuisance',pct:'54% of storms' },
+  // ---- Simulator-only sub-Nuisance tail (long low end; all official Cat 0, <1) ----
+  { min:0,max:0.02,cat:0,label:'Imperceptible',css:'imperceptible',pct:'A few stray flakes' },
+  { min:0.02,max:0.05,cat:0,label:'Trace',css:'trace',pct:'Not measurable' },
+  { min:0.05,max:0.10,cat:0,label:'Flurries',css:'flurries',pct:'No accumulation' },
+  { min:0.10,max:0.20,cat:0,label:'Dusting',css:'dusting',pct:'Coating on surfaces' },
+  { min:0.20,max:0.35,cat:0,label:'Light Snow',css:'lightsnow',pct:'Common minor event' },
+  { min:0.35,max:0.55,cat:0,label:'Minor Event',css:'minor',pct:'Roads stay clear' },
+  { min:0.55,max:0.80,cat:0,label:'Modest Snowfall',css:'modest',pct:'Brief slowdowns' },
+  { min:0.80,max:1,cat:0,label:'Nuisance',css:'nuisance',pct:'Top of Category 0' },
   { min:1,max:3,cat:1,label:'Notable',css:'notable',pct:'25% of storms' },
   { min:3,max:6,cat:2,label:'Significant',css:'significant',pct:'13% of storms' },
   { min:6,max:10,cat:3,label:'Major',css:'major',pct:'5% of storms' },
   { min:10,max:18,cat:4,label:'Crippling',css:'crippling',pct:'2% of storms' },
   { min:18,max:30,cat:5,label:'Extreme',css:'extreme',pct:'~1% of storms' },
+  // ---- Simulator-only extended scale (beyond the official NOAA 0-5) ----
   { min:30,max:45,cat:'5+',label:'Generational',css:'beyond',pct:'Rarest of the rare' },
-  { min:45,max:999,cat:'5++',label:'Unprecedented',css:'beyond',pct:'Beyond recorded history' }
+  { min:45,max:70,cat:'5++',label:'Unprecedented',css:'unprecedented',pct:'Beyond recorded history' },
+  { min:70,max:110,cat:6,label:'Cataclysmic',css:'cataclysm',pct:'Continental paralysis' },
+  { min:110,max:175,cat:7,label:'Apocalyptic',css:'apocalypse',pct:'Societal collapse' },
+  { min:175,max:300,cat:8,label:'Extinction-Level',css:'extinction',pct:'Mass-casualty event' },
+  { min:300,max:500,cat:9,label:'Glacial Onset',css:'glacial',pct:'Ice sheets advancing' },
+  { min:500,max:1000,cat:10,label:'Snowball Earth',css:'snowball',pct:'Planet-wide glaciation' },
+  { min:1000,max:999999,cat:'∞',label:'Absolute Zero',css:'absolute',pct:'Theoretical maximum' }
 ];
 
 const HISTORIC_STORMS = [
@@ -1709,8 +1778,16 @@ const HISTORIC_STORMS = [
   { name:'Gulf Coast Frost Event (composite)',rsi:1.0 },
   { name:'Southern Dusting Event (composite)',rsi:1.5 },
   { name:'Average Nor\'easter (composite)',rsi:2.1 },
-  // === Theoretical maximum (for scale reference) ===
-  { name:'Snowball Earth (composite)',rsi:999 },
+  // === Extended-scale climate analogs (simulator-only tiers above the
+  //     1888 Blizzard, RSI 42 — deep-time cold events, not snowstorms) ===
+  { name:'Laki Volcanic Winter (1783-84, Mississippi froze at New Orleans)',rsi:55 }, // Cat 5++ Unprecedented
+  { name:'Year Without a Summer (1816, Tambora volcanic winter)',rsi:85 },   // Cat 6 Cataclysmic
+  { name:'Little Ice Age peak (~1650)',rsi:140 },                            // Cat 7 Apocalyptic
+  { name:'Younger Dryas cold reversal (~12,900 years ago)',rsi:230 },        // Cat 8 Extinction-Level
+  { name:'Last Glacial Maximum (~20,000 years ago)',rsi:400 },               // Cat 9 Glacial Onset
+  // === Theoretical ceiling (no physical analog) ===
+  { name:'Snowball Earth (composite, ~650 Mya Cryogenian glaciation)',rsi:999 }, // Cat 10 Snowball Earth
+  { name:'Absolute Zero (theoretical scale limit — no physical analog)',rsi:1500 }, // Cat ∞ Absolute Zero
 ];
 
 /* ======================================================================
@@ -3130,10 +3207,10 @@ function generateProfile() {
 
   rsiCard.innerHTML = `
     <h2>Regional Snowfall Index (RSI)</h2>
-    <p style="font-size:0.82rem;opacity:0.5;margin-bottom:14px">Based on Squires et al. (2014, BAMS). RSI covers six eastern U.S. regions only. International and western U.S. cities still receive resilience-adjusted impact ratings.</p>
+    <p style="font-size:0.82rem;opacity:0.5;margin-bottom:14px">Based on the NOAA <a href="https://en.wikipedia.org/wiki/Regional_snowfall_index" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">Regional Snowfall Index</a> (Squires et al., 2014, BAMS). RSI covers six eastern U.S. regions only. International and western U.S. cities still receive resilience-adjusted impact ratings.</p>
     <div class="rsi-section">
       <div class="rsi-meter-wrap"><div class="rsi-meter-fill rsi-${rsiCat.css}" style="width:${Math.max(8,meterPct)}%">${rsiResult.totalRSI.toFixed(1)}</div></div>
-      <div class="rsi-meter-labels"><span>0</span><span>Cat 1</span><span>Cat 2</span><span>Cat 3</span><span>Cat 4</span><span>Cat 5</span><span>45+</span></div>
+      <div class="rsi-meter-labels"><span>0</span><span>Cat 1</span><span>Cat 2</span><span>Cat 3</span><span>Cat 4</span><span>Cat 5</span><span>5+ &rarr; &infin;</span></div>
       <div style="margin-top:10px"><span class="rsi-cat-badge rsi-${rsiCat.css}" style="color:#fff">Category ${rsiCat.cat}: ${rsiCat.label}</span><span style="font-size:0.78rem;opacity:0.5;margin-left:8px">${rsiCat.pct}</span></div>
     </div>
     <div class="rsi-breakdown"><h3 style="font-size:0.8rem;text-transform:uppercase;letter-spacing:1px;opacity:0.5;margin:14px 0 8px">Breakdown by Region</h3>${regRows||'<p style="opacity:0.4">No cities matched to RSI regions.</p>'}</div>
@@ -5368,9 +5445,12 @@ function estimateSnowForCity(candidate) {
   const coldReports = [], windReports = [], gustReports = [], pressureReports = [];
   let minDist = Infinity;
   let nearestAnchor = null;
+  const candDists = new Array(anchors.length);
 
-  for (const a of anchors) {
+  for (let i = 0; i < anchors.length; i++) {
+    const a = anchors[i];
     const d = milesBetween(candidate.lat, candidate.lon, a.lat, a.lon);
+    candDists[i] = d;
     if (d < minDist) { minDist = d; nearestAnchor = a; }
     // Exact co-location → return anchor directly
     if (d < 1) {
@@ -5411,13 +5491,33 @@ function estimateSnowForCity(candidate) {
   const spreadMult = getSpreadMultiplier();
   const falloffScale = Math.max(110, spanRadius * 0.35) * spreadMult;
 
+  // "Effective" distance for the falloff: how far the candidate sits from the
+  // nearest anchor *pair segment*, not just from the single nearest anchor. A
+  // candidate that lies between two anchors (e.g. Gainesville between Orlando
+  // and Jacksonville) is interpolating, not extrapolating, and the falloff
+  // shouldn't crush its value just because it's > X miles from the nearest
+  // single anchor. (di + dj - dij)/2 ≈ 0 when the candidate is on the segment
+  // between i and j, and grows as the candidate moves off-segment / outside.
+  // With one anchor it falls back to the point distance.
+  let effectiveDist = minDist;
+  for (let i = 0; i < anchors.length; i++) {
+    for (let j = i + 1; j < anchors.length; j++) {
+      const dij = milesBetween(anchors[i].lat, anchors[i].lon, anchors[j].lat, anchors[j].lon);
+      if (dij < 1) continue;
+      const seg = Math.max(0, (candDists[i] + candDists[j] - dij) / 2);
+      if (seg < effectiveDist) effectiveDist = seg;
+    }
+  }
+
   // Hard cutoff: beyond 1.4× scale OR an absolute distance ceiling that also
-  // scales with spread (260 mi at Minimal up to 1400 mi at Extreme).
+  // scales with spread (260 mi at Minimal up to 1400 mi at Extreme). The
+  // absolute ceiling uses the point distance — even a perfectly-interpolated
+  // candidate has to be within physical reach of *some* anchor.
   const distCeiling = 800 * spreadMult;
-  if (minDist > 1.4 * falloffScale || minDist > distCeiling) {
+  if (effectiveDist > 1.4 * falloffScale || minDist > distCeiling) {
     return { ...outOfReach(), minDistance: minDist };
   }
-  const falloff = Math.exp(-Math.pow(minDist / falloffScale, 2));
+  const falloff = Math.exp(-Math.pow(effectiveDist / falloffScale, 2));
 
   // Climate gate (frozen phases only): anchors in real snow climates dampen
   // frozen impact for warmer candidates — a polar outbreak can still dust
