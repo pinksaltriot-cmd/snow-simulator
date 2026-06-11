@@ -224,23 +224,29 @@
 
   /* Rain Impact levels — water/flood palette for rain-only events */
   .impact-rain-none          { background: #0f172a; color: #334155; }
+  .impact-rain-dew           { background: #101d2b; color: #3f566d; }
   .impact-rain-trace         { background: #11202e; color: #4b6680; }
   .impact-rain-sprinkle      { background: #15273a; color: #6b8eb0; }
   .impact-rain-drizzle       { background: #163245; color: #7fb3cc; }
+  .impact-rain-lshower       { background: #153a48; color: #73d0dd; }
   .impact-rain-light         { background: #143a45; color: #67e8f9; }
+  .impact-rain-steady        { background: #123c47; color: #45ddea; }
   .impact-rain-moderate      { background: #103e4a; color: #22d3ee; }
   .impact-rain-notable       { background: #0b3a52; color: #38bdf8; }
   .impact-rain-soaking       { background: #0a3560; color: #60a5fa; }
   .impact-rain-heavy         { background: #0a2a5e; color: #93c5fd; }
   .impact-rain-drenching     { background: #102060; color: #a5b4fc; }
+  .impact-rain-gully         { background: #2e3318; color: #c8d84a; }
   .impact-rain-flood-watch   { background: #3a3a18; color: #fde047; }
   .impact-rain-flash         { background: #3a2a0a; color: #fbbf24; }
   .impact-rain-major-flood   { background: #3d2010; color: #fb923c; }
+  .impact-rain-quagmire      { background: #3f1b10; color: #fa8729; }
   .impact-rain-severe-flood  { background: #421510; color: #f97316; }
   .impact-rain-critical      { background: #401010; color: #f87171; }
   .impact-rain-devastating   { background: #3b1024; color: #ef4c7a; }
   .impact-rain-catastrophic  { background: #350a2e; color: #f472b6; }
   .impact-rain-calamitous    { background: #2e1035; color: #c084fc; }
+  .impact-rain-submetro      { background: #2c0d3a; color: #ba7efc; }
   .impact-rain-submersion    { background: #2a0a3e; color: #b478ff; }
   .impact-rain-historic      { background: #200a3a; color: #c4a6ff; border: 1px solid #7c3aed; }
   .impact-rain-apocalyptic   { background: linear-gradient(135deg,#3b1010,#0a1a4a); color: #fde68a; border: 1px solid #f59e0b; }
@@ -254,7 +260,13 @@
   .impact-rain-biblical      { background: linear-gradient(135deg,#0a0a2a,#3a2a0a); color: #fbbf24; border: 2px solid #f59e0b; text-shadow: 0 0 8px rgba(251,191,36,0.5); }
   .impact-rain-mythic-deluge { background: linear-gradient(135deg,#0a0a2e,#1a0505); color: #ffd166; border: 2px solid #f59e0b; text-shadow: 0 0 10px rgba(255,209,102,0.6); }
   .impact-rain-floodpoc-omega{ background: radial-gradient(circle,#0a1e4a,#000); color: #7dd3fc; border: 2px solid #38bdf8; text-shadow: 0 0 12px rgba(125,211,252,0.8); animation: pulse-glow 2s infinite; }
+  .impact-rain-panthalassa   { background: radial-gradient(circle,#0a2a5a,#04102e); color: #93d8ff; border: 2px solid #38bdf8; text-shadow: 0 0 12px rgba(147,216,255,0.8); animation: pulse-glow 1.8s infinite; }
+  .impact-rain-abyssal       { background: radial-gradient(circle,#041030,#000); color: #5fb8e8; border: 2px solid #0ea5e9; text-shadow: 0 0 12px rgba(95,184,232,0.85); animation: pulse-glow 1.4s infinite; }
+  .impact-rain-cosmic-deluge { background: radial-gradient(circle,#1a0540,#04102e); color: #a5d8ff; border: 2px solid #6366f1; text-shadow: 0 0 14px rgba(165,216,255,0.9); animation: pulse-glow 1.1s infinite; }
   .impact-rain-omega-flood   { background: radial-gradient(circle,#bae6fd,#1e3a8a); color: #000; border: 3px solid #fff; text-shadow: 0 0 8px rgba(255,255,255,1); animation: pulse-glow 0.8s infinite; }
+
+  /* Alerts issued — shown inline in the impact detail cell */
+  .impact-alerts { display: inline-block; margin-top: 3px; color: #fbbf24; font-weight: 600; }
 
   /* Resilience levels (36 tiers) */
   .res-absolute-zero   { background: radial-gradient(circle,#fff,#bae6fd); color: #000; border: 3px solid #60a5fa; text-shadow: 0 0 8px rgba(255,255,255,1); animation: pulse-glow 1.2s infinite; }
@@ -680,6 +692,9 @@
 
   <div class="ladder-title" style="margin-top:14px">Rain Impact</div>
   <div class="ladder-item impact-rain-omega-flood">Ocean Singularity</div>
+  <div class="ladder-item impact-rain-cosmic-deluge">Cosmic Deluge Entropy</div>
+  <div class="ladder-item impact-rain-abyssal">Abyssal Epoch</div>
+  <div class="ladder-item impact-rain-panthalassa">Panthalassa Reborn</div>
   <div class="ladder-item impact-rain-floodpoc-omega">Floodpocalypse Omega</div>
   <div class="ladder-item impact-rain-mythic-deluge">Antediluvian Cataclysm</div>
   <div class="ladder-item impact-rain-biblical">Noachian Flood</div>
@@ -693,30 +708,36 @@
   <div class="ladder-item impact-rain-apocalyptic">Drowning of Records</div>
   <div class="ladder-item impact-rain-historic">Centurial Surge</div>
   <div class="ladder-item impact-rain-submersion">Aquapolis</div>
+  <div class="ladder-item impact-rain-submetro">Submerged Metro</div>
   <div class="ladder-item impact-rain-calamitous">Riverine Wrath</div>
   <div class="ladder-item impact-rain-catastrophic">Maelstrom</div>
   <div class="ladder-item impact-rain-devastating">Cataract</div>
   <div class="ladder-item impact-rain-critical">Overspill</div>
   <div class="ladder-item impact-rain-severe-flood">Deluge</div>
+  <div class="ladder-item impact-rain-quagmire">Quagmire</div>
   <div class="ladder-item impact-rain-major-flood">Inundation</div>
   <div class="ladder-item impact-rain-flash">Torrent</div>
   <div class="ladder-item impact-rain-flood-watch">Surge Watch</div>
+  <div class="ladder-item impact-rain-gully">Gully Washer</div>
   <div class="ladder-item impact-rain-drenching">Cloudburst</div>
   <div class="ladder-item impact-rain-heavy">Downpour</div>
   <div class="ladder-item impact-rain-soaking">Sluice</div>
   <div class="ladder-item impact-rain-notable">Wet Cycle</div>
   <div class="ladder-item impact-rain-moderate">Splash Zone</div>
+  <div class="ladder-item impact-rain-steady">Steady Rain</div>
   <div class="ladder-item impact-rain-light">Steady Drip</div>
   <div class="ladder-item impact-rain-light">Pitter-Patter</div>
+  <div class="ladder-item impact-rain-lshower">Light Shower</div>
   <div class="ladder-item impact-rain-drizzle">Drizzle</div>
   <div class="ladder-item impact-rain-sprinkle">Spitting</div>
   <div class="ladder-item impact-rain-trace">Mist</div>
+  <div class="ladder-item impact-rain-dew">Dewfall</div>
   <div class="ladder-item impact-rain-none">Bone Dry</div>
 </aside>
 
 <div class="container">
   <h1>Snow Event Profile Maker 3.1.4</h1>
-  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">5743 lines of code</p>
+  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">5883 lines of code</p>
   <p class="subtitle">Powered by real NOAA RSI methodology with location-based impact scaling</p>
 
   <div class="card">
@@ -2181,51 +2202,51 @@ function getImpact(snow, annualSnow, recordCold, coldTemp, snowEquivalent, windS
   const effective = Math.max(snowEffective, coldBaseline * pressureMult);  // Whichever is worse
 
   let result;
-  if (effective === 0)          result = { level:'None',              css:'none-impact',         desc:'No precipitation of any kind. Clear skies.',                                          school:'0-minute delay; normal schedule.' };
-  else if (effective <= 0.005)  result = { level:'Dusting',           css:'dusting',             desc:'A few flakes observed; nothing accumulates. Photo-worthy.',                            school:'0-minute delay; normal schedule.' };
-  else if (effective <= 0.01)   result = { level:'Trace',             css:'trace-impact',        desc:'Brief flurries spotted; ground remains clear. Social media buzz.',                     school:'0-minute delay; normal schedule.' };
-  else if (effective <= 0.02)   result = { level:'Negligible',        css:'negligible',          desc:'No measurable impact; a few flakes spotted.',                                         school:'5-minute delay possible for a few late buses.' };
-  else if (effective <= 0.05)   result = { level:'Minimal',           css:'minimal',             desc:'Light dusting on grassy surfaces; roads stay wet.',                                   school:'10-minute delay possible in a few districts.' };
-  else if (effective <= 0.15)   result = { level:'Very Light',        css:'very-light',          desc:'Fine powder on lawns and cars; melts within hours.',                                  school:'15-minute delay possible in rural districts.' };
-  else if (effective <= 0.3)    result = { level:'Light',             css:'light-impact',        desc:'Noticeable coating; brushed off cars; kids step outside to play.',                    school:'30-minute delay possible; most districts normal.' };
-  else if (effective < 0.5)     result = { level:'Minor',             css:'minor',               desc:'Thin coating on cold surfaces; mostly cosmetic.',                                     school:'45-minute delay likely in some districts.' };
-  else if (effective < 1)       result = { level:'Mild',              css:'mild',                desc:'Slushy roads; morning ice on windshields; some slipping on sidewalks.',               school:'1-hour delay common; scattered 2-hour delays.' };
-  else if (effective < 2)       result = { level:'Moderate',          css:'moderate',            desc:'Slippery roads; cautious driving needed; possible school delays.',                    school:'2-hour delays likely across the region.' };
-  else if (effective < 3)       result = { level:'Notable',           css:'notable-impact',      desc:'Roads white; commutes disrupted; plow crews out; first accidents reported.',          school:'2-hour delays standard; 0\u20131 snow days.' };
-  else if (effective < 4)       result = { level:'Considerable',      css:'considerable',        desc:'Accumulating roads; school delays/closures begin; plows deployed.',                   school:'1 snow day; delays for neighboring districts.' };
-  else if (effective < 5.5)     result = { level:'High Impact',       css:'high-impact',         desc:'Travel hazardous; accidents rising; non-essential businesses slow to open.',          school:'1 snow day; most schools closed.' };
-  else if (effective < 7)       result = { level:'Significant',       css:'significant',         desc:'School closures likely; hazardous travel; businesses may close early.',               school:'1 snow day.' };
-  else if (effective < 8.5)     result = { level:'Grave',             css:'grave',               desc:'Road network failing; spinouts every mile; regional state of emergency likely.',       school:'1\u20132 snow days; all schools closed.' };
-  else if (effective < 10)      result = { level:'Severe',            css:'severe',              desc:'Most schools closed; roads dangerous; only essential travel advised.',                 school:'1\u20132 snow days.' };
-  else if (effective < 12.5)    result = { level:'Oppressive',        css:'oppressive',          desc:'Travel bans; stores shelved empty; plow convoys struggle to keep up.',                school:'2 snow days.' };
-  else if (effective < 15)      result = { level:'Major',             css:'major',               desc:'Travel shutdown; widespread closures; power outages possible.',                       school:'2\u20133 snow days.' };
-  else if (effective < 17.5)    result = { level:'Dire',              css:'dire',                desc:'Stranded vehicles; roof loads concerning; emergency services overwhelmed.',          school:'3\u20134 snow days.' };
-  else if (effective < 20)      result = { level:'Crippling',         css:'crippling',           desc:'Region-wide shutdowns; emergency conditions; military/guard may deploy.',             school:'3\u20135 snow days.' };
-  else if (effective < 25)      result = { level:'Devastating',       css:'devastating',         desc:'National Guard activated; power grid failures; roof collapses reported.',             school:'4\u20136 snow days.' };
-  else if (effective < 30)      result = { level:'Extreme',           css:'extreme',             desc:'Life-threatening; complete transportation halt; roofs stressed.',                     school:'5\u20137 snow days.' };
-  else if (effective < 36)      result = { level:'Cataclysmic',       css:'cataclysmic',         desc:'Regional disaster declaration; supply lines broken; hospitals on backup power.',      school:'7\u201310 snow days; some buildings condemned.' };
-  else if (effective < 42)      result = { level:'Catastrophic',      css:'catastrophic',        desc:'Infrastructure collapse; structural damage; days-long paralysis.',                    school:'10\u201314 snow days.' };
-  else if (effective < 50)      result = { level:'Calamitous',        css:'calamitous',          desc:'Federal disaster; widespread roof collapses; fatalities mounting.',                   school:'14\u201318 snow days; many buildings unusable.' };
-  else if (effective < 60)      result = { level:'City Paralysis',    css:'paralysis',           desc:'City completely buried; historic accumulation; week-long recovery.',                  school:'18\u201325 snow days; schools serve as shelters.' };
-  else if (effective < 70)      result = { level:'Historic',          css:'historic-impact',     desc:'Generational event; entire neighborhoods inaccessible; heavy machinery required.',    school:'25\u201335 snow days; calendar irrecoverable.' };
-  else if (effective < 80)      result = { level:'Apocalyptic',       css:'apocalyptic',         desc:'Beyond any recorded event; survival conditions; month-long recovery.',                school:'35\u201360 snow days; semester lost.' };
-  else if (effective < 90)      result = { level:'Dystopian',         css:'dystopian',           desc:'Urban areas unreachable for weeks; supply drops by helicopter; mass evacuations.',    school:'60\u2013120 snow days; no classes for months.' };
-  else if (effective < 100)     result = { level:'Civilization Ender', css:'civilization-ender', desc:'Society stops functioning; National Guard overwhelmed; mass evacuations impossible.',  school:'120\u2013180 snow days; full school year canceled.' };
-  else if (effective < 125)     result = { level:'Post-Civilization', css:'post-civilization',   desc:'Cities functionally erased; survivors cluster near heated infrastructure.',           school:'180\u2013365 snow days; survival schools only.' };
-  else if (effective < 150)     result = { level:'Ice Age Onset',     css:'ice-age',             desc:'Record-shattering; multi-week digging out; structural collapses widespread.',         school:'365\u2013730 snow days; buildings condemned.' };
-  else if (effective < 175)     result = { level:'Glacial Epoch',     css:'glacial-epoch',       desc:'Snowpack resembles a glacier; cities entombed; no thaw expected this season.',        school:'730\u20133,650 snow days; schools buried entirely.' };
-  else if (effective < 200)     result = { level:'Extinction Event',  css:'extinction',          desc:'Theoretically impossible; every building buried; survival mode for months.',          school:'3,650\u201336,500 snow days; no reopening foreseen.' };
-  else if (effective < 250)     result = { level:'World-Ender',       css:'world-ender',         desc:'Regional biomes rewritten; permafrost layer forming; migration impossible.',          school:'36,500\u2013365,000 snow days; education globally disrupted.' };
-  else if (effective < 300)     result = { level:'Planet Killer',     css:'planet-killer',       desc:'Fantasy-level snowfall exceeding any physical model; entire regions uninhabitable.',  school:'365,000\u20133,650,000 snow days; regional education ends.' };
-  else if (effective < 400)     result = { level:'Planetary Cryogenesis', css:'cryogenesis',     desc:'Continent-scale freeze-in; terrain unrecognizable; atmosphere too cold to hold water vapor.', school:'3,650,000\u201336,500,000 snow days; humanity shelters underground.' };
-  else if (effective < 500)     result = { level:'Biblical',          css:'biblical',            desc:'Noah\'s Ark but frozen; entire landscape unrecognizable for months.',                 school:'36,500,000\u2013365,000,000 snow days; concept of school lost.' };
-  else if (effective < 700)     result = { level:'Mythic Deluge',     css:'mythic-deluge',       desc:'Mountain ranges exceeded; entire climate zones displaced; legends written anew.',     school:'365,000,000\u20133,650,000,000 snow days; only oral histories remain.' };
-  else if (effective < 1000)    result = { level:'Snowpocalypse Omega', css:'omega',             desc:'Beyond any conceivable scenario; multiple stories of snow everywhere.',               school:'3,650,000,000+ snow days; permanent winter.' };
-  else if (effective < 1500)    result = { level:'Heat Death of Snow', css:'heat-death',         desc:'The mathematical limit; snow ceases to have meaning as a unit of measure.',           school:'10\u00b9\u2070\u207a snow days; society no longer exists.' };
-  else if (effective < 2500)    result = { level:'Big Freeze Singularity', css:'singularity',    desc:'Spacetime itself appears to curve around the snowpack; gravity anomalies reported.',   school:'10\u00b2\u2070\u207a snow days; no observers remain.' };
-  else if (effective < 5000)    result = { level:'Cosmic Snow Entropy', css:'cosmic-entropy',    desc:'Entropy reversed; snowflakes assemble from nothing; laws of thermodynamics violated.',school:'10\u2075\u2070\u207a snow days; causality is optional.' };
-  else if (effective < 10000)   result = { level:'The White Void',    css:'white-void',          desc:'All matter converted to snow; light does not escape; time is silent.',                school:'10\u00b9\u2070\u2070\u207a snow days; nothing remembers school.' };
-  else                          result = { level:'Omega Point Frost', css:'omega-point',         desc:'Final unified snow state; universe achieves maximal crystallinity; no further events possible.', school:'\u221E snow days; end of all narrative.' };
+  if (effective === 0)          result = { level:'None',              css:'none-impact',         desc:'No precipitation of any kind. Clear skies.', alerts:'No alerts in effect.',                                          school:'0-minute delay; normal schedule.' };
+  else if (effective <= 0.005)  result = { level:'Dusting',           css:'dusting',             desc:'A few flakes observed; nothing accumulates. Photo-worthy.', alerts:'No alerts in effect.',                            school:'0-minute delay; normal schedule.' };
+  else if (effective <= 0.01)   result = { level:'Trace',             css:'trace-impact',        desc:'Brief flurries spotted; ground remains clear. Social media buzz.', alerts:'No alerts in effect.',                     school:'0-minute delay; normal schedule.' };
+  else if (effective <= 0.02)   result = { level:'Negligible',        css:'negligible',          desc:'No measurable impact; a few flakes spotted.', alerts:'No alerts in effect.',                                         school:'5-minute delay possible for a few late buses.' };
+  else if (effective <= 0.05)   result = { level:'Minimal',           css:'minimal',             desc:'Light dusting on grassy surfaces; roads stay wet.', alerts:'No alerts; perhaps a Special Weather Statement.',                                   school:'10-minute delay possible in a few districts.' };
+  else if (effective <= 0.15)   result = { level:'Very Light',        css:'very-light',          desc:'Fine powder on lawns and cars; melts within hours.', alerts:'Special Weather Statement possible.',                                  school:'15-minute delay possible in rural districts.' };
+  else if (effective <= 0.3)    result = { level:'Light',             css:'light-impact',        desc:'Noticeable coating; brushed off cars; kids step outside to play.', alerts:'Special Weather Statement.',                    school:'30-minute delay possible; most districts normal.' };
+  else if (effective < 0.5)     result = { level:'Minor',             css:'minor',               desc:'Thin coating on cold surfaces; mostly cosmetic.', alerts:'Special Weather Statement; localized Winter Weather Advisory.',                                     school:'45-minute delay likely in some districts.' };
+  else if (effective < 1)       result = { level:'Mild',              css:'mild',                desc:'Slushy roads; morning ice on windshields; some slipping on sidewalks.', alerts:'Winter Weather Advisory.',               school:'1-hour delay common; scattered 2-hour delays.' };
+  else if (effective < 2)       result = { level:'Moderate',          css:'moderate',            desc:'Slippery roads; cautious driving needed; possible school delays.', alerts:'Winter Weather Advisory.',                    school:'2-hour delays likely across the region.' };
+  else if (effective < 3)       result = { level:'Notable',           css:'notable-impact',      desc:'Roads white; commutes disrupted; plow crews out; first accidents reported.', alerts:'Winter Weather Advisory; Winter Storm Watch possible.',          school:'2-hour delays standard; 0\u20131 snow days.' };
+  else if (effective < 4)       result = { level:'Considerable',      css:'considerable',        desc:'Accumulating roads; school delays/closures begin; plows deployed.', alerts:'Winter Storm Watch.',                   school:'1 snow day; delays for neighboring districts.' };
+  else if (effective < 5.5)     result = { level:'High Impact',       css:'high-impact',         desc:'Travel hazardous; accidents rising; non-essential businesses slow to open.', alerts:'Winter Storm Warning.',          school:'1 snow day; most schools closed.' };
+  else if (effective < 7)       result = { level:'Significant',       css:'significant',         desc:'School closures likely; hazardous travel; businesses may close early.', alerts:'Winter Storm Warning.',               school:'1 snow day.' };
+  else if (effective < 8.5)     result = { level:'Grave',             css:'grave',               desc:'Road network failing; spinouts every mile; regional state of emergency likely.', alerts:'Winter Storm Warning; local State of Emergency.',       school:'1\u20132 snow days; all schools closed.' };
+  else if (effective < 10)      result = { level:'Severe',            css:'severe',              desc:'Most schools closed; roads dangerous; only essential travel advised.', alerts:'Winter Storm Warning; Blizzard Warning if winds are high.',                 school:'1\u20132 snow days.' };
+  else if (effective < 12.5)    result = { level:'Oppressive',        css:'oppressive',          desc:'Travel bans; stores shelved empty; plow convoys struggle to keep up.', alerts:'Blizzard Warning; State of Emergency.',                school:'2 snow days.' };
+  else if (effective < 15)      result = { level:'Major',             css:'major',               desc:'Travel shutdown; widespread closures; power outages possible.', alerts:'Blizzard Warning; regional State of Emergency; travel ban.',                       school:'2\u20133 snow days.' };
+  else if (effective < 17.5)    result = { level:'Dire',              css:'dire',                desc:'Stranded vehicles; roof loads concerning; emergency services overwhelmed.', alerts:'Blizzard Warning; Civil Emergency Message; travel banned.',          school:'3\u20134 snow days.' };
+  else if (effective < 20)      result = { level:'Crippling',         css:'crippling',           desc:'Region-wide shutdowns; emergency conditions; military/guard may deploy.', alerts:'Blizzard Warning; statewide State of Emergency; National Guard alerted.',             school:'3\u20135 snow days.' };
+  else if (effective < 25)      result = { level:'Devastating',       css:'devastating',         desc:'National Guard activated; power grid failures; roof collapses reported.', alerts:'Blizzard Warning; Federal Emergency Declaration; National Guard deployed.',             school:'4\u20136 snow days.' };
+  else if (effective < 30)      result = { level:'Extreme',           css:'extreme',             desc:'Life-threatening; complete transportation halt; roofs stressed.', alerts:'Blizzard Warning + Extreme Cold Warning; Presidential Disaster Declaration.',                     school:'5\u20137 snow days.' };
+  else if (effective < 36)      result = { level:'Cataclysmic',       css:'cataclysmic',         desc:'Regional disaster declaration; supply lines broken; hospitals on backup power.', alerts:'Regional Disaster Declaration; all winter warnings maxed; Emergency Alert System active.',      school:'7\u201310 snow days; some buildings condemned.' };
+  else if (effective < 42)      result = { level:'Catastrophic',      css:'catastrophic',        desc:'Infrastructure collapse; structural damage; days-long paralysis.', alerts:'Federal Disaster Declaration; continuous Emergency Alert System broadcast.',                    school:'10\u201314 snow days.' };
+  else if (effective < 50)      result = { level:'Calamitous',        css:'calamitous',          desc:'Federal disaster; widespread roof collapses; fatalities mounting.', alerts:'Federal Disaster Declaration; EAS broadcast; mass-shelter orders.',                   school:'14\u201318 snow days; many buildings unusable.' };
+  else if (effective < 60)      result = { level:'City Paralysis',    css:'paralysis',           desc:'City completely buried; historic accumulation; week-long recovery.', alerts:'Maximum NWS warnings; FEMA regional activation.',                  school:'18\u201325 snow days; schools serve as shelters.' };
+  else if (effective < 70)      result = { level:'Historic',          css:'historic-impact',     desc:'Generational event; entire neighborhoods inaccessible; heavy machinery required.', alerts:'FEMA national activation; continuous EAS broadcast.',    school:'25\u201335 snow days; calendar irrecoverable.' };
+  else if (effective < 80)      result = { level:'Apocalyptic',       css:'apocalyptic',         desc:'Beyond any recorded event; survival conditions; month-long recovery.', alerts:'Beyond NWS alert scales; national emergency; continuous EAS.',                school:'35\u201360 snow days; semester lost.' };
+  else if (effective < 90)      result = { level:'Dystopian',         css:'dystopian',           desc:'Urban areas unreachable for weeks; supply drops by helicopter; mass evacuations.', alerts:'National emergency; military airlift; alert systems saturated.',    school:'60\u2013120 snow days; no classes for months.' };
+  else if (effective < 100)     result = { level:'Civilization Ender', css:'civilization-ender', desc:'Society stops functioning; National Guard overwhelmed; mass evacuations impossible.', alerts:'Global emergency broadcast; governments coordinating evacuation.',  school:'120\u2013180 snow days; full school year canceled.' };
+  else if (effective < 125)     result = { level:'Post-Civilization', css:'post-civilization',   desc:'Cities functionally erased; survivors cluster near heated infrastructure.', alerts:'Alert infrastructure failing; last broadcasts urge the highlands.',           school:'180\u2013365 snow days; survival schools only.' };
+  else if (effective < 150)     result = { level:'Ice Age Onset',     css:'ice-age',             desc:'Record-shattering; multi-week digging out; structural collapses widespread.', alerts:'No functioning alert authority remains.',         school:'365\u2013730 snow days; buildings condemned.' };
+  else if (effective < 175)     result = { level:'Glacial Epoch',     css:'glacial-epoch',       desc:'Snowpack resembles a glacier; cities entombed; no thaw expected this season.', alerts:'No alerts — no one left to issue them.',        school:'730\u20133,650 snow days; schools buried entirely.' };
+  else if (effective < 200)     result = { level:'Extinction Event',  css:'extinction',          desc:'Theoretically impossible; every building buried; survival mode for months.', alerts:'Alert systems silent.',          school:'3,650\u201336,500 snow days; no reopening foreseen.' };
+  else if (effective < 250)     result = { level:'World-Ender',       css:'world-ender',         desc:'Regional biomes rewritten; permafrost layer forming; migration impossible.', alerts:'No alerts; civilization gone.',          school:'36,500\u2013365,000 snow days; education globally disrupted.' };
+  else if (effective < 300)     result = { level:'Planet Killer',     css:'planet-killer',       desc:'Fantasy-level snowfall exceeding any physical model; entire regions uninhabitable.', alerts:'No alerts; planetary scale.',  school:'365,000\u20133,650,000 snow days; regional education ends.' };
+  else if (effective < 400)     result = { level:'Planetary Cryogenesis', css:'cryogenesis',     desc:'Continent-scale freeze-in; terrain unrecognizable; atmosphere too cold to hold water vapor.', alerts:'No alerts; the atmosphere itself is failing.', school:'3,650,000\u201336,500,000 snow days; humanity shelters underground.' };
+  else if (effective < 500)     result = { level:'Biblical',          css:'biblical',            desc:'Noah\'s Ark but frozen; entire landscape unrecognizable for months.', alerts:'No alerts; mythic scale.',                 school:'36,500,000\u2013365,000,000 snow days; concept of school lost.' };
+  else if (effective < 700)     result = { level:'Mythic Deluge',     css:'mythic-deluge',       desc:'Mountain ranges exceeded; entire climate zones displaced; legends written anew.', alerts:'No alerts; legend only.',     school:'365,000,000\u20133,650,000,000 snow days; only oral histories remain.' };
+  else if (effective < 1000)    result = { level:'Snowpocalypse Omega', css:'omega',             desc:'Beyond any conceivable scenario; multiple stories of snow everywhere.', alerts:'No alerts; reality unraveling.',               school:'3,650,000,000+ snow days; permanent winter.' };
+  else if (effective < 1500)    result = { level:'Heat Death of Snow', css:'heat-death',         desc:'The mathematical limit; snow ceases to have meaning as a unit of measure.', alerts:'No alerts; units of measure are meaningless.',           school:'10\u00b9\u2070\u207a snow days; society no longer exists.' };
+  else if (effective < 2500)    result = { level:'Big Freeze Singularity', css:'singularity',    desc:'Spacetime itself appears to curve around the snowpack; gravity anomalies reported.', alerts:'No alerts; spacetime is curved.',   school:'10\u00b2\u2070\u207a snow days; no observers remain.' };
+  else if (effective < 5000)    result = { level:'Cosmic Snow Entropy', css:'cosmic-entropy',    desc:'Entropy reversed; snowflakes assemble from nothing; laws of thermodynamics violated.', alerts:'No alerts; causality is optional.',school:'10\u2075\u2070\u207a snow days; causality is optional.' };
+  else if (effective < 10000)   result = { level:'The White Void',    css:'white-void',          desc:'All matter converted to snow; light does not escape; time is silent.', alerts:'No alerts; light cannot escape.',                school:'10\u00b9\u2070\u2070\u207a snow days; nothing remembers school.' };
+  else                          result = { level:'Omega Point Frost', css:'omega-point',         desc:'Final unified snow state; universe achieves maximal crystallinity; no further events possible.', alerts:'No alerts; end of all narrative.', school:'\u221E snow days; end of all narrative.' };
 
   result.effective = effective;
   result.factor = factor;
@@ -2386,39 +2407,48 @@ function getRainImpact(rainInches, lat, windSpeed, gustSpeed, pressure) {
   const effective = (rainInches || 0) * windMult * latMult * pressureMult;
 
   let result;
-  if (effective === 0)            result = { level:'Bone Dry',            css:'rain-none',           desc:'No precipitation. Clear skies.',                                                  school:'0-minute delay; normal schedule.' };
-  else if (effective <= 0.005)    result = { level:'Mist',                css:'rain-trace',          desc:'A few drops; ground stays dry.',                                                 school:'0-minute delay; normal schedule.' };
-  else if (effective <= 0.02)     result = { level:'Spitting',            css:'rain-sprinkle',       desc:'Brief sprinkle; pavement barely darkens.',                                       school:'0-minute delay; normal schedule.' };
-  else if (effective <= 0.05)     result = { level:'Drizzle',             css:'rain-drizzle',        desc:'Light mist; umbrellas optional; cars wet briefly.',                              school:'0-minute delay; normal schedule.' };
-  else if (effective <= 0.15)     result = { level:'Pitter-Patter',       css:'rain-light',          desc:'Steady drizzle; ground wet, no puddles.',                                        school:'0-minute delay; normal schedule.' };
-  else if (effective <= 0.3)      result = { level:'Steady Drip',         css:'rain-light',          desc:'Wet roads; first puddles in low spots; wipers on.',                              school:'0-minute delay; normal schedule.' };
-  else if (effective <= 0.6)      result = { level:'Splash Zone',         css:'rain-moderate',       desc:'Standing water in low spots; storm drains active; highway spray noticeable.',    school:'0-minute delay; normal schedule.' };
-  else if (effective <= 1.0)      result = { level:'Wet Cycle',           css:'rain-notable',        desc:'Drains backing up; minor street ponding; rush hour slows.',                       school:'0-minute delay; normal schedule.' };
-  else if (effective <= 1.6)      result = { level:'Sluice',              css:'rain-soaking',        desc:'Yards saturated; small streams running high; ground soaked deep.',               school:'15-minute delay possible in low-lying districts.' };
-  else if (effective <= 2.2)      result = { level:'Downpour',            css:'rain-heavy',          desc:'Underpasses flooding; ponded intersections; first flood watches issued.',         school:'30-minute delay; bus reroutes around low spots.' };
-  else if (effective <= 3.0)      result = { level:'Cloudburst',          css:'rain-drenching',      desc:'Localized flash-flood watches; some road closures; basements vulnerable.',        school:'1-hour delay; some buses canceled.' };
-  else if (effective <= 4.0)      result = { level:'Surge Watch',         css:'rain-flood-watch',    desc:'Streams overtopping banks; flash-flood watches widespread; first stream rescues.', school:'2-hour delay; flooded districts close early.' };
-  else if (effective <= 5.5)      result = { level:'Torrent',             css:'rain-flash',          desc:'Flash Flood Warning; first water rescues; multiple roads closed; cars stranded.', school:'1 flood day for affected districts.' };
-  else if (effective <= 7.0)      result = { level:'Inundation',          css:'rain-major-flood',    desc:'Widespread road closures; basements flooded; voluntary evacs along streams.',     school:'1–2 flood days; many districts closed.' };
-  else if (effective <= 9.0)      result = { level:'Deluge',              css:'rain-severe-flood',   desc:'Neighborhoods isolated; bridges unsafe; first mandatory evacuations.',           school:'2 flood days; all districts closed.' };
-  else if (effective <= 11.0)     result = { level:'Overspill',           css:'rain-critical',       desc:'Mandatory evacs along rivers; highways submerged; National Guard activating.',    school:'2–3 flood days.' };
-  else if (effective <= 13.5)     result = { level:'Cataract',            css:'rain-devastating',    desc:'Levees stressed; rescues by boat; whole subdivisions underwater.',                school:'3–5 flood days; some buildings condemned.' };
-  else if (effective <= 16.5)     result = { level:'Maelstrom',           css:'rain-catastrophic',   desc:'FEMA mobilizing; National Guard deployed; downtown flooding.',                    school:'5–7 flood days.' };
-  else if (effective <= 20.0)     result = { level:'Riverine Wrath',      css:'rain-calamitous',     desc:'Federal disaster declaration; downtowns fully underwater; first dam concerns.',   school:'7–10 flood days; structural damage region-wide.' };
-  else if (effective <= 25.0)     result = { level:'Aquapolis',           css:'rain-submersion',     desc:'Cities fully submerged; multi-week recovery; reservoirs overflowing.',           school:'10–14 flood days; many schools serve as shelters.' };
-  else if (effective <= 32.0)     result = { level:'Centurial Surge',     css:'rain-historic',       desc:'Generational once-a-century event; levees breaching; metro paralysis.',          school:'14–21 flood days; semester at risk.' };
-  else if (effective <= 40.0)     result = { level:'Drowning of Records', css:'rain-apocalyptic',    desc:'Beyond any record; mass relocations; coastlines reshaped; weeks-long crisis.',    school:'21–30 flood days.' };
-  else if (effective <= 55.0)     result = { level:'Harvey-Class',        css:'rain-harvey',         desc:'Houston-2017-scale: metro paralyzed for months; hundreds of thousands displaced.', school:'30–60 flood days; semester lost.' };
-  else if (effective <= 75.0)     result = { level:'Aqualyptic Plunge',   css:'rain-dystopian',      desc:'Permanent water damage; whole districts uninhabitable; mold and disease spread.', school:'60–120 flood days; year disrupted.' };
-  else if (effective <= 100.0)    result = { level:'Atlantis Event',      css:'rain-civ-ender',      desc:'Coastal cities permanently lost; mass migrations inland.',                       school:'120–180 flood days; full school year canceled.' };
-  else if (effective <= 140.0)    result = { level:'Drowned Era',         css:'rain-post-civ',       desc:'Society retreats to highlands; lowland infrastructure abandoned.',                school:'180–365 flood days; survival schools only.' };
-  else if (effective <= 200.0)    result = { level:'Inland Sea Onset',    css:'rain-inland-sea',     desc:'New seas form on continental interiors; geography rewritten this season.',        school:'365–730 flood days; buildings condemned.' };
-  else if (effective <= 300.0)    result = { level:'Tethys Resurgence',   css:'rain-tethys',         desc:'Continental floods; mountain passes are the only refuge; civilization fragments.', school:'730+ flood days; most surface dwellings lost.' };
-  else if (effective <= 450.0)    result = { level:'Hydrosphere Failure', css:'rain-hydrosphere',    desc:'Atmosphere can’t physically hold this much water; thermodynamic anomaly.',   school:'No reopening foreseen.' };
-  else if (effective <= 700.0)    result = { level:'Noachian Flood',      css:'rain-biblical',       desc:'Noah’s Ark literally; entire continents submerged; only mountaintops remain.', school:'Concept of school lost.' };
-  else if (effective <= 1500.0)   result = { level:'Antediluvian Cataclysm',  css:'rain-mythic-deluge',  desc:'Mountain ranges submerged; entire climate zones drowned; legends written anew.', school:'Only oral histories remain.' };
-  else if (effective <= 3000.0)   result = { level:'Floodpocalypse Omega', css:'rain-floodpoc-omega', desc:'All landmass submerged; Earth becomes a water world.',                          school:'Permanent flood; humanity aquatic.' };
-  else                            result = { level:'Ocean Singularity',   css:'rain-omega-flood',    desc:'Final hydric singularity; every molecule of water joined into one event.',       school:'∞ flood days; end of all narrative.' };
+  if (effective === 0)            result = { level:'Bone Dry',            css:'rain-none',           desc:'No precipitation. Clear skies.', alerts:'No alerts in effect.',                                                  school:'0-minute delay; normal schedule.' };
+  else if (effective <= 0.002)    result = { level:'Dewfall',             css:'rain-dew',            desc:'Air thick with moisture; a faint damp sheen on glass and railings; no true drops.', alerts:'No alerts in effect.', school:'0-minute delay; normal schedule.' };
+  else if (effective <= 0.005)    result = { level:'Mist',                css:'rain-trace',          desc:'A few drops; ground stays dry.', alerts:'No alerts in effect.',                                                 school:'0-minute delay; normal schedule.' };
+  else if (effective <= 0.02)     result = { level:'Spitting',            css:'rain-sprinkle',       desc:'Brief sprinkle; pavement barely darkens.', alerts:'No alerts in effect.',                                       school:'0-minute delay; normal schedule.' };
+  else if (effective <= 0.05)     result = { level:'Drizzle',             css:'rain-drizzle',        desc:'Light mist; umbrellas optional; cars wet briefly.', alerts:'No alerts in effect.',                              school:'0-minute delay; normal schedule.' };
+  else if (effective <= 0.10)     result = { level:'Light Shower',        css:'rain-lshower',        desc:'Gentle shower; pavement glistens; first thin film of water on roads.', alerts:'No alerts in effect.',           school:'0-minute delay; normal schedule.' };
+  else if (effective <= 0.15)     result = { level:'Pitter-Patter',       css:'rain-light',          desc:'Steady drizzle; ground wet, no puddles.', alerts:'No alerts in effect.',                                        school:'0-minute delay; normal schedule.' };
+  else if (effective <= 0.3)      result = { level:'Steady Drip',         css:'rain-light',          desc:'Wet roads; first puddles in low spots; wipers on.', alerts:'No alerts; perhaps a Special Weather Statement.',                              school:'0-minute delay; normal schedule.' };
+  else if (effective <= 0.45)     result = { level:'Steady Rain',         css:'rain-steady',         desc:'Continuous rain; puddles connect; gutters run steadily; wipers on constant.', alerts:'Special Weather Statement possible.',    school:'0-minute delay; normal schedule.' };
+  else if (effective <= 0.6)      result = { level:'Splash Zone',         css:'rain-moderate',       desc:'Standing water in low spots; storm drains active; highway spray noticeable.', alerts:'Special Weather Statement; localized ponding.',    school:'0-minute delay; normal schedule.' };
+  else if (effective <= 1.0)      result = { level:'Wet Cycle',           css:'rain-notable',        desc:'Drains backing up; minor street ponding; rush hour slows.', alerts:'Flood Advisory possible for low-lying areas.',                       school:'0-minute delay; normal schedule.' };
+  else if (effective <= 1.6)      result = { level:'Sluice',              css:'rain-soaking',        desc:'Yards saturated; small streams running high; ground soaked deep.', alerts:'Flood Advisory.',               school:'15-minute delay possible in low-lying districts.' };
+  else if (effective <= 2.2)      result = { level:'Downpour',            css:'rain-heavy',          desc:'Underpasses flooding; ponded intersections; first flood watches issued.', alerts:'Flood Watch; Flood Advisory.',         school:'30-minute delay; bus reroutes around low spots.' };
+  else if (effective <= 3.0)      result = { level:'Cloudburst',          css:'rain-drenching',      desc:'Localized flash-flood watches; some road closures; basements vulnerable.', alerts:'Flash Flood Watch.',        school:'1-hour delay; some buses canceled.' };
+  else if (effective <= 3.5)      result = { level:'Gully Washer',        css:'rain-gully',          desc:'Ditches and gullies running brown and fast; culverts overwhelmed; rural roads washboarded.', alerts:'Flash Flood Watch; Flood Advisory.', school:'1-hour delay; rural routes suspended.' };
+  else if (effective <= 4.0)      result = { level:'Surge Watch',         css:'rain-flood-watch',    desc:'Streams overtopping banks; flash-flood watches widespread; first stream rescues.', alerts:'Flash Flood Watch (widespread).', school:'2-hour delay; flooded districts close early.' };
+  else if (effective <= 5.5)      result = { level:'Torrent',             css:'rain-flash',          desc:'Flash Flood Warning; first water rescues; multiple roads closed; cars stranded.', alerts:'Flash Flood Warning.', school:'1 flood day for affected districts.' };
+  else if (effective <= 7.0)      result = { level:'Inundation',          css:'rain-major-flood',    desc:'Widespread road closures; basements flooded; voluntary evacs along streams.', alerts:'Flash Flood Warning; River Flood Warning.',     school:'1–2 flood days; many districts closed.' };
+  else if (effective <= 8.0)      result = { level:'Quagmire',            css:'rain-quagmire',       desc:'Saturated ground liquefies; fields become bogs; vehicles mired; first levee seepage.', alerts:'Flash Flood Warning; River Flood Warning.', school:'1–2 flood days; outlying schools cut off.' };
+  else if (effective <= 9.0)      result = { level:'Deluge',              css:'rain-severe-flood',   desc:'Neighborhoods isolated; bridges unsafe; first mandatory evacuations.', alerts:'Flash Flood Emergency.',           school:'2 flood days; all districts closed.' };
+  else if (effective <= 11.0)     result = { level:'Overspill',           css:'rain-critical',       desc:'Mandatory evacs along rivers; highways submerged; National Guard activating.', alerts:'Flash Flood Emergency; mandatory-evacuation orders.',    school:'2–3 flood days.' };
+  else if (effective <= 13.5)     result = { level:'Cataract',            css:'rain-devastating',    desc:'Levees stressed; rescues by boat; whole subdivisions underwater.', alerts:'Flash Flood Emergency; major River Flood Warning.',                school:'3–5 flood days; some buildings condemned.' };
+  else if (effective <= 16.5)     result = { level:'Maelstrom',           css:'rain-catastrophic',   desc:'FEMA mobilizing; National Guard deployed; downtown flooding.', alerts:'Flash Flood Emergency; State of Emergency.',                    school:'5–7 flood days.' };
+  else if (effective <= 20.0)     result = { level:'Riverine Wrath',      css:'rain-calamitous',     desc:'Federal disaster declaration; downtowns fully underwater; first dam concerns.', alerts:'Flash Flood Emergency; Federal Disaster Declaration.',   school:'7–10 flood days; structural damage region-wide.' };
+  else if (effective <= 22.5)     result = { level:'Submerged Metro',     css:'rain-submetro',       desc:'Subway tunnels and parking structures fully flooded; downtown core impassable for weeks.', alerts:'Flash Flood Emergency; transit-system shutdown order.', school:'10–14 flood days; transit network drowned.' };
+  else if (effective <= 25.0)     result = { level:'Aquapolis',           css:'rain-submersion',     desc:'Cities fully submerged; multi-week recovery; reservoirs overflowing.', alerts:'Flash Flood Emergency; FEMA regional activation.',           school:'10–14 flood days; many schools serve as shelters.' };
+  else if (effective <= 32.0)     result = { level:'Centurial Surge',     css:'rain-historic',       desc:'Generational once-a-century event; levees breaching; metro paralysis.', alerts:'Flash Flood Emergency; FEMA national activation; EAS broadcast.',          school:'14–21 flood days; semester at risk.' };
+  else if (effective <= 40.0)     result = { level:'Drowning of Records', css:'rain-apocalyptic',    desc:'Beyond any record; mass relocations; coastlines reshaped; weeks-long crisis.', alerts:'Beyond NWS alert scales; national emergency; continuous EAS.',    school:'21–30 flood days.' };
+  else if (effective <= 55.0)     result = { level:'Harvey-Class',        css:'rain-harvey',         desc:'Houston-2017-scale: metro paralyzed for months; hundreds of thousands displaced.', alerts:'Catastrophic Flash Flood Emergency; mass water-rescue mobilization.', school:'30–60 flood days; semester lost.' };
+  else if (effective <= 75.0)     result = { level:'Aqualyptic Plunge',   css:'rain-dystopian',      desc:'Permanent water damage; whole districts uninhabitable; mold and disease spread.', alerts:'National emergency; alert systems saturated.', school:'60–120 flood days; year disrupted.' };
+  else if (effective <= 100.0)    result = { level:'Atlantis Event',      css:'rain-civ-ender',      desc:'Coastal cities permanently lost; mass migrations inland.', alerts:'Global emergency broadcast; coastal evacuation orders.',                       school:'120–180 flood days; full school year canceled.' };
+  else if (effective <= 140.0)    result = { level:'Drowned Era',         css:'rain-post-civ',       desc:'Society retreats to highlands; lowland infrastructure abandoned.', alerts:'Alert infrastructure failing; last broadcasts urge the highlands.',                school:'180–365 flood days; survival schools only.' };
+  else if (effective <= 200.0)    result = { level:'Inland Sea Onset',    css:'rain-inland-sea',     desc:'New seas form on continental interiors; geography rewritten this season.', alerts:'No functioning alert authority remains.',        school:'365–730 flood days; buildings condemned.' };
+  else if (effective <= 300.0)    result = { level:'Tethys Resurgence',   css:'rain-tethys',         desc:'Continental floods; mountain passes are the only refuge; civilization fragments.', alerts:'No alerts; continents fragmenting.', school:'730+ flood days; most surface dwellings lost.' };
+  else if (effective <= 450.0)    result = { level:'Hydrosphere Failure', css:'rain-hydrosphere',    desc:'Atmosphere can’t physically hold this much water; thermodynamic anomaly.', alerts:'No alerts; the atmosphere itself is failing.',   school:'No reopening foreseen.' };
+  else if (effective <= 700.0)    result = { level:'Noachian Flood',      css:'rain-biblical',       desc:'Noah’s Ark literally; entire continents submerged; only mountaintops remain.', alerts:'No alerts; mythic scale.', school:'Concept of school lost.' };
+  else if (effective <= 1500.0)   result = { level:'Antediluvian Cataclysm',  css:'rain-mythic-deluge',  desc:'Mountain ranges submerged; entire climate zones drowned; legends written anew.', alerts:'No alerts; legend only.', school:'Only oral histories remain.' };
+  else if (effective <= 3000.0)   result = { level:'Floodpocalypse Omega', css:'rain-floodpoc-omega', desc:'All landmass submerged; Earth becomes a water world.', alerts:'No alerts; reality unraveling.',                          school:'Permanent flood; humanity aquatic.' };
+  else if (effective <= 5000.0)   result = { level:'Panthalassa Reborn',  css:'rain-panthalassa',    desc:'Continents merge beneath a single world-ocean; the last archipelagos vanish.', alerts:'No alerts; no land left to warn.',   school:'No land remains; humanity is pelagic.' };
+  else if (effective <= 10000.0)  result = { level:'Abyssal Epoch',       css:'rain-abyssal',        desc:'Ocean floor and sky become indistinguishable; no light pierces the depth; pressure crushes the drowned lowlands.', alerts:'No alerts; the surface is lost.', school:'Concept of surface lost.' };
+  else if (effective <= 20000.0)  result = { level:'Cosmic Deluge Entropy', css:'rain-cosmic-deluge', desc:'Water assembles from vacuum; thermodynamics runs backward; rain falls from an empty sky.', alerts:'No alerts; causality dissolved.', school:'Causality dissolves into the flood.' };
+  else                            result = { level:'Ocean Singularity',   css:'rain-omega-flood',    desc:'Final hydric singularity; every molecule of water joined into one event.', alerts:'No alerts; end of all narrative.',       school:'∞ flood days; end of all narrative.' };
 
   result.effective = effective;
   result.windMult = windMult;
@@ -2994,6 +3024,7 @@ function generateProfile() {
 
     // Build detail text
     let detail = imp.desc;
+    if (imp.alerts) detail += ` <span class="impact-alerts">⚠️ ${imp.alerts}</span>`;
     if (rainOnly) {
       if (imp.latMult > 1.0) {
         const why = imp.latMult >= 1.15 ? 'tropical/arid region rarely sees soaking rain' : 'subtropical region with limited drainage';
@@ -3920,25 +3951,31 @@ const TEST_LADDER_TARGETS = [
 // rain impact ladder can be visually verified end-to-end.
 const TEST_LADDER_RAIN_TARGETS = [
   0,        // Bone Dry
+  0.001,    // Dewfall       (<=0.002)
   0.003,    // Mist          (<=0.005)
   0.012,    // Spitting      (<=0.02)
   0.035,    // Drizzle       (<=0.05)
-  0.10,     // Pitter-Patter (<=0.15)
+  0.075,    // Light Shower  (<=0.10)
+  0.125,    // Pitter-Patter (<=0.15)
   0.22,     // Steady Drip   (<=0.3)
-  0.45,     // Splash Zone   (<=0.6)
+  0.38,     // Steady Rain   (<=0.45)
+  0.52,     // Splash Zone   (<=0.6)
   0.80,     // Wet Cycle     (<=1.0)
   1.30,     // Sluice        (<=1.6)
   1.90,     // Downpour      (<=2.2)
   2.60,     // Cloudburst    (<=3.0)
-  3.50,     // Surge Watch   (<=4.0)
+  3.25,     // Gully Washer  (<=3.5)
+  3.75,     // Surge Watch   (<=4.0)
   4.75,     // Torrent       (<=5.5)
   6.25,     // Inundation    (<=7.0)
-  8.00,     // Deluge        (<=9.0)
+  7.50,     // Quagmire      (<=8.0)
+  8.50,     // Deluge        (<=9.0)
   10.00,    // Overspill     (<=11.0)
   12.25,    // Cataract      (<=13.5)
   15.00,    // Maelstrom     (<=16.5)
   18.00,    // Riverine Wrath(<=20.0)
-  22.50,    // Aquapolis     (<=25.0)
+  21.25,    // Submerged Metro(<=22.5)
+  23.75,    // Aquapolis     (<=25.0)
   28.50,    // Centurial Surge(<=32.0)
   36.00,    // Drowning of Records(<=40.0)
   47.50,    // Harvey-Class  (<=55.0)
@@ -3951,7 +3988,10 @@ const TEST_LADDER_RAIN_TARGETS = [
   575.00,   // Noachian Flood(<=700.0)
   1100.00,  // Antediluvian Cataclysm(<=1500.0)
   2200.00,  // Floodpocalypse Omega(<=3000.0)
-  5000.00,  // Ocean Singularity(>3000.0)
+  4000.00,  // Panthalassa Reborn(<=5000.0)
+  7500.00,  // Abyssal Epoch (<=10000.0)
+  15000.00, // Cosmic Deluge Entropy(<=20000.0)
+  30000.00, // Ocean Singularity(>20000.0)
 ];
 
 function runTestLadder(ladderType) {
