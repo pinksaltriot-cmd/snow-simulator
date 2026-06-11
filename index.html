@@ -1642,30 +1642,34 @@ const RSI_REGIONS = {
 // (30-45) up through 'Absolute Zero' (1000+) AND the sub-Nuisance tail below
 // (the eight tiers that subdivide the official 0-1 Cat 0 band) is a
 // SIMULATOR-ONLY extension -- NOT part of the official NOAA scale.
+// Each category carries `share` (percent of storms landing in this band —
+// NOAA's published rates for official Cats 1-5, estimates subdividing the
+// remaining ~54% across the Cat 0 tail, 0% for the never-observed
+// hypothetical tiers) and `desc` (a worded description of the band).
 const RSI_CATEGORIES = [
   // ---- Simulator-only sub-Nuisance tail (long low end; all official Cat 0, <1) ----
-  { min:0,max:0.02,cat:0,label:'Imperceptible',css:'imperceptible',pct:'A few stray flakes' },
-  { min:0.02,max:0.05,cat:0,label:'Trace',css:'trace',pct:'Not measurable' },
-  { min:0.05,max:0.10,cat:0,label:'Flurries',css:'flurries',pct:'No accumulation' },
-  { min:0.10,max:0.20,cat:0,label:'Dusting',css:'dusting',pct:'Coating on surfaces' },
-  { min:0.20,max:0.35,cat:0,label:'Light Snow',css:'lightsnow',pct:'Common minor event' },
-  { min:0.35,max:0.55,cat:0,label:'Minor Event',css:'minor',pct:'Roads stay clear' },
-  { min:0.55,max:0.80,cat:0,label:'Modest Snowfall',css:'modest',pct:'Brief slowdowns' },
-  { min:0.80,max:1,cat:0,label:'Nuisance',css:'nuisance',pct:'Top of Category 0' },
-  { min:1,max:3,cat:1,label:'Notable',css:'notable',pct:'25% of storms' },
-  { min:3,max:6,cat:2,label:'Significant',css:'significant',pct:'13% of storms' },
-  { min:6,max:10,cat:3,label:'Major',css:'major',pct:'5% of storms' },
-  { min:10,max:18,cat:4,label:'Crippling',css:'crippling',pct:'2% of storms' },
-  { min:18,max:30,cat:5,label:'Extreme',css:'extreme',pct:'~1% of storms' },
+  { min:0,max:0.02,cat:0,label:'Imperceptible',css:'imperceptible',share:'~12% of storms',desc:'A few stray flakes' },
+  { min:0.02,max:0.05,cat:0,label:'Trace',css:'trace',share:'~10% of storms',desc:'Not measurable' },
+  { min:0.05,max:0.10,cat:0,label:'Flurries',css:'flurries',share:'~9% of storms',desc:'No accumulation' },
+  { min:0.10,max:0.20,cat:0,label:'Dusting',css:'dusting',share:'~8% of storms',desc:'Coating on surfaces' },
+  { min:0.20,max:0.35,cat:0,label:'Light Snow',css:'lightsnow',share:'~6% of storms',desc:'Common minor event' },
+  { min:0.35,max:0.55,cat:0,label:'Minor Event',css:'minor',share:'~4% of storms',desc:'Roads stay clear' },
+  { min:0.55,max:0.80,cat:0,label:'Modest Snowfall',css:'modest',share:'~3% of storms',desc:'Brief slowdowns' },
+  { min:0.80,max:1,cat:0,label:'Nuisance',css:'nuisance',share:'~2% of storms',desc:'Top of Category 0' },
+  { min:1,max:3,cat:1,label:'Notable',css:'notable',share:'25% of storms',desc:'Plowable snow, routine disruption' },
+  { min:3,max:6,cat:2,label:'Significant',css:'significant',share:'13% of storms',desc:'Widespread travel delays' },
+  { min:6,max:10,cat:3,label:'Major',css:'major',share:'5% of storms',desc:'Closures and stranded travelers' },
+  { min:10,max:18,cat:4,label:'Crippling',css:'crippling',share:'2% of storms',desc:'Regions shut down for days' },
+  { min:18,max:30,cat:5,label:'Extreme',css:'extreme',share:'~1% of storms',desc:'Paralyzing, historic storm' },
   // ---- Simulator-only extended scale (beyond the official NOAA 0-5) ----
-  { min:30,max:45,cat:'5+',label:'Generational',css:'beyond',pct:'Rarest of the rare' },
-  { min:45,max:70,cat:'5++',label:'Unprecedented',css:'unprecedented',pct:'Beyond recorded history' },
-  { min:70,max:110,cat:6,label:'Cataclysmic',css:'cataclysm',pct:'Continental paralysis' },
-  { min:110,max:175,cat:7,label:'Apocalyptic',css:'apocalypse',pct:'Societal collapse' },
-  { min:175,max:300,cat:8,label:'Extinction-Level',css:'extinction',pct:'Mass-casualty event' },
-  { min:300,max:500,cat:9,label:'Glacial Onset',css:'glacial',pct:'Ice sheets advancing' },
-  { min:500,max:1000,cat:10,label:'Snowball Earth',css:'snowball',pct:'Planet-wide glaciation' },
-  { min:1000,max:999999,cat:'∞',label:'Absolute Zero',css:'absolute',pct:'Theoretical maximum' }
+  { min:30,max:45,cat:'5+',label:'Generational',css:'beyond',share:'<0.1% of storms',desc:'Rarest of the rare' },
+  { min:45,max:70,cat:'5++',label:'Unprecedented',css:'unprecedented',share:'0% of storms',desc:'Beyond recorded history' },
+  { min:70,max:110,cat:6,label:'Cataclysmic',css:'cataclysm',share:'0% of storms',desc:'Continental paralysis' },
+  { min:110,max:175,cat:7,label:'Apocalyptic',css:'apocalypse',share:'0% of storms',desc:'Societal collapse' },
+  { min:175,max:300,cat:8,label:'Extinction-Level',css:'extinction',share:'0% of storms',desc:'Mass-casualty event' },
+  { min:300,max:500,cat:9,label:'Glacial Onset',css:'glacial',share:'0% of storms',desc:'Ice sheets advancing' },
+  { min:500,max:1000,cat:10,label:'Snowball Earth',css:'snowball',share:'0% of storms',desc:'Planet-wide glaciation' },
+  { min:1000,max:999999,cat:'∞',label:'Absolute Zero',css:'absolute',share:'0% of storms',desc:'Theoretical maximum' }
 ];
 
 const HISTORIC_STORMS = [
@@ -3247,7 +3251,7 @@ function generateProfile(rsiOverride) {
     <div class="rsi-section">
       <div class="rsi-meter-wrap"><div class="rsi-meter-fill rsi-${rsiCat.css}" style="width:${Math.max(8,meterPct)}%">${officialRSI < 1 ? officialRSI.toFixed(2) : officialRSI.toFixed(1)}</div></div>
       <div class="rsi-meter-labels"><span>0</span><span>Cat 1</span><span>Cat 2</span><span>Cat 3</span><span>Cat 4</span><span>Cat 5</span><span>5+ &rarr; &infin;</span></div>
-      <div style="margin-top:10px"><span class="rsi-cat-badge rsi-${rsiCat.css}" style="color:#fff">Category ${rsiCat.cat}: ${rsiCat.label}</span><span style="font-size:0.78rem;opacity:0.5;margin-left:8px">${rsiCat.pct}</span></div>
+      <div style="margin-top:10px"><span class="rsi-cat-badge rsi-${rsiCat.css}" style="color:#fff">Category ${rsiCat.cat}: ${rsiCat.label}</span><span style="font-size:0.78rem;opacity:0.5;margin-left:8px">${rsiCat.share} &middot; ${rsiCat.desc}</span></div>
     </div>
     <div class="rsi-breakdown"><h3 style="font-size:0.8rem;text-transform:uppercase;letter-spacing:1px;opacity:0.5;margin:14px 0 8px">Breakdown by Region</h3>${regRows||'<p style="opacity:0.4">No cities matched to RSI regions.</p>'}</div>
     ${noData}
