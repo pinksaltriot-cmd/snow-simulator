@@ -1955,7 +1955,7 @@ const PRECIP_MULTIPLIERS = {
 // getRainImpact(). Snow Grains and Thundersnow stay on the snow scale.
 //   per-inch types scale by the entered amount (e.g. 2" thunderstorm = 4" rain);
 //   fixed types contribute a flat rain-equivalent regardless of amount.
-const RAIN_SCALE_PER_INCH = { rain: 1.0, drizzle: 1.0, thunderstorm: 2.0, hail: 3.0 };
+const RAIN_SCALE_PER_INCH = { rain: 1.0, drizzle: 0.5, thunderstorm: 2.0, hail: 3.0 };
 const RAIN_SCALE_FIXED    = { fog: 0.1, haze: 0.15, mist: 0.02 };
 const RAIN_SCALE_TYPES = [...Object.keys(RAIN_SCALE_PER_INCH), ...Object.keys(RAIN_SCALE_FIXED)];
 
