@@ -416,6 +416,14 @@
   .tl-ice { color: #c084fc; }
   .tl-sleet { color: #fbbf24; }
   .tl-rain { color: #6ee7b7; }
+  .tl-snowgrains { color: #bfdbfe; }
+  .tl-hail { color: #e5e7eb; }
+  .tl-thunderstorm { color: #f87171; }
+  .tl-thundersnow { color: #f0abfc; }
+  .tl-fog { color: #9ca3af; }
+  .tl-haze { color: #d6d3d1; }
+  .tl-mist { color: #a5f3fc; }
+  .tl-drizzle { color: #5eead4; }
   .tl-phase-row { margin-bottom: 2px; }
 
   /* Precip breakdown in city list & table */
@@ -1915,13 +1923,48 @@ function getResilienceLabel(annualSnow, lat) {
    Supports snow, ice (freezing rain), sleet, and rain with
    order-dependent impact modifiers.
    ====================================================================== */
-const PRECIP_TYPES = ['snow', 'ice', 'sleet', 'rain'];
-const PRECIP_LABELS = { snow: 'Snow', ice: 'Ice / Freezing Rain', sleet: 'Sleet', rain: 'Rain' };
-const PRECIP_ICONS  = { snow: '\u2744\uFE0F', ice: '\u{1F9CA}', sleet: '\u26C8\uFE0F', rain: '\u{1F327}\uFE0F' };
-const PRECIP_COLORS = { snow: '#93c5fd', ice: '#c084fc', sleet: '#fbbf24', rain: '#6ee7b7' };
+const PRECIP_TYPES = ['snow', 'ice', 'sleet', 'rain',
+  'snowgrains', 'hail', 'thunderstorm', 'thundersnow', 'fog', 'haze', 'mist', 'drizzle'];
+const PRECIP_LABELS = {
+  snow: 'Snow', ice: 'Ice / Freezing Rain', sleet: 'Sleet', rain: 'Rain',
+  snowgrains: 'Snow Grains', hail: 'Hail', thunderstorm: 'Thunderstorm', thundersnow: 'Thundersnow',
+  fog: 'Fog', haze: 'Haze', mist: 'Mist', drizzle: 'Drizzle'
+};
+const PRECIP_ICONS  = {
+  snow: '\u2744\uFE0F', ice: '\u{1F9CA}', sleet: '\u26C8\uFE0F', rain: '\u{1F327}\uFE0F',
+  snowgrains: '\u{1F328}\uFE0F', hail: '\u26AA', thunderstorm: '\u{1F329}\uFE0F', thundersnow: '\u26A1\u2744\uFE0F',
+  fog: '\u{1F32B}\uFE0F', haze: '\u{1F301}', mist: '\u{1F4A7}', drizzle: '\u{1F326}\uFE0F'
+};
+const PRECIP_COLORS = {
+  snow: '#93c5fd', ice: '#c084fc', sleet: '#fbbf24', rain: '#6ee7b7',
+  snowgrains: '#bfdbfe', hail: '#e5e7eb', thunderstorm: '#f87171', thundersnow: '#f0abfc',
+  fog: '#9ca3af', haze: '#d6d3d1', mist: '#a5f3fc', drizzle: '#5eead4'
+};
 
-// Impact multiplier per inch relative to snow
-const PRECIP_MULTIPLIERS = { snow: 1.0, ice: 8.0, sleet: 2.5, rain: 0.0 };
+// Impact multiplier per inch relative to snow (snow-impact scale only).
+// Types scored on the RAIN impact scale (see RAIN_SCALE_TYPES) keep 0.0 here so
+// they never inflate snow impact when mixed with wintry phases.
+const PRECIP_MULTIPLIERS = {
+  snow: 1.0, ice: 8.0, sleet: 2.5, rain: 0.0,
+  snowgrains: 0.3, hail: 0.0, thunderstorm: 0.0, thundersnow: 2.5,
+  fog: 0.0, haze: 0.0, mist: 0.0, drizzle: 0.0
+};
+
+// Types scored on the rain (flood) impact scale rather than the snow impact
+// scale. A city whose phases are entirely these types is routed through
+// getRainImpact(). Snow Grains and Thundersnow stay on the snow scale.
+//   per-inch types scale by the entered amount (e.g. 2" thunderstorm = 4" rain);
+//   fixed types contribute a flat rain-equivalent regardless of amount.
+const RAIN_SCALE_PER_INCH = { rain: 1.0, drizzle: 1.0, thunderstorm: 2.0, hail: 3.0 };
+const RAIN_SCALE_FIXED    = { fog: 0.1, haze: 0.15, mist: 0.02 };
+const RAIN_SCALE_TYPES = [...Object.keys(RAIN_SCALE_PER_INCH), ...Object.keys(RAIN_SCALE_FIXED)];
+
+// Convert a rain-scale phase into inches of rain-equivalent for getRainImpact().
+function rainEquivInches(type, amount) {
+  if (type in RAIN_SCALE_FIXED)    return RAIN_SCALE_FIXED[type];
+  if (type in RAIN_SCALE_PER_INCH) return (amount || 0) * RAIN_SCALE_PER_INCH[type];
+  return 0;
+}
 
 // Order-dependent modifiers: how adjacent phases interact
 const SEQUENCE_MODIFIERS = [
@@ -2475,12 +2518,13 @@ function getRainImpact(rainInches, lat, windSpeed, gustSpeed, pressure) {
    ====================================================================== */
 function isRainOnly(phases) {
   if (!phases || !phases.length) return false;
-  return phases.every(p => p.type === 'rain' && p.amount > 0);
+  return phases.every(p => RAIN_SCALE_TYPES.includes(p.type) && p.amount > 0);
 }
 
 function totalRainInches(phases) {
   if (!phases || !phases.length) return 0;
-  return phases.filter(p => p.type === 'rain').reduce((s, p) => s + (p.amount || 0), 0);
+  return phases.filter(p => RAIN_SCALE_TYPES.includes(p.type))
+               .reduce((s, p) => s + rainEquivInches(p.type, p.amount), 0);
 }
 
 /* ====================================================================== */
