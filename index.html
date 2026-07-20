@@ -1974,13 +1974,14 @@ const PRECIP_MULTIPLIERS = {
 };
 
 // Tornado severity in impact-equivalent units — rain-equivalent inches on the
-// rain scale, snow-equivalent inches on the snow scale. It is by far the most
-// severe modifier even at low wind and grows exponentially with mph. Anchored
-// so the base is already catastrophic and EF5-class (~200 mph) is apocalyptic.
-//   0 mph → 40,  65 (EF0) → ~101,  120 → ~222,  165 (EF3) → ~423,  200 → ~700
+// rain scale, snow-equivalent inches on the snow scale. Anchored to the real
+// Enhanced Fujita scale: a windless "tornado" is negligible, the EF0 threshold
+// (65 mph) is a modest 3, and severity grows exponentially into the apocalyptic
+// range for violent tornadoes.
+//   0 mph → ~0.3,  65 (EF0) → 3,  111 (EF2) → ~14,  166 (EF4) → ~87,  200 (EF5) → ~270,  250 → ~1431
 function tornadoEquiv(mph) {
   const w = Math.max(0, mph || 0);
-  return 40 * Math.exp(w / 70);
+  return 3 * Math.exp((w - 65) / 30);
 }
 
 // Types scored on the rain (flood) impact scale rather than the snow impact
