@@ -403,6 +403,23 @@
   .phase-arrows button:hover { color: #5b9cf5; }
   .phase-remove { background: none; border: none; color: #f87171; font-size: 0.95rem; padding: 2px 6px; opacity: 0.5; cursor: pointer; }
   .phase-remove:hover { opacity: 1; }
+  .phase-companions {
+    display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap;
+    margin: -2px 0 8px 30px; padding: 6px 10px;
+    background: rgba(0,0,0,0.1); border-radius: 8px;
+    border-left: 2px solid rgba(255,255,255,0.12);
+  }
+  .phase-with-label { font-size: 0.7rem; opacity: 0.55; text-transform: uppercase; letter-spacing: 0.5px; }
+  .companion-item { display: inline-flex; align-items: center; gap: 5px; }
+  .companion-toggle { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8rem; cursor: pointer; white-space: nowrap; }
+  .companion-toggle input { cursor: pointer; }
+  .phase-companions input[type="text"] {
+    width: 58px; padding: 5px 8px; font-size: 0.8rem; border-radius: 6px;
+    background: rgba(0,0,0,0.3); color: #fff; border: 1px solid rgba(255,255,255,0.2); outline: none;
+  }
+  .phase-companions input[type="text"]:focus { border-color: #5b9cf5; }
+  .phase-companions input[type="text"]:disabled { opacity: 0.3; }
+  .companion-unit { font-size: 0.68rem; opacity: 0.45; margin-left: -6px; }
   .btn-add-phase {
     background: rgba(91,156,245,0.15); border: 1px dashed rgba(91,156,245,0.3);
     color: #93c5fd; padding: 6px 14px; border-radius: 6px; font-size: 0.8rem;
@@ -424,6 +441,7 @@
   .tl-haze { color: #d6d3d1; }
   .tl-mist { color: #a5f3fc; }
   .tl-drizzle { color: #5eead4; }
+  .tl-tornado { color: #c026d3; }
   .tl-phase-row { margin-bottom: 2px; }
 
   /* Precip breakdown in city list & table */
@@ -1924,22 +1942,27 @@ function getResilienceLabel(annualSnow, lat) {
    order-dependent impact modifiers.
    ====================================================================== */
 const PRECIP_TYPES = ['snow', 'ice', 'sleet', 'rain',
-  'snowgrains', 'hail', 'thunderstorm', 'thundersnow', 'fog', 'haze', 'mist', 'drizzle'];
+  'snowgrains', 'hail', 'thunderstorm', 'thundersnow', 'fog', 'haze', 'mist', 'drizzle', 'tornado'];
 const PRECIP_LABELS = {
   snow: 'Snow', ice: 'Ice / Freezing Rain', sleet: 'Sleet', rain: 'Rain',
   snowgrains: 'Snow Grains', hail: 'Hail', thunderstorm: 'Thunderstorm', thundersnow: 'Thundersnow',
-  fog: 'Fog', haze: 'Haze', mist: 'Mist', drizzle: 'Drizzle'
+  fog: 'Fog', haze: 'Haze', mist: 'Mist', drizzle: 'Drizzle', tornado: 'Tornado'
 };
 const PRECIP_ICONS  = {
   snow: '\u2744\uFE0F', ice: '\u{1F9CA}', sleet: '\u26C8\uFE0F', rain: '\u{1F327}\uFE0F',
   snowgrains: '\u{1F328}\uFE0F', hail: '\u26AA', thunderstorm: '\u{1F329}\uFE0F', thundersnow: '\u26A1\u2744\uFE0F',
-  fog: '\u{1F32B}\uFE0F', haze: '\u{1F301}', mist: '\u{1F4A7}', drizzle: '\u{1F326}\uFE0F'
+  fog: '\u{1F32B}\uFE0F', haze: '\u{1F301}', mist: '\u{1F4A7}', drizzle: '\u{1F326}\uFE0F', tornado: '\u{1F32A}\uFE0F'
 };
 const PRECIP_COLORS = {
   snow: '#93c5fd', ice: '#c084fc', sleet: '#fbbf24', rain: '#6ee7b7',
   snowgrains: '#bfdbfe', hail: '#e5e7eb', thunderstorm: '#f87171', thundersnow: '#f0abfc',
-  fog: '#9ca3af', haze: '#d6d3d1', mist: '#a5f3fc', drizzle: '#5eead4'
+  fog: '#9ca3af', haze: '#d6d3d1', mist: '#a5f3fc', drizzle: '#5eead4', tornado: '#c026d3'
 };
+
+// Tornado is measured in wind speed (mph), not inches. These types carry an mph
+// amount and render an "mph" unit instead of "inches".
+const MPH_TYPES = ['tornado'];
+function isMphType(type) { return MPH_TYPES.includes(type); }
 
 // Impact multiplier per inch relative to snow (snow-impact scale only).
 // Types scored on the RAIN impact scale (see RAIN_SCALE_TYPES) keep 0.0 here so
@@ -1947,8 +1970,18 @@ const PRECIP_COLORS = {
 const PRECIP_MULTIPLIERS = {
   snow: 1.0, ice: 8.0, sleet: 2.5, rain: 0.0,
   snowgrains: 0.3, hail: 0.0, thunderstorm: 0.0, thundersnow: 2.5,
-  fog: 0.0, haze: 0.0, mist: 0.0, drizzle: 0.0
+  fog: 0.0, haze: 0.0, mist: 0.0, drizzle: 0.0, tornado: 0.0  // tornado impact is exponential (see tornadoEquiv), not linear per unit
 };
+
+// Tornado severity in impact-equivalent units — rain-equivalent inches on the
+// rain scale, snow-equivalent inches on the snow scale. It is by far the most
+// severe modifier even at low wind and grows exponentially with mph. Anchored
+// so the base is already catastrophic and EF5-class (~200 mph) is apocalyptic.
+//   0 mph → 40,  65 (EF0) → ~101,  120 → ~222,  165 (EF3) → ~423,  200 → ~700
+function tornadoEquiv(mph) {
+  const w = Math.max(0, mph || 0);
+  return 40 * Math.exp(w / 70);
+}
 
 // Types scored on the rain (flood) impact scale rather than the snow impact
 // scale. A city whose phases are entirely these types is routed through
@@ -1959,8 +1992,14 @@ const RAIN_SCALE_PER_INCH = { rain: 1.0, drizzle: 0.5, thunderstorm: 2.0, hail: 
 const RAIN_SCALE_FIXED    = { fog: 0.1, haze: 0.15, mist: 0.02 };
 const RAIN_SCALE_TYPES = [...Object.keys(RAIN_SCALE_PER_INCH), ...Object.keys(RAIN_SCALE_FIXED)];
 
+// Tornado rides whichever scale its companions use: alone or with rain-scale
+// types it's rain-scale; with wintry types (snow, ice, sleet, snow grains,
+// thundersnow) the city routes to the snow scale via isRainOnly() below.
+function isRainScaleType(type) { return RAIN_SCALE_TYPES.includes(type) || type === 'tornado'; }
+
 // Convert a rain-scale phase into inches of rain-equivalent for getRainImpact().
 function rainEquivInches(type, amount) {
+  if (type === 'tornado')          return tornadoEquiv(amount);   // amount is mph
   if (type in RAIN_SCALE_FIXED)    return RAIN_SCALE_FIXED[type];
   if (type in RAIN_SCALE_PER_INCH) return (amount || 0) * RAIN_SCALE_PER_INCH[type];
   return 0;
@@ -1981,11 +2020,12 @@ const SEQUENCE_MODIFIERS = [
 function computeDerivedPrecip(phases) {
   if (!phases || !phases.length) return { snow: 0, snowEquivalent: 0, phaseImpacts: [] };
 
-  // Step 1: Raw weighted impact per phase
+  // Step 1: Raw weighted impact per phase. Tornado's impact is exponential in
+  // its wind speed (mph), not linear per inch, so it uses tornadoEquiv().
   const phaseImpacts = phases.map(p => ({
     type: p.type,
     amount: p.amount,
-    rawImpact: p.amount * PRECIP_MULTIPLIERS[p.type],
+    rawImpact: p.type === 'tornado' ? tornadoEquiv(p.amount) : p.amount * PRECIP_MULTIPLIERS[p.type],
     modifiers: []
   }));
 
@@ -2014,7 +2054,9 @@ function computeDerivedPrecip(phases) {
 
   // Step 3: Sum totals
   const snowEquivalent = phaseImpacts.reduce((s, p) => s + p.rawImpact, 0);
-  const frozenTotal = phases.filter(p => p.type !== 'rain').reduce((s, p) => s + p.amount, 0);
+  // Frozen accumulation in inches — exclude rain and tornado (tornado's "amount"
+  // is a wind speed in mph, not inches, so it must not inflate snow depth).
+  const frozenTotal = phases.filter(p => p.type !== 'rain' && p.type !== 'tornado').reduce((s, p) => s + p.amount, 0);
 
   return {
     snow: Math.round(frozenTotal * 10) / 10,
@@ -2518,12 +2560,12 @@ function getRainImpact(rainInches, lat, windSpeed, gustSpeed, pressure) {
    ====================================================================== */
 function isRainOnly(phases) {
   if (!phases || !phases.length) return false;
-  return phases.every(p => RAIN_SCALE_TYPES.includes(p.type) && p.amount > 0);
+  return phases.every(p => isRainScaleType(p.type) && p.amount > 0);
 }
 
 function totalRainInches(phases) {
   if (!phases || !phases.length) return 0;
-  return phases.filter(p => RAIN_SCALE_TYPES.includes(p.type))
+  return phases.filter(p => isRainScaleType(p.type))
                .reduce((s, p) => s + rainEquivInches(p.type, p.amount), 0);
 }
 
@@ -2575,21 +2617,47 @@ function parseSnow(val) {
   return Math.round(n * 10) / 10;
 }
 
+// Parse a wind speed (mph) for tornado phases — a plain non-negative number.
+function parseMph(val) {
+  const n = parseFloat((val || '').trim());
+  if (isNaN(n) || n < 0) return null;
+  return Math.round(n);
+}
+
+// Parse a phase amount using the right unit for the type (mph for tornado).
+function parsePhaseAmount(type, str) {
+  return isMphType(type) ? parseMph(str) : parseSnow(str);
+}
+
 /* ---- Phase Builder ---- */
+// Hail can occur alongside these co-occurring types (each with its own amount).
+const HAIL_COMPANIONS = ['thunderstorm', 'rain', 'drizzle'];
+// Tornado can be layered onto any non-tornado phase as a modifier.
+function ensureTornado(phase) {
+  if (!phase.tornado) phase.tornado = { on: false, mphStr: '' };
+  return phase.tornado;
+}
+function ensureCompanions(phase) {
+  if (!phase.companions) phase.companions = {};
+  HAIL_COMPANIONS.forEach(t => { if (!phase.companions[t]) phase.companions[t] = { on: false, amountStr: '' }; });
+  return phase.companions;
+}
+
 function renderPhaseRows() {
-  // Remove existing phase rows (keep the empty message element)
-  phaseBuilder.querySelectorAll('.phase-row').forEach(el => el.remove());
+  // Remove existing phase rows and companion sub-rows (keep the empty message element)
+  phaseBuilder.querySelectorAll('.phase-row, .phase-companions').forEach(el => el.remove());
   phasesEmpty.style.display = inputPhases.length ? 'none' : 'block';
   inputPhases.forEach((phase, i) => {
     const row = document.createElement('div');
     row.className = 'phase-row';
+    const isMph = isMphType(phase.type);
     row.innerHTML = `
       <span class="phase-order-num">${i + 1}</span>
       <select data-idx="${i}" class="phase-type-sel">
         ${PRECIP_TYPES.map(t => `<option value="${t}" ${t===phase.type?'selected':''}>${PRECIP_ICONS[t]} ${PRECIP_LABELS[t]}</option>`).join('')}
       </select>
-      <input type="text" class="phase-amt-input" data-idx="${i}" value="${phase.amountStr || ''}" placeholder="e.g. 4.0, Trace, or Half a Trace">
-      <span class="phase-unit">inches</span>
+      <input type="text" class="phase-amt-input" data-idx="${i}" value="${phase.amountStr || ''}" placeholder="${isMph ? 'e.g. 120' : 'e.g. 4.0, Trace, or Half a Trace'}">
+      <span class="phase-unit">${isMph ? 'mph' : 'inches'}</span>
       <div class="phase-arrows">
         <button type="button" data-dir="up" data-idx="${i}" title="Move up">\u25B2</button>
         <button type="button" data-dir="down" data-idx="${i}" title="Move down">\u25BC</button>
@@ -2597,6 +2665,41 @@ function renderPhaseRows() {
       <button type="button" class="phase-remove" data-idx="${i}" title="Remove">&times;</button>
     `;
     phaseBuilder.appendChild(row);
+
+    // Non-tornado rows get a "with:" sub-row: hail also offers co-occurring
+    // types (thunderstorm / rain / drizzle), and every type can layer on a
+    // Tornado modifier (entered in mph).
+    if (phase.type !== 'tornado') {
+      const isHail = phase.type === 'hail';
+      const comp = isHail ? ensureCompanions(phase) : null;
+      const torn = ensureTornado(phase);
+      const cRow = document.createElement('div');
+      cRow.className = 'phase-companions';
+      let html = `<span class="phase-with-label">with:</span>`;
+      if (isHail) {
+        html += HAIL_COMPANIONS.map(t => `
+          <span class="companion-item">
+            <label class="companion-toggle">
+              <input type="checkbox" class="companion-check" data-idx="${i}" data-ctype="${t}" ${comp[t].on ? 'checked' : ''}>
+              ${PRECIP_ICONS[t]} ${PRECIP_LABELS[t]}
+            </label>
+            <input type="text" class="companion-amt" data-idx="${i}" data-ctype="${t}" value="${comp[t].amountStr || ''}" placeholder="in" ${comp[t].on ? '' : 'disabled'}>
+            <span class="companion-unit">in</span>
+          </span>
+        `).join('');
+      }
+      html += `
+        <span class="companion-item">
+          <label class="companion-toggle">
+            <input type="checkbox" class="tornado-check" data-idx="${i}" ${torn.on ? 'checked' : ''}>
+            ${PRECIP_ICONS.tornado} ${PRECIP_LABELS.tornado}
+          </label>
+          <input type="text" class="tornado-mph" data-idx="${i}" value="${torn.mphStr || ''}" placeholder="mph" ${torn.on ? '' : 'disabled'}>
+          <span class="companion-unit">mph</span>
+        </span>`;
+      cRow.innerHTML = html;
+      phaseBuilder.appendChild(cRow);
+    }
   });
 }
 
@@ -2631,6 +2734,22 @@ function syncPhaseInputs() {
     const idx = parseInt(inp.dataset.idx);
     if (inputPhases[idx]) inputPhases[idx].amountStr = inp.value;
   });
+  phaseBuilder.querySelectorAll('.companion-check').forEach(chk => {
+    const idx = parseInt(chk.dataset.idx), ct = chk.dataset.ctype;
+    if (inputPhases[idx]) { ensureCompanions(inputPhases[idx]); inputPhases[idx].companions[ct].on = chk.checked; }
+  });
+  phaseBuilder.querySelectorAll('.companion-amt').forEach(inp => {
+    const idx = parseInt(inp.dataset.idx), ct = inp.dataset.ctype;
+    if (inputPhases[idx]) { ensureCompanions(inputPhases[idx]); inputPhases[idx].companions[ct].amountStr = inp.value; }
+  });
+  phaseBuilder.querySelectorAll('.tornado-check').forEach(chk => {
+    const idx = parseInt(chk.dataset.idx);
+    if (inputPhases[idx]) { ensureTornado(inputPhases[idx]); inputPhases[idx].tornado.on = chk.checked; }
+  });
+  phaseBuilder.querySelectorAll('.tornado-mph').forEach(inp => {
+    const idx = parseInt(inp.dataset.idx);
+    if (inputPhases[idx]) { ensureTornado(inputPhases[idx]); inputPhases[idx].tornado.mphStr = inp.value; }
+  });
 }
 
 function getPhases() {
@@ -2638,9 +2757,25 @@ function getPhases() {
   if (!inputPhases.length) return null;
   const result = [];
   for (const p of inputPhases) {
-    const amount = parseSnow(p.amountStr);
+    const amount = parsePhaseAmount(p.type, p.amountStr);
     if (amount === null) return null; // invalid
     result.push({ type: p.type, amount });
+    // Expand any checked hail companions into their own concurrent phases.
+    if (p.type === 'hail' && p.companions) {
+      for (const ct of HAIL_COMPANIONS) {
+        const c = p.companions[ct];
+        if (!c || !c.on) continue;
+        const camt = parseSnow(c.amountStr);
+        if (camt === null) return null; // checked companion needs a valid amount
+        result.push({ type: ct, amount: camt });
+      }
+    }
+    // Expand a checked Tornado modifier (mph) into its own concurrent phase.
+    if (p.type !== 'tornado' && p.tornado && p.tornado.on) {
+      const tmph = parseMph(p.tornado.mphStr);
+      if (tmph === null) return null; // checked tornado needs a valid mph
+      result.push({ type: 'tornado', amount: tmph });
+    }
   }
   return result;
 }
@@ -2657,12 +2792,26 @@ phaseBuilder.addEventListener('click', e => {
   const arrBtn = e.target.closest('.phase-arrows button');
   if (arrBtn) { movePhaseRow(parseInt(arrBtn.dataset.idx), arrBtn.dataset.dir); return; }
 });
+// Re-render when the type changes (to show/hide the hail "with" row) or when a
+// companion is toggled (to enable/disable its amount input).
+phaseBuilder.addEventListener('change', e => {
+  if (e.target.classList.contains('phase-type-sel') ||
+      e.target.classList.contains('companion-check') ||
+      e.target.classList.contains('tornado-check')) {
+    syncPhaseInputs();
+    renderPhaseRows();
+  }
+});
 addPhaseBtn.addEventListener('click', () => addPhaseRow());
 function formatSnow(inches) {
   if (inches === 0.025) return 'Half Trace';
   if (inches === 0.05) return 'Trace';
   if (inches === 0.075) return 'Trace+';
   return inches.toFixed(1) + '\u2033';
+}
+// Format a phase's amount for display, honoring mph-based types (tornado).
+function formatAmt(p) {
+  return isMphType(p.type) ? `${Math.round(p.amount)} mph` : formatSnow(p.amount);
 }
 function formatPop(k) { return k >= 1000 ? (k/1000).toFixed(1)+'M' : Math.round(k)+'K'; }
 function regionName(code) { return RSI_REGIONS[code] ? RSI_REGIONS[code].name : null; }
@@ -2748,7 +2897,7 @@ function removeCity(i) { cities.splice(i,1); renderCityList(); if (!cities.lengt
 
 function formatPhasesSummary(phases) {
   if (!phases || !phases.length) return '';
-  return phases.map(p => `<span class="precip-tag" style="color:${PRECIP_COLORS[p.type]}">${PRECIP_ICONS[p.type]} ${formatSnow(p.amount)}</span>`).join(' \u2192 ');
+  return phases.map(p => `<span class="precip-tag" style="color:${PRECIP_COLORS[p.type]}">${PRECIP_ICONS[p.type]} ${formatAmt(p)}</span>`).join(' \u2192 ');
 }
 
 function renderCityList() {
@@ -3071,13 +3220,15 @@ function generateProfile(rsiOverride) {
     let precipCell;
     if (c.phases && c.phases.length > 1) {
       const lines = c.phases.map(p =>
-        `<div style="color:${PRECIP_COLORS[p.type]}">${PRECIP_ICONS[p.type]} ${formatSnow(p.amount)} ${PRECIP_LABELS[p.type].split('/')[0].trim()}</div>`
+        `<div style="color:${PRECIP_COLORS[p.type]}">${PRECIP_ICONS[p.type]} ${formatAmt(p)} ${PRECIP_LABELS[p.type].split('/')[0].trim()}</div>`
       ).join('');
       precipCell = `<td class="precip-breakdown">${lines}</td>`;
     } else {
       const p = c.phases && c.phases[0];
       const icon = p ? PRECIP_ICONS[p.type] : '\u2744\uFE0F';
-      precipCell = `<td style="font-weight:600">${icon} ${formatSnow(c.snow)}</td>`;
+      // Tornado-only cities have no snow depth \u2014 show the wind speed instead.
+      const amtText = p ? formatAmt(p) : formatSnow(c.snow);
+      precipCell = `<td style="font-weight:600">${icon} ${amtText}</td>`;
     }
 
     // Build detail text
@@ -3810,8 +3961,13 @@ function getStormDate() {
 function calculateTimeline(phases, isCenter, stormStart, arrivalOffset) {
   if (!phases || !phases.length) return null;
 
+  // Duration weight per phase. A tornado's amount is a wind speed (mph), not
+  // inches, and it passes in minutes — so treat it as a short fixed phase
+  // rather than letting a 3-digit mph dominate the storm's duration.
+  const durWeight = p => p.type === 'tornado' ? 0.3 : p.amount;
+
   // Total precipitation for duration calc
-  const totalPrecip = phases.reduce((s, p) => s + p.amount, 0);
+  const totalPrecip = phases.reduce((s, p) => s + durWeight(p), 0);
 
   // Duration scales with total precipitation
   const totalDurationHrs = totalPrecip <= 0.05
@@ -3822,10 +3978,10 @@ function calculateTimeline(phases, isCenter, stormStart, arrivalOffset) {
 
   // Divide duration among phases proportional to amounts (min 0.5 hrs each)
   const minPhaseHrs = 0.5;
-  const totalAmount = phases.reduce((s, p) => s + Math.max(p.amount, 0.05), 0);
+  const totalAmount = phases.reduce((s, p) => s + Math.max(durWeight(p), 0.05), 0);
   let remainingHrs = totalDurationHrs;
   const phaseDurations = phases.map(p => {
-    const proportion = Math.max(p.amount, 0.05) / totalAmount;
+    const proportion = Math.max(durWeight(p), 0.05) / totalAmount;
     return Math.max(minPhaseHrs, proportion * totalDurationHrs);
   });
   // Normalize to fit total duration
@@ -3872,7 +4028,29 @@ function formatTimeline(d) {
   return `${day} ${h}:${String(m).padStart(2,'0')} ${ampm}`;
 }
 
+// Build a stable seed from every input that shapes the timeline, so identical
+// inputs always yield an identical timeline (same start, end, durations, peaks).
+// Without this the timeline rolls fresh Math.random values on every render, so
+// durations, peaks, arrival jitter and center-delay drift on each run.
+function timelineSeed() {
+  const parts = [
+    document.getElementById('stormDate').value || '',
+    document.getElementById('stormDirection').value || '',
+    document.getElementById('stormSpeed').value || '',
+    (document.getElementById('radialCore') || {}).value || ''
+  ];
+  cities.forEach((c, i) => {
+    parts.push(i + '#' + (c.name || '') + '@' + (c.snow || 0));
+    (c.phases || []).forEach(p => parts.push(p.type + ':' + p.amount));
+  });
+  return hashStormName(parts.join('|'));
+}
+
 function computeAllTimelines() {
+  // Seed the PRNG so the timeline is a deterministic function of the inputs.
+  const nativeRandom = Math.random;
+  Math.random = mulberry32(timelineSeed());
+  try {
   const stormStart = getStormDate();
   const centerCount = Math.max(1, Math.round(cities.length * 0.3));
   // Sort by snow descending to determine center vs fringe
@@ -3934,21 +4112,17 @@ function computeAllTimelines() {
     // Distance in miles from the first city hit (linear) or from the
     // radial core city.
     const distMiles = distFromOrigin[i];
-    // Arrival offset = distance / speed
-    const geoOffset = distMiles / speedMph;
-    // Small jitter for realism
-    const jitter = rand(-0.5, 0.5);
-    // Center cities see precip slightly after the leading edge passes.
-    // In radial mode the core city itself is index 0 distance and shouldn't
-    // be pushed back by this delay (it's where the storm begins), so skip
-    // the center delay for the core.
-    const isCore = isRadial && distMiles < 1;
-    const centerDelay = (isCenter && !isCore) ? rand(0.5, 1.5) : 0;
-    const arrivalOffset = Math.max(0, geoOffset + jitter + centerDelay);
+    // Arrival is strictly distance / speed — no random jitter and no center
+    // delay, so every city's timing is purely geographic and the origin city
+    // lands exactly on the entered start time.
+    const arrivalOffset = Math.max(0, distMiles / speedMph);
 
     c.timeline = calculateTimeline(c.phases || [{type:'snow', amount:c.snow}], isCenter, stormStart, arrivalOffset);
     c.isCenter = isCenter;
   });
+  } finally {
+    Math.random = nativeRandom;
+  }
 }
 
 /* ---- Test Ladder: diagnostic — snowiest city at every impact tier ---- */
