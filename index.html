@@ -162,7 +162,10 @@
   .rsi-breakdown { margin-top: 12px; font-size: 0.82rem; line-height: 1.6; }
   .rsi-breakdown .region-line { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
 
-  .impact-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+  /* The table is wide enough on narrow viewports to push the page sideways.
+     Keep the scrolling inside this box so the body never scrolls horizontally. */
+  .impact-table-wrap { overflow-x: auto; }
+  .impact-table { width: 100%; border-collapse: collapse; margin-top: 12px; min-width: 900px; }
   .impact-table th {
     text-align: left; font-size: 0.68rem; text-transform: uppercase;
     letter-spacing: 1px; opacity: 0.5; padding: 6px 8px;
@@ -173,6 +176,20 @@
 
   .impact-pill { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
   .res-pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.68rem; font-weight: 600; white-space: nowrap; }
+
+  /* Snow war activity (50 tiers, banded into 10 colors) */
+  .war-pill { display: inline-block; padding: 3px 9px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
+  .war-desc { display: block; margin-top: 4px; opacity: 0.62; font-size: 0.72rem; line-height: 1.35; }
+  .war-w0 { background: #0f172a; color: #334155; }
+  .war-w1 { background: #131e2e; color: #4b6280; }
+  .war-w2 { background: #16283f; color: #7dabd6; }
+  .war-w3 { background: #17324f; color: #93c5fd; }
+  .war-w4 { background: #103f52; color: #67e8f9; }
+  .war-w5 { background: #114b40; color: #6ee7b7; }
+  .war-w6 { background: #40391a; color: #fbbf24; }
+  .war-w7 { background: #4a2a13; color: #fb923c; }
+  .war-w8 { background: #4a1a1a; color: #f87171; }
+  .war-w9 { background: #3d1240; color: #f0abfc; }
 
   /* Impact levels (40+ tiers) */
   .impact-none-impact  { background: #0f172a; color: #334155; }
@@ -429,7 +446,9 @@
   .phases-empty { font-size: 0.8rem; opacity: 0.35; padding: 8px 0; }
 
   /* Timeline colors per precip type */
-  .tl-snow { color: #93c5fd; }
+  .tl-snowball { color: #93c5fd; }
+  .tl-powder { color: #e0f2fe; }
+  .tl-slush { color: #38bdf8; }
   .tl-ice { color: #c084fc; }
   .tl-sleet { color: #fbbf24; }
   .tl-rain { color: #6ee7b7; }
@@ -1941,35 +1960,55 @@ function getResilienceLabel(annualSnow, lat) {
    Supports snow, ice (freezing rain), sleet, and rain with
    order-dependent impact modifiers.
    ====================================================================== */
-const PRECIP_TYPES = ['snow', 'ice', 'sleet', 'rain',
+// The generic 'snow' type was replaced by three varieties that differ in water
+// content and crystal structure: powder (dry, fluffy, won't pack), snowball
+// (classic near-freezing packing snow), and slush (wet, heavy, half-melted).
+const PRECIP_TYPES = ['snowball', 'powder', 'slush', 'ice', 'sleet', 'rain',
   'snowgrains', 'hail', 'thunderstorm', 'thundersnow', 'fog', 'haze', 'mist', 'drizzle', 'tornado'];
 const PRECIP_LABELS = {
-  snow: 'Snow', ice: 'Ice / Freezing Rain', sleet: 'Sleet', rain: 'Rain',
+  snowball: 'Snowball Snow', powder: 'Powder', slush: 'Slush',
+  ice: 'Ice / Freezing Rain', sleet: 'Sleet', rain: 'Rain',
   snowgrains: 'Snow Grains', hail: 'Hail', thunderstorm: 'Thunderstorm', thundersnow: 'Thundersnow',
   fog: 'Fog', haze: 'Haze', mist: 'Mist', drizzle: 'Drizzle', tornado: 'Tornado'
 };
 const PRECIP_ICONS  = {
-  snow: '\u2744\uFE0F', ice: '\u{1F9CA}', sleet: '\u26C8\uFE0F', rain: '\u{1F327}\uFE0F',
+  snowball: '\u2603\uFE0F', powder: '\u2744\uFE0F', slush: '\u2744\uFE0F\u{1F4A7}',
+  ice: '\u{1F9CA}', sleet: '\u26C8\uFE0F', rain: '\u{1F327}\uFE0F',
   snowgrains: '\u{1F328}\uFE0F', hail: '\u26AA', thunderstorm: '\u{1F329}\uFE0F', thundersnow: '\u26A1\u2744\uFE0F',
   fog: '\u{1F32B}\uFE0F', haze: '\u{1F301}', mist: '\u{1F4A7}', drizzle: '\u{1F326}\uFE0F', tornado: '\u{1F32A}\uFE0F'
 };
 const PRECIP_COLORS = {
-  snow: '#93c5fd', ice: '#c084fc', sleet: '#fbbf24', rain: '#6ee7b7',
+  snowball: '#93c5fd', powder: '#e0f2fe', slush: '#38bdf8',
+  ice: '#c084fc', sleet: '#fbbf24', rain: '#6ee7b7',
   snowgrains: '#bfdbfe', hail: '#e5e7eb', thunderstorm: '#f87171', thundersnow: '#f0abfc',
   fog: '#9ca3af', haze: '#d6d3d1', mist: '#a5f3fc', drizzle: '#5eead4', tornado: '#c026d3'
 };
+
+// The three snow varieties, so impact / timeline / interpolation code can ask
+// "is this snow?" without spelling them out every time.
+const SNOW_VARIETIES = ['snowball', 'powder', 'slush'];
+
+// Aliases for retired type names. The old generic 'snow' becomes snowball snow,
+// which is what people mean when they just say "snow". Applied wherever a type
+// arrives from outside the type table \u2014 parsed prose, older saved scenarios.
+const PRECIP_ALIASES = { snow: 'snowball' };
+function normalizePrecipType(t) { return PRECIP_ALIASES[t] || t; }
 
 // Tornado is measured in wind speed (mph), not inches. These types carry an mph
 // amount and render an "mph" unit instead of "inches".
 const MPH_TYPES = ['tornado'];
 function isMphType(type) { return MPH_TYPES.includes(type); }
 
-// Impact multiplier per inch relative to snow (snow-impact scale only).
+// Impact multiplier per inch on the snow-impact scale. The three snow varieties
+// differ by water content and how they behave underfoot: powder is dry and
+// blows off, snowball snow is the near-freezing standard case, and slush is
+// heavy, wet, and the worst of the three for travel per inch.
 // Types scored on the RAIN impact scale (see RAIN_SCALE_TYPES) keep 0.0 here so
 // they never inflate snow impact when mixed with wintry phases.
 const PRECIP_MULTIPLIERS = {
-  snow: 1.0, ice: 8.0, sleet: 2.5, rain: 0.0,
-  snowgrains: 0.3, hail: 0.0, thunderstorm: 0.0, thundersnow: 2.5,
+  snowball: 1.1, powder: 0.7, slush: 1.4,
+  ice: 8.0, sleet: 2.5, rain: 0.0,
+  snowgrains: 0.3, hail: 0.0, thunderstorm: 0.0, thundersnow: 3.0,
   fog: 0.0, haze: 0.0, mist: 0.0, drizzle: 0.0, tornado: 0.0  // tornado impact is exponential (see tornadoEquiv), not linear per unit
 };
 
@@ -2006,16 +2045,18 @@ function rainEquivInches(type, amount) {
   return 0;
 }
 
-// Order-dependent modifiers: how adjacent phases interact
+// Order-dependent modifiers: how adjacent phases interact. All three snow
+// varieties behave the same way in sequence — the variety changes impact per
+// inch, not how the pack reacts to rain or ice laid over it.
 const SEQUENCE_MODIFIERS = [
   // Rain after wintry precip melts it — reduces preceding phase impact
-  { prev: ['snow','ice','sleet'], next: 'rain',  target: 'prev', factor: 0.4 },
+  { prev: [...SNOW_VARIETIES,'ice','sleet'], next: 'rain', target: 'prev', factor: 0.4 },
   // Wintry precip after rain — wet surfaces refreeze, amplifies
-  { prev: 'rain', next: ['snow','ice','sleet'],  target: 'next', factor: 1.3 },
+  { prev: 'rain', next: [...SNOW_VARIETIES,'ice','sleet'], target: 'next', factor: 1.3 },
   // Ice on top of snow pack is worse
-  { prev: 'snow', next: 'ice',                   target: 'next', factor: 1.2 },
+  { prev: SNOW_VARIETIES, next: 'ice',               target: 'next', factor: 1.2 },
   // Snow on slippery ice base
-  { prev: 'ice',  next: 'snow',                  target: 'next', factor: 1.1 },
+  { prev: 'ice',  next: SNOW_VARIETIES,              target: 'next', factor: 1.1 },
 ];
 
 function computeDerivedPrecip(phases) {
@@ -2060,10 +2101,165 @@ function computeDerivedPrecip(phases) {
   const frozenTotal = phases.filter(p => p.type !== 'rain' && p.type !== 'tornado').reduce((s, p) => s + p.amount, 0);
 
   return {
-    snow: Math.round(frozenTotal * 10) / 10,
-    snowEquivalent: Math.round(snowEquivalent * 100) / 100,
+    snow: roundPrecip(frozenTotal),
+    snowEquivalent: roundPrecip(snowEquivalent),
     phaseImpacts
   };
+}
+
+/* ======================================================================
+   SNOW WAR ACTIVITY
+   How far snowball fights, ammunition stockpiles, and snow forts can be
+   pushed by what actually fell. Depth alone doesn't decide it — packability
+   does. A foot of powder crumbles in your hands; an inch and a half of
+   snowball snow beats it outright.
+   ====================================================================== */
+
+// Fraction of each inch that is usable snow-war material. Snowball snow is the
+// reference at 1.0. Thundersnow is the outlier: convective riming produces snow
+// that packs beyond anything falling from an ordinary sky, so it counts double.
+// Ice and sleet are poor ammunition but real construction material — glaze
+// armors a rampart, sleet gives it mass — so both contribute rather than zero out.
+const PACKABILITY = {
+  thundersnow: 2.00,   // packs better than physically reasonable
+  snowball:    1.00,   // the reference: near-freezing, binds perfectly
+  slush:       0.35,   // packs, but you are making wet sloppy ice balls
+  ice:         0.25,   // hopeless as ammo, superb as fortification armor
+  sleet:       0.20,   // brutal ammunition, structurally worthless
+  powder:      0.10,   // too dry to bind; falls apart in the hand
+  snowgrains:  0.08,   // tiny dry pellets that barely hold together
+  hail:        0.00, rain: 0.00, thunderstorm: 0.00, drizzle: 0.00,
+  fog:         0.00, haze: 0.00, mist: 0.00, tornado: 0.00
+};
+
+// Packable inches: the war-usable depth, after weighting each phase by how well
+// its material holds a shape.
+function packableInches(phases) {
+  if (!phases || !phases.length) return 0;
+  return phases.reduce((s, p) => s + (p.amount || 0) * (PACKABILITY[p.type] || 0), 0);
+}
+
+// Activity grows with the square of packable depth. Doubling the good snow
+// quadruples what can be built with it, which is why the bottom of the ladder is
+// almost nothing and the top runs away so fast.
+function snowWarScore(phases) {
+  const p = packableInches(phases);
+  return roundPrecip(6 * p * p);
+}
+
+// Fifty tiers, keyed by the upper bound of packable inches that reaches them.
+// css picks a color band; the ladder darkens from grey through blue and amber
+// into magenta as the war stops resembling recreation.
+const SNOW_WAR_TIERS = [
+  { maxP: 0,       css:'w0', icon:'🚫', label:'No Ammo',
+    desc:'Not one packable flake anywhere. The snow war exists only as a thing older siblings claim happened once, in a better year, before you were paying attention.' },
+  { maxP: 0.0001,  css:'w0', icon:'🔬', label:'Subatomic',
+    desc:'Frozen material is technically present. Confirming this requires instruments, and closing your fist around the entire supply accomplishes nothing measurable.' },
+  { maxP: 0.001,   css:'w0', icon:'🧫', label:'Theoretical',
+    desc:'The snowball exists as a mathematical object. It can be described, diagrammed, and argued about at length, but under no circumstances can it be thrown.' },
+  { maxP: 0.005,   css:'w0', icon:'🌫️', label:'Rumored',
+    desc:'Someone insists they packed one successfully. Nobody can reproduce the result, and the block quietly divides into believers and skeptics who will not speak of it again.' },
+  { maxP: 0.02,    css:'w0', icon:'🫥', label:'Imperceptible',
+    desc:'Enough to whiten a dark glove for about two seconds. Any attempt at compression returns it directly to the air it came from.' },
+  { maxP: 0.05,    css:'w1', icon:'🤏', label:'A Pinch',
+    desc:'Stripping an entire porch railing yields something roughly pea-sized. It disintegrates in transit and its existence is disputed on landing.' },
+  { maxP: 0.1,     css:'w1', icon:'🥄', label:'Scrapings',
+    desc:'Harvest the whole hood of a car and you get one crumbly lump held together mostly by hope. It survives about two feet of flight before reverting to loose crystals.' },
+  { maxP: 0.15,    css:'w1', icon:'🧂', label:"A Dusting's Worth",
+    desc:'There is visibly snow on the ground and visibly not enough of it. This is the most frustrating tier on the entire ladder and everyone here knows it.' },
+  { maxP: 0.22,    css:'w1', icon:'⚪', label:'One Bad Snowball',
+    desc:'A single snowball, poorly made, composed largely of grass and driveway grit. It is thrown once, it misses, and the war concludes.' },
+  { maxP: 0.3,     css:'w1', icon:'🎯', label:'Two Snowballs',
+    desc:'Enough for exactly one throw each. The engagement lasts four seconds and is recounted at dinner for a week with substantial embellishment.' },
+  { maxP: 0.4,     css:'w2', icon:'✊', label:'Handful',
+    desc:'A modest stockpile fits inside one mitten. Ammunition discipline is invented on the spot and abandoned within ninety seconds.' },
+  { maxP: 0.55,    css:'w2', icon:'🥎', label:'Skirmish',
+    desc:'Real snowballs, briefly. Both sides run dry before anyone manages to establish cover, and it ends in a negotiated draw nobody is happy with.' },
+  { maxP: 0.7,     css:'w2', icon:'💥', label:'Ambush',
+    desc:'Enough to crouch behind a tree with three in reserve. This is where the first genuine tactical decision of the season gets made.' },
+  { maxP: 0.9,     css:'w2', icon:'🤺', label:'Duel',
+    desc:'Two committed participants, adequate ammunition, and an audience. Rules are agreed beforehand and violated immediately by whoever proposed them.' },
+  { maxP: 1.1,     css:'w2', icon:'⚔️', label:'Snowball Fight',
+    desc:'A proper fight at last. Cover behind parked cars, a running stockpile, and an ending determined entirely by when hands stop working.' },
+  { maxP: 1.4,     css:'w3', icon:'🧤', label:'Extended Engagement',
+    desc:'Ammunition now outlasts the participants. Gloves soak through, hostilities pause for a hot chocolate armistice, and then resume with damp fury.' },
+  { maxP: 1.7,     css:'w3', icon:'🪖', label:'Pitched Battle',
+    desc:'Enough material for sustained volleys from fixed positions. Someone starts keeping score, which ruins it for everyone and does not stop.' },
+  { maxP: 2.1,     css:'w3', icon:'🧱', label:'First Wall',
+    desc:'The first defensive structure of the season. Knee-high, structurally dubious, and instantly the most important object in the neighborhood.' },
+  { maxP: 2.5,     css:'w3', icon:'🏗️', label:'Fort Building',
+    desc:'Walls go up in earnest, with ammunition piled behind them. Teams form, rules are negotiated in good faith, and they are broken within minutes.' },
+  { maxP: 3.0,     css:'w3', icon:'🚩', label:'Two Forts',
+    desc:'Rival construction begins across the yard. Both sides overbuild the front wall and completely neglect the flanks, as tradition demands.' },
+  { maxP: 3.6,     css:'w4', icon:'🛡️', label:'Fortified Position',
+    desc:'Walls thick enough to absorb a direct hit without shedding. A dedicated ammunition-maker is appointed and begins resenting the assignment immediately.' },
+  { maxP: 4.3,     css:'w4', icon:'🏰', label:'Siege Begins',
+    desc:'Neither fort can be taken by direct assault anymore. This produces the first prolonged standoff of the winter and, reliably, the first betrayal.' },
+  { maxP: 5.0,     css:'w4', icon:'🗼', label:'Battlements',
+    desc:'Walls acquire height, firing notches, and a lookout position. Someone erects a purely decorative tower that serves no function and is defended fanatically.' },
+  { maxP: 6.0,     css:'w4', icon:'🎪', label:'Multi-Fort Campaign',
+    desc:'Three or more strongholds now hold the block. Alliances form strictly along lines of who has stockpiled the most, and dissolve the moment that changes.' },
+  { maxP: 7.0,     css:'w4', icon:'🕳️', label:'Trenches',
+    desc:'Connected firing positions are dug between the forts. Movement under cover becomes possible and the war quietly goes three-dimensional.' },
+  { maxP: 8.2,     css:'w5', icon:'⛏️', label:'Tunnel Networks',
+    desc:'Passages link the trench system beneath the surface. Adults are informed only once the tunnels are structurally complete and far too extensive to fill in.' },
+  { maxP: 9.5,     css:'w5', icon:'🏯', label:'The Keep',
+    desc:'A central stronghold with a genuine interior chamber. The chamber is cold, dark, steadily dripping, and the most coveted real estate in the known world.' },
+  { maxP: 11,      css:'w5', icon:'🧊', label:'Ice-Armored Walls',
+    desc:'Water is deliberately poured over the ramparts and left overnight to glaze. Snowballs now shatter on impact, and an arms race begins that nobody wins.' },
+  { maxP: 13,      css:'w5', icon:'🎣', label:'Siege Engines',
+    desc:'The first catapult, assembled from a sled, a fence post, and bungee cords taken without permission. It works exactly once, spectacularly, and is never rebuilt.' },
+  { maxP: 15,      css:'w5', icon:'🏭', label:'Ammunition Factory',
+    desc:'A dedicated production line with an actual foreman. Output is counted in the hundreds and quality control is enforced with a seriousness that alarms passing adults.' },
+  { maxP: 17.5,    css:'w6', icon:'🗺️', label:'Front Lines',
+    desc:'The conflict has outgrown a single block. Territory is mapped on notebook paper, and the map is guarded considerably more carefully than any of the forts.' },
+  { maxP: 20,      css:'w6', icon:'🚚', label:'Supply Lines',
+    desc:'Ammunition must now be moved to where it is needed. Sleds are requisitioned, and logistics quietly replaces enthusiasm as the binding constraint on the war.' },
+  { maxP: 23,      css:'w6', icon:'🏛️', label:'Snow Citadel',
+    desc:'A multi-chamber fortress with a roof that holds. It is given a name, and the name is argued over for substantially longer than the walls took to build.' },
+  { maxP: 26.5,    css:'w6', icon:'👑', label:'Standing Army',
+    desc:'Participation stops being casual. There are ranks, uniforms improvised from scarves, and a chain of command that is obeyed with genuinely unsettling consistency.' },
+  { maxP: 30,      css:'w6', icon:'📜', label:'Treaties',
+    desc:'Formal agreements are drafted and signed on flattened cardboard. Every single one is violated before the ink finishes drying, which everyone anticipated.' },
+  { maxP: 34,      css:'w7', icon:'🔥', label:'Total Snow War',
+    desc:'A regional campaign across multiple neighborhoods with coordinated offensives. The war has now outlasted the storm that started it and shows no sign of resolving.' },
+  { maxP: 39,      css:'w7', icon:'⚡', label:'Blitz Doctrine',
+    desc:'Massed ammunition and speed displace fortification entirely. The old fort-building school is declared obsolete, chiefly by people who were never good at building forts.' },
+  { maxP: 45,      css:'w7', icon:'🏔️', label:'Fortress Cities',
+    desc:'Strongholds large enough to house their own garrisons overnight. Interior tunnels connect chambers that connect to further chambers nobody has fully surveyed.' },
+  { maxP: 51,      css:'w7', icon:'🎖️', label:'War Academy',
+    desc:'Technique is formally taught to newcomers. There is a correct way to pack, a correct way to throw, and an extensively documented correct way to lose gracefully.' },
+  { maxP: 58,      css:'w7', icon:'🗿', label:'Snow Empire',
+    desc:'Fortifications visible from an upstairs window and arguably from the air. Outlying forts pay tribute in packed ammunition and receive protection of uncertain value.' },
+  { maxP: 66,      css:'w8', icon:'💎', label:'Hereditary Aristocracy',
+    desc:'Command begins passing to younger siblings by succession rather than merit. This proceeds exactly as badly as it sounds, and takes four days to unravel.' },
+  { maxP: 75,      css:'w8', icon:'🌐', label:'Continental War',
+    desc:'Separate cities’ snow wars make contact and merge into one conflict. No participant can name every belligerent, and several are fighting on two sides simultaneously.' },
+  { maxP: 85,      css:'w8', icon:'🏴', label:'The Great Schism',
+    desc:'The war splits along doctrinal lines over whether ice-cored snowballs are permissible. Both factions consider the other monstrous, and both are entirely correct.' },
+  { maxP: 97,      css:'w8', icon:'⛩️', label:'Snow Civilization',
+    desc:'Permanent structures, permanent institutions, and a permanent resident population. The fighting is now the smaller and less interesting part of what exists out there.' },
+  { maxP: 110,     css:'w8', icon:'📖', label:'Founding Myths',
+    desc:'Origin stories are told about the first snowball ever thrown. They contradict each other on every material point and all of them are demonstrably wrong.' },
+  { maxP: 125,     css:'w9', icon:'🕰️', label:'Its Own Calendar',
+    desc:'Time is reckoned from the storm itself. Events are dated Before Snow and After Snow, and nobody out there finds this remarkable any longer.' },
+  { maxP: 145,     css:'w9', icon:'⚰️', label:'Its Own Dead',
+    desc:'There are memorials now. They are built of snow, they are carefully maintained by people who never knew the honored, and they are genuinely moving to stand before.' },
+  { maxP: 170,     css:'w9', icon:'🌋', label:'Age of Warring Forts',
+    desc:'Centuries of conflict compressed into a single school break. Dynasties rise, overreach, and collapse entirely before the streetlights come on.' },
+  { maxP: 200,     css:'w9', icon:'🌌', label:'Mythic',
+    desc:'The snow war has become a civilization unto itself, with a calendar, a canon, its own dead, and its own founding myths. Nobody alive remembers who threw first.' },
+  { maxP: Infinity,css:'w9', icon:'♾️', label:'Beyond Reckoning',
+    desc:'The scale has run out of names. Whatever is taking place out there stopped being describable as a snowball fight some time ago, and continues to escalate.' }
+];
+
+// Resolve a city's phases to its snow war tier. The first tier is reserved for
+// literally zero packable material; everything else falls through by depth.
+function getSnowWar(phases) {
+  const p = packableInches(phases);
+  const score = snowWarScore(phases);
+  const tier = p <= 0 ? SNOW_WAR_TIERS[0] : (SNOW_WAR_TIERS.find(t => p <= t.maxP) || SNOW_WAR_TIERS[SNOW_WAR_TIERS.length - 1]);
+  return { ...tier, packable: roundPrecip(p), score };
 }
 
 /* ---- Cold Impact System ----
@@ -2615,8 +2811,16 @@ function parseSnow(val) {
   if (norm === 'trace 0.05') return 0.075;
   const n = parseFloat(v);
   if (isNaN(n) || n < 0) return null;
-  return Math.round(n * 10) / 10;
+  // Kept at full precision. Amounts are no longer snapped to tenths, so
+  // hundredths (0.25") and vanishingly small entries (0.0000000616") both
+  // survive to the impact math and to formatSnow() for display.
+  return n;
 }
+
+// Round away floating-point noise without destroying genuinely tiny amounts.
+// 1e-10 is far below any amount a user would enter but well above the error
+// that accumulates when summing phase impacts.
+function roundPrecip(n) { return Math.round(n * 1e10) / 1e10; }
 
 // Parse a wind speed (mph) for tornado phases — a plain non-negative number.
 function parseMph(val) {
@@ -2657,7 +2861,7 @@ function renderPhaseRows() {
       <select data-idx="${i}" class="phase-type-sel">
         ${PRECIP_TYPES.map(t => `<option value="${t}" ${t===phase.type?'selected':''}>${PRECIP_ICONS[t]} ${PRECIP_LABELS[t]}</option>`).join('')}
       </select>
-      <input type="text" class="phase-amt-input" data-idx="${i}" value="${phase.amountStr || ''}" placeholder="${isMph ? 'e.g. 120' : 'e.g. 4.0, Trace, or Half a Trace'}">
+      <input type="text" class="phase-amt-input" data-idx="${i}" value="${phase.amountStr || ''}" placeholder="${isMph ? 'e.g. 120' : 'e.g. 4.0, 0.25, 0.0000000616, Trace'}">
       <span class="phase-unit">${isMph ? 'mph' : 'inches'}</span>
       <div class="phase-arrows">
         <button type="button" data-dir="up" data-idx="${i}" title="Move up">\u25B2</button>
@@ -2705,7 +2909,7 @@ function renderPhaseRows() {
 }
 
 function addPhaseRow(type, amountStr) {
-  inputPhases.push({ type: type || 'snow', amountStr: amountStr || '' });
+  inputPhases.push({ type: type || 'snowball', amountStr: amountStr || '' });
   renderPhaseRows();
   // Focus the new amount input
   const inputs = phaseBuilder.querySelectorAll('.phase-amt-input');
@@ -2804,11 +3008,18 @@ phaseBuilder.addEventListener('change', e => {
   }
 });
 addPhaseBtn.addEventListener('click', () => addPhaseRow());
+// Display an inch amount at whatever precision it actually carries. Amounts
+// below a hundredth of an inch go to scientific notation rather than rounding
+// away to "0.0" \u2014 an entry of 0.0000000616" reads back as 6.16e-8".
 function formatSnow(inches) {
   if (inches === 0.025) return 'Half Trace';
   if (inches === 0.05) return 'Trace';
   if (inches === 0.075) return 'Trace+';
-  return inches.toFixed(1) + '\u2033';
+  if (inches > 0 && inches < 0.01) return inches.toExponential(2) + '\u2033';
+  // Up to two decimals, but never fewer than one: 4" \u2192 4.0", 0.25" \u2192 0.25".
+  const twoDp = inches.toFixed(2);
+  const trimmed = twoDp.endsWith('0') ? inches.toFixed(1) : twoDp;
+  return trimmed + '\u2033';
 }
 // Format a phase's amount for display, honoring mph-based types (tornado).
 function formatAmt(p) {
@@ -3010,7 +3221,7 @@ function classifyStormType(cityList) {
   cityList.forEach(c => {
     if (c.phases) c.phases.forEach(p => {
       if (p.type === 'ice') totalIceAmt += p.amount;
-      else if (p.type === 'snow') totalSnowAmt += p.amount;
+      else if (SNOW_VARIETIES.includes(p.type)) totalSnowAmt += p.amount;
       else if (p.type === 'sleet') totalSleetAmt += p.amount;
       else if (p.type === 'rain') totalRainAmt += p.amount;
     });
@@ -3214,6 +3425,7 @@ function generateProfile(rsiOverride) {
     const res = rainOnly
       ? getRainResilienceLabel(estimateAnnualRain(c.lat, c.lon, c.region), c.lat)
       : getResilienceLabel(c.annualSnow, c.lat);
+    const war = getSnowWar(c.phases);
     const rn = regionName(c.region);
     const locTag = rn ? `<span style="opacity:0.35;font-size:0.7rem;margin-left:3px">${rn}</span>` : '';
 
@@ -3260,7 +3472,7 @@ function generateProfile(rsiOverride) {
         else if (imp.factor >= 1.4) detail += ` <em style="opacity:0.6">(Impact reduced \u2014 this area handles snow well)</em>`;
       }
       if (c.phases && c.phases.length > 1 && c.snowEquivalent !== c.snow) {
-        detail += ` <em style="opacity:0.6">(Snow-equivalent impact: ${c.snowEquivalent.toFixed(1)}\u2033)</em>`;
+        detail += ` <em style="opacity:0.6">(Snow-equivalent impact: ${formatSnow(c.snowEquivalent)})</em>`;
       }
       if (c.recordCold) {
         if (imp.coldDriven) {
@@ -3299,6 +3511,7 @@ function generateProfile(rsiOverride) {
       <td><span class="res-pill res-${res.css}">${res.icon} ${res.label}</span></td>
       <td><span class="impact-pill impact-${imp.css}">${imp.level}</span></td>
       <td style="font-size:0.82rem">\u{1F3EB} ${imp.school}</td>
+      <td style="min-width:190px"><span class="war-pill war-${war.css}">${war.icon} ${war.label}</span><span class="war-desc">${war.desc}</span></td>
       <td style="opacity:0.7;font-size:0.78rem">${detail}</td>
     </tr>`;
   }).join('');
@@ -3420,7 +3633,7 @@ function generateProfile(rsiOverride) {
     <div class="stats-row">
       <div class="stat-box"><div class="val">${cities.length}</div><div class="lbl">${cities.length===1?'City':'Cities'} Impacted</div></div>
       <div class="stat-box"><div class="val">${formatSnow(maxSnow)}</div><div class="lbl">Max Frozen Precip</div></div>
-      <div class="stat-box"><div class="val">${avgSnow<=0.05?'Trace':avgSnow.toFixed(1)+'\u2033'}</div><div class="lbl">Avg Frozen Precip</div></div>
+      <div class="stat-box"><div class="val">${(avgSnow>=0.01&&avgSnow<=0.05)?'Trace':formatSnow(avgSnow)}</div><div class="lbl">Avg Frozen Precip</div></div>
       <div class="stat-box"><div class="val">${officialRSI < 1 ? officialRSI.toFixed(2) : officialRSI.toFixed(1)}</div><div class="lbl">RSI Score</div></div>
       ${hasIce ? `<div class="stat-box"><div class="val" style="color:#c084fc">${totalIce.toFixed(1)}\u2033</div><div class="lbl">Total Ice</div></div>` : ''}
       ${hasWind ? `<div class="stat-box"><div class="val" style="color:#a5b4fc">${maxWind}${maxGust ? '/G'+maxGust : ''}</div><div class="lbl">Max Wind (mph)</div></div>` : ''}
@@ -3428,10 +3641,12 @@ function generateProfile(rsiOverride) {
       ${stormDurationHrs ? `<div class="stat-box"><div class="val">${stormDurationHrs}h</div><div class="lbl">Storm Duration</div></div>` : ''}
     </div>
     ${earliestFirst && latestLast ? `<div style="font-size:0.78rem;opacity:0.5;margin-bottom:8px">\u{1F552} Storm window: ${formatTimeline(earliestFirst)} \u2192 ${formatTimeline(latestLast)}</div>` : ''}
+    <div class="impact-table-wrap">
     <table class="impact-table">
-      <thead><tr><th>City</th><th>Precip</th><th>Storm Timeline</th><th>Resilience</th><th>Impact</th><th>School Impact</th><th>Details</th></tr></thead>
+      <thead><tr><th>City</th><th>Precip</th><th>Storm Timeline</th><th>Resilience</th><th>Impact</th><th>School Impact</th><th>Snow War Activity</th><th>Details</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
+    </div>
     <div class="fun-fact">${ff.map(f=>'<p style="margin-bottom:6px">'+f+'</p>').join('')}</div>
   `;
 
@@ -3469,9 +3684,9 @@ function generateProfile(rsiOverride) {
 /* ---- Random Storm Generator ---- */
 const STORM_TEMPLATES = [
   { type:"Northeast Nor'easter", regions:['NE'], typicalDirections:['SW_NE','S_N'], windProfile:{base:[10,25],severe:[25,50],gustAdd:[10,25],chance:0.7}, precipMix:[
-    { phases:[{type:'snow',pct:1.0}], weight:10 },
-    { phases:[{type:'snow',pct:0.9},{type:'sleet',pct:0.1}], weight:1 },
-    { phases:[{type:'snow',pct:0.92},{type:'ice',pct:0.08}], weight:1 },
+    { phases:[{type:'snowball',pct:1.0}], weight:10 },
+    { phases:[{type:'snowball',pct:0.9},{type:'sleet',pct:0.1}], weight:1 },
+    { phases:[{type:'snowball',pct:0.92},{type:'ice',pct:0.08}], weight:1 },
   ], severities:[
     { label:'Minor',       centerSnow:[1,3],   fringe:[0.2,1],  cityCount:[1,3],  coldChance:0.1,  coldRange:[18,28] },
     { label:'Moderate',    centerSnow:[3,7],   fringe:[0.5,3],  cityCount:[2,5],  coldChance:0.25, coldRange:[8,22] },
@@ -3480,10 +3695,10 @@ const STORM_TEMPLATES = [
     { label:'Extreme',     centerSnow:[14,22], fringe:[5,11],   cityCount:[7,13], coldChance:0.7,  coldRange:[-20,5] },
   ]},
   { type:'Deep South Ice Storm', regions:['SO','SE'], typicalDirections:['N_S','NW_SE'], windProfile:{base:[5,15],severe:[10,30],gustAdd:[10,20],chance:0.5}, precipMix:[
-    { phases:[{type:'snow',pct:0.15},{type:'ice',pct:0.7},{type:'rain',pct:0.15}], weight:3 },
+    { phases:[{type:'snowball',pct:0.15},{type:'ice',pct:0.7},{type:'rain',pct:0.15}], weight:3 },
     { phases:[{type:'ice',pct:0.85},{type:'rain',pct:0.15}], weight:3 },
     { phases:[{type:'sleet',pct:0.2},{type:'ice',pct:0.7},{type:'rain',pct:0.1}], weight:2 },
-    { phases:[{type:'snow',pct:0.1},{type:'ice',pct:0.6},{type:'sleet',pct:0.15},{type:'rain',pct:0.15}], weight:2 },
+    { phases:[{type:'snowball',pct:0.1},{type:'ice',pct:0.6},{type:'sleet',pct:0.15},{type:'rain',pct:0.15}], weight:2 },
   ], severities:[
     { label:'Minor',       centerSnow:[0.5,1.5], fringe:[0,0.5],  cityCount:[2,4],  coldChance:0.5,  coldRange:[20,30] },
     { label:'Moderate',    centerSnow:[0.5,2],   fringe:[0,0.7],  cityCount:[3,7],  coldChance:0.65, coldRange:[10,25] },
@@ -3492,7 +3707,7 @@ const STORM_TEMPLATES = [
     { label:'Extreme',     centerSnow:[3,8],     fringe:[1,3],    cityCount:[9,15], coldChance:0.95, coldRange:[-15,5] },
   ]},
   { type:'Midwest Blizzard', regions:['UM','OV'], typicalDirections:['NW_SE','W_E'], windProfile:{base:[15,35],severe:[30,55],gustAdd:[10,30],chance:0.8}, precipMix:[
-    { phases:[{type:'snow',pct:1.0}], weight:1 },
+    { phases:[{type:'snowball',pct:1.0}], weight:1 },
   ], severities:[
     { label:'Minor',       centerSnow:[1.5,4],  fringe:[0.5,1.5], cityCount:[1,4],  coldChance:0.2,  coldRange:[5,20] },
     { label:'Moderate',    centerSnow:[3,7],    fringe:[1,3],     cityCount:[3,7],  coldChance:0.4,  coldRange:[-5,15] },
@@ -3501,9 +3716,9 @@ const STORM_TEMPLATES = [
     { label:'Extreme',     centerSnow:[14,22],  fringe:[5,10],    cityCount:[10,16],coldChance:0.85, coldRange:[-35,-10] },
   ]},
   { type:'Ohio Valley Wallop', regions:['OV'], typicalDirections:['SW_NE','W_E'], windProfile:{base:[8,20],severe:[20,40],gustAdd:[10,20],chance:0.6}, precipMix:[
-    { phases:[{type:'snow',pct:1.0}], weight:8 },
-    { phases:[{type:'snow',pct:0.88},{type:'sleet',pct:0.12}], weight:1 },
-    { phases:[{type:'snow',pct:0.9},{type:'ice',pct:0.1}], weight:1 },
+    { phases:[{type:'snowball',pct:1.0}], weight:8 },
+    { phases:[{type:'snowball',pct:0.88},{type:'sleet',pct:0.12}], weight:1 },
+    { phases:[{type:'snowball',pct:0.9},{type:'ice',pct:0.1}], weight:1 },
   ], severities:[
     { label:'Minor',       centerSnow:[1,3],    fringe:[0.2,1],  cityCount:[1,3], coldChance:0.1,  coldRange:[15,25] },
     { label:'Moderate',    centerSnow:[3,6],    fringe:[1,2.5],  cityCount:[2,5], coldChance:0.2,  coldRange:[5,20] },
@@ -3512,9 +3727,9 @@ const STORM_TEMPLATES = [
     { label:'Extreme',     centerSnow:[12,18],  fringe:[5,10],   cityCount:[6,11],coldChance:0.65, coldRange:[-20,0] },
   ]},
   { type:'Southern Snowpocalypse', regions:['SO'], typicalDirections:['N_S','NW_SE'], windProfile:{base:[5,15],severe:[15,35],gustAdd:[10,20],chance:0.5}, precipMix:[
-    { phases:[{type:'snow',pct:1.0}], weight:7 },
-    { phases:[{type:'snow',pct:0.85},{type:'sleet',pct:0.15}], weight:2 },
-    { phases:[{type:'snow',pct:0.85},{type:'ice',pct:0.15}], weight:1 },
+    { phases:[{type:'snowball',pct:1.0}], weight:7 },
+    { phases:[{type:'snowball',pct:0.85},{type:'sleet',pct:0.15}], weight:2 },
+    { phases:[{type:'snowball',pct:0.85},{type:'ice',pct:0.15}], weight:1 },
   ], severities:[
     { label:'Minor',       centerSnow:[0.8,2],  fringe:[0.2,0.8], cityCount:[2,5],  coldChance:0.15, coldRange:[18,28] },
     { label:'Moderate',    centerSnow:[1,3.5],  fringe:[0.3,1.2], cityCount:[3,8],  coldChance:0.3,  coldRange:[10,24] },
@@ -3523,10 +3738,10 @@ const STORM_TEMPLATES = [
     { label:'Extreme',     centerSnow:[8,15],   fringe:[2,6],     cityCount:[11,18],coldChance:0.8,  coldRange:[-15,5] },
   ]},
   { type:'Gulf Coast Freeze', regions:['SO','SE'], typicalDirections:['N_S','NW_SE'], windProfile:{base:[5,15],severe:[10,25],gustAdd:[5,15],chance:0.4}, precipMix:[
-    { phases:[{type:'snow',pct:0.55},{type:'ice',pct:0.4},{type:'rain',pct:0.05}], weight:4 },
-    { phases:[{type:'snow',pct:0.5},{type:'sleet',pct:0.15},{type:'ice',pct:0.3},{type:'rain',pct:0.05}], weight:3 },
-    { phases:[{type:'snow',pct:0.45},{type:'ice',pct:0.5},{type:'sleet',pct:0.05}], weight:2 },
-    { phases:[{type:'snow',pct:0.6},{type:'ice',pct:0.35},{type:'rain',pct:0.05}], weight:1 },
+    { phases:[{type:'snowball',pct:0.55},{type:'ice',pct:0.4},{type:'rain',pct:0.05}], weight:4 },
+    { phases:[{type:'snowball',pct:0.5},{type:'sleet',pct:0.15},{type:'ice',pct:0.3},{type:'rain',pct:0.05}], weight:3 },
+    { phases:[{type:'snowball',pct:0.45},{type:'ice',pct:0.5},{type:'sleet',pct:0.05}], weight:2 },
+    { phases:[{type:'snowball',pct:0.6},{type:'ice',pct:0.35},{type:'rain',pct:0.05}], weight:1 },
   ], severities:[
     { label:'Minor',       centerSnow:[0,0.5],  fringe:[0,0.1],  cityCount:[2,4],  coldChance:0.7,  coldRange:[22,29] },
     { label:'Moderate',    centerSnow:[0,0.5],  fringe:[0,0.1],  cityCount:[3,7],  coldChance:0.85, coldRange:[15,27] },
@@ -3535,9 +3750,9 @@ const STORM_TEMPLATES = [
     { label:'Extreme',     centerSnow:[0.5,2.5],fringe:[0,1],    cityCount:[8,14], coldChance:0.98, coldRange:[-15,5] },
   ]},
   { type:'Southeast Surprise', regions:['SE'], typicalDirections:['SW_NE','W_E'], windProfile:{base:[5,15],severe:[15,30],gustAdd:[10,20],chance:0.4}, precipMix:[
-    { phases:[{type:'snow',pct:1.0}], weight:7 },
-    { phases:[{type:'snow',pct:0.82},{type:'sleet',pct:0.18}], weight:2 },
-    { phases:[{type:'snow',pct:0.85},{type:'ice',pct:0.15}], weight:1 },
+    { phases:[{type:'snowball',pct:1.0}], weight:7 },
+    { phases:[{type:'snowball',pct:0.82},{type:'sleet',pct:0.18}], weight:2 },
+    { phases:[{type:'snowball',pct:0.85},{type:'ice',pct:0.15}], weight:1 },
   ], severities:[
     { label:'Minor',       centerSnow:[0.8,2],  fringe:[0.2,0.8], cityCount:[1,3],  coldChance:0.1,  coldRange:[18,28] },
     { label:'Moderate',    centerSnow:[1.5,4],  fringe:[0.3,1.5], cityCount:[2,5],  coldChance:0.2,  coldRange:[10,24] },
@@ -3546,7 +3761,7 @@ const STORM_TEMPLATES = [
     { label:'Extreme',     centerSnow:[8,15],   fringe:[3,7],     cityCount:[7,12], coldChance:0.65, coldRange:[-10,8] },
   ]},
   { type:'Northern Rockies Dump', regions:['NR'], typicalDirections:['W_E','NW_SE'], windProfile:{base:[10,25],severe:[25,50],gustAdd:[10,25],chance:0.6}, precipMix:[
-    { phases:[{type:'snow',pct:1.0}], weight:1 },
+    { phases:[{type:'snowball',pct:1.0}], weight:1 },
   ], severities:[
     { label:'Minor',       centerSnow:[1.5,5],  fringe:[0.5,1.5], cityCount:[1,3], coldChance:0.2,  coldRange:[5,20] },
     { label:'Moderate',    centerSnow:[4,9],    fringe:[1,3.5],   cityCount:[2,4], coldChance:0.35, coldRange:[-5,15] },
@@ -3555,8 +3770,8 @@ const STORM_TEMPLATES = [
     { label:'Extreme',     centerSnow:[17,28],  fringe:[6,12],    cityCount:[5,9], coldChance:0.8,  coldRange:[-35,-10] },
   ]},
   { type:'Clipper System', regions:['UM','OV','NE'], typicalDirections:['W_E','NW_SE'], windProfile:{base:[10,25],severe:[20,40],gustAdd:[10,20],chance:0.6}, precipMix:[
-    { phases:[{type:'snow',pct:1.0}], weight:9 },
-    { phases:[{type:'snow',pct:0.9},{type:'sleet',pct:0.1}], weight:1 },
+    { phases:[{type:'snowball',pct:1.0}], weight:9 },
+    { phases:[{type:'snowball',pct:0.9},{type:'sleet',pct:0.1}], weight:1 },
   ], severities:[
     { label:'Minor',       centerSnow:[0.8,2],   fringe:[0.2,0.8], cityCount:[2,4], coldChance:0.1,  coldRange:[12,25] },
     { label:'Moderate',    centerSnow:[1.2,3],   fringe:[0.3,1.2], cityCount:[3,7], coldChance:0.2,  coldRange:[5,20] },
@@ -3565,9 +3780,9 @@ const STORM_TEMPLATES = [
     { label:'Extreme',     centerSnow:[6,11],    fringe:[2,5],     cityCount:[10,16],coldChance:0.6,  coldRange:[-20,0] },
   ]},
   { type:'Historic East Coast Storm', regions:['NE','SE','OV'], typicalDirections:['SW_NE','S_N'], windProfile:{base:[15,30],severe:[30,55],gustAdd:[10,30],chance:0.75}, precipMix:[
-    { phases:[{type:'snow',pct:1.0}], weight:8 },
-    { phases:[{type:'snow',pct:0.88},{type:'sleet',pct:0.12}], weight:1 },
-    { phases:[{type:'snow',pct:0.9},{type:'ice',pct:0.1}], weight:1 },
+    { phases:[{type:'snowball',pct:1.0}], weight:8 },
+    { phases:[{type:'snowball',pct:0.88},{type:'sleet',pct:0.12}], weight:1 },
+    { phases:[{type:'snowball',pct:0.9},{type:'ice',pct:0.1}], weight:1 },
   ], severities:[
     { label:'Minor',       centerSnow:[2.5,5.5],fringe:[0.5,2.5], cityCount:[3,6],  coldChance:0.15, coldRange:[15,25] },
     { label:'Moderate',    centerSnow:[5,10],   fringe:[1.5,4.5], cityCount:[5,10], coldChance:0.3,  coldRange:[5,20] },
@@ -3576,9 +3791,9 @@ const STORM_TEMPLATES = [
     { label:'Extreme',     centerSnow:[16,25],  fringe:[6,12],    cityCount:[13,22],coldChance:0.75, coldRange:[-20,0] },
   ]},
   { type:'Polar Vortex Outbreak', regions:['UM','OV','SO','NE'], typicalDirections:['N_S','NW_SE'], windProfile:{base:[10,25],severe:[25,50],gustAdd:[10,25],chance:0.7}, precipMix:[
-    { phases:[{type:'snow',pct:1.0}], weight:8 },
-    { phases:[{type:'snow',pct:0.9},{type:'sleet',pct:0.1}], weight:1 },
-    { phases:[{type:'snow',pct:0.92},{type:'ice',pct:0.08}], weight:1 },
+    { phases:[{type:'snowball',pct:1.0}], weight:8 },
+    { phases:[{type:'snowball',pct:0.9},{type:'sleet',pct:0.1}], weight:1 },
+    { phases:[{type:'snowball',pct:0.92},{type:'ice',pct:0.08}], weight:1 },
   ], severities:[
     { label:'Minor',       centerSnow:[0.5,2],  fringe:[0.2,0.8], cityCount:[3,6],  coldChance:0.6,  coldRange:[0,15] },
     { label:'Moderate',    centerSnow:[1,3.5],  fringe:[0.3,1.2], cityCount:[5,10], coldChance:0.75, coldRange:[-10,5] },
@@ -3587,10 +3802,10 @@ const STORM_TEMPLATES = [
     { label:'Extreme',     centerSnow:[6,12],   fringe:[2,5],     cityCount:[13,21],coldChance:0.97, coldRange:[-45,-15] },
   ]},
   { type:'Texas Winter Emergency', regions:['SO'], typicalDirections:['N_S','NW_SE'], windProfile:{base:[5,15],severe:[15,35],gustAdd:[10,20],chance:0.5}, precipMix:[
-    { phases:[{type:'snow',pct:0.55},{type:'ice',pct:0.35},{type:'sleet',pct:0.1}], weight:3 },
-    { phases:[{type:'snow',pct:0.6},{type:'ice',pct:0.35},{type:'rain',pct:0.05}], weight:3 },
-    { phases:[{type:'snow',pct:0.5},{type:'ice',pct:0.45},{type:'rain',pct:0.05}], weight:2 },
-    { phases:[{type:'snow',pct:0.55},{type:'sleet',pct:0.15},{type:'ice',pct:0.25},{type:'rain',pct:0.05}], weight:2 },
+    { phases:[{type:'snowball',pct:0.55},{type:'ice',pct:0.35},{type:'sleet',pct:0.1}], weight:3 },
+    { phases:[{type:'snowball',pct:0.6},{type:'ice',pct:0.35},{type:'rain',pct:0.05}], weight:3 },
+    { phases:[{type:'snowball',pct:0.5},{type:'ice',pct:0.45},{type:'rain',pct:0.05}], weight:2 },
+    { phases:[{type:'snowball',pct:0.55},{type:'sleet',pct:0.15},{type:'ice',pct:0.25},{type:'rain',pct:0.05}], weight:2 },
   ], severities:[
     { label:'Minor',       centerSnow:[0.5,1.5],fringe:[0,0.5],  cityCount:[2,4],  coldChance:0.5,  coldRange:[15,28] },
     { label:'Moderate',    centerSnow:[0.5,2],  fringe:[0,0.7],  cityCount:[3,7],  coldChance:0.7,  coldRange:[5,22] },
@@ -3605,9 +3820,9 @@ const STORM_TEMPLATES = [
   // cyclone territory; winds reach Cat 1-3; snow totals push 60-90" in the
   // hardest-hit corridor. cityCount is large but bounded.
   { type:'Snowmageddon 2.0', regions:'na-and-weur', typicalDirections:['W_E','SW_NE','NW_SE'], windProfile:{base:[40,70],severe:[80,115],gustAdd:[15,35],chance:1.0}, precipMix:[
-    { phases:[{type:'snow',pct:1.0}], weight:8 },
-    { phases:[{type:'snow',pct:0.9},{type:'sleet',pct:0.1}], weight:2 },
-    { phases:[{type:'snow',pct:0.92},{type:'ice',pct:0.08}], weight:1 },
+    { phases:[{type:'snowball',pct:1.0}], weight:8 },
+    { phases:[{type:'snowball',pct:0.9},{type:'sleet',pct:0.1}], weight:2 },
+    { phases:[{type:'snowball',pct:0.92},{type:'ice',pct:0.08}], weight:1 },
   ], severities:[
     // Fixed-severity: Snowmageddon 2.0 is its own brand. All five rows lock
     // to the signature record-breaking scale — severity dropdown is ignored.
@@ -3618,7 +3833,7 @@ const STORM_TEMPLATES = [
     { label:'Snowmageddon 2.0', centerSnow:[60,90], fringe:[25,50], cityCount:[70,130], coldChance:0.97, coldRange:[-42,-8] },
   ]},
   { type:'Flurry Dud', regions:'weighted-single', typicalDirections:['W_E','NW_SE','SW_NE'], windProfile:{base:[0,5],severe:[0,8],gustAdd:[0,5],chance:0.1}, precipMix:[
-    { phases:[{type:'snow',pct:1.0}], weight:1 },
+    { phases:[{type:'snowball',pct:1.0}], weight:1 },
   ], severities:[
     { label:'Flurry Dud', centerSnow:[0.05,0.3], fringe:[0,0.1],  cityCount:[1,1],  coldChance:0.05, coldRange:[26,32] },
     { label:'Flurry Dud', centerSnow:[0.05,0.3], fringe:[0,0.1],  cityCount:[1,1],  coldChance:0.05, coldRange:[25,32] },
@@ -3627,9 +3842,9 @@ const STORM_TEMPLATES = [
     { label:'Flurry Dud', centerSnow:[0.15,0.6], fringe:[0,0.2],  cityCount:[1,2],  coldChance:0.1,  coldRange:[20,30] },
   ]},
   { type:'Omega Continental Blizzard Outbreak', regions:'all-continental', typicalDirections:['W_E','SW_NE'], windProfile:{base:[400,800],severe:[3000,12000],gustAdd:[500,5000],chance:1.0}, precipMix:[
-    { phases:[{type:'snow',pct:1.0}], weight:8 },
-    { phases:[{type:'snow',pct:0.92},{type:'sleet',pct:0.08}], weight:1 },
-    { phases:[{type:'snow',pct:0.93},{type:'ice',pct:0.07}], weight:1 },
+    { phases:[{type:'snowball',pct:1.0}], weight:8 },
+    { phases:[{type:'snowball',pct:0.92},{type:'sleet',pct:0.08}], weight:1 },
+    { phases:[{type:'snowball',pct:0.93},{type:'ice',pct:0.07}], weight:1 },
   ], severities:[
     // Every severity level maxes out every scale — every city, every time, beyond Omega Point Frost.
     { label:'Omega Continental Blizzard Outbreak', centerSnow:[8000,12000],  fringe:[4500,7000],   cityCount:[99999,99999], coldChance:1.0, coldRange:[-300,-150] },
@@ -3715,7 +3930,7 @@ const STORM_TEMPLATES = [
   ]},
   { type:'Northern Rockies Atmospheric River', regions:['NR'], typicalDirections:['W_E','SW_NE'], windProfile:{base:[10,25],severe:[25,50],gustAdd:[10,25],chance:0.6}, precipMix:[
     { phases:[{type:'rain',pct:1.0}], weight:8 },
-    { phases:[{type:'rain',pct:0.85},{type:'snow',pct:0.15}], weight:2 },
+    { phases:[{type:'rain',pct:0.85},{type:'snowball',pct:0.15}], weight:2 },
   ], severities:[
     { label:'Minor',       centerSnow:[0.5,2.0], fringe:[0.2,0.8],  cityCount:[2,4],  coldChance:0.06, coldRange:[36,52] },
     { label:'Moderate',    centerSnow:[2.0,5.0], fringe:[0.7,2.5],  cityCount:[3,6],  coldChance:0.10, coldRange:[34,50] },
@@ -3744,7 +3959,7 @@ const STORM_TEMPLATES = [
   ]},
   { type:'Atmospheric River Outbreak', regions:['UM','OV','SO','NE'], typicalDirections:['W_E','SW_NE'], windProfile:{base:[15,30],severe:[30,55],gustAdd:[10,25],chance:0.7}, precipMix:[
     { phases:[{type:'rain',pct:1.0}], weight:9 },
-    { phases:[{type:'rain',pct:0.9},{type:'snow',pct:0.1}], weight:1 },
+    { phases:[{type:'rain',pct:0.9},{type:'snowball',pct:0.1}], weight:1 },
   ], severities:[
     { label:'Minor',       centerSnow:[0.5,1.5], fringe:[0.15,0.6], cityCount:[3,6],  coldChance:0.06, coldRange:[36,52] },
     { label:'Moderate',    centerSnow:[1.5,4.0], fringe:[0.5,1.8],  cityCount:[5,10], coldChance:0.10, coldRange:[34,50] },
@@ -3768,7 +3983,7 @@ const STORM_TEMPLATES = [
   // pressure profile mirror the snow version.
   { type:'Rainmageddon 2.0', regions:'na-and-weur', typicalDirections:['W_E','SW_NE','S_N'], windProfile:{base:[40,70],severe:[80,115],gustAdd:[15,35],chance:1.0}, precipMix:[
     { phases:[{type:'rain',pct:1.0}], weight:9 },
-    { phases:[{type:'rain',pct:0.9},{type:'snow',pct:0.1}], weight:1 },
+    { phases:[{type:'rain',pct:0.9},{type:'snowball',pct:0.1}], weight:1 },
   ], severities:[
     // Fixed-severity: Rainmageddon 2.0 mirrors its snow sibling — all five
     // rows lock to the signature record-breaking scale.
@@ -3803,7 +4018,7 @@ const STORM_TEMPLATES = [
   // and enters it 45 times — once at every impact tier from None to Omega Point
   // Frost. Used to visually verify the impact ladder renders correctly.
   { type:'Test Ladder', testLadder:true, regions:'test', typicalDirections:['W_E'], windProfile:{base:[0,0],severe:[0,0],gustAdd:[0,0],chance:0}, precipMix:[
-    { phases:[{type:'snow',pct:1.0}], weight:1 },
+    { phases:[{type:'snowball',pct:1.0}], weight:1 },
   ], severities:[
     { label:'Test Ladder', centerSnow:[0,0], fringe:[0,0], cityCount:[45,45], coldChance:0, coldRange:[32,32] },
   ]},
@@ -4118,7 +4333,7 @@ function computeAllTimelines() {
     // lands exactly on the entered start time.
     const arrivalOffset = Math.max(0, distMiles / speedMph);
 
-    c.timeline = calculateTimeline(c.phases || [{type:'snow', amount:c.snow}], isCenter, stormStart, arrivalOffset);
+    c.timeline = calculateTimeline(c.phases || [{type:'snowball', amount:c.snow}], isCenter, stormStart, arrivalOffset);
     c.isCenter = isCenter;
   });
   } finally {
@@ -4236,7 +4451,7 @@ function runTestLadder(ladderType) {
   resetGapFillState();
   TEST_LADDER_TARGETS.forEach(target => {
     const rawSnow = Math.round(target * factor * 100) / 100;
-    const phases = [{ type: 'snow', amount: Math.max(0, rawSnow) }];
+    const phases = [{ type: 'snowball', amount: Math.max(0, rawSnow) }];
     const derived = computeDerivedPrecip(phases);
     cities.push({
       name: anchor.n,
@@ -4382,7 +4597,7 @@ function generateRandomStorm() {
 
   // Pick a precipitation mix template for this storm (weighted random)
   function pickPrecipMix(mixArr) {
-    if (!mixArr || !mixArr.length) return [{ type: 'snow', pct: 1.0 }];
+    if (!mixArr || !mixArr.length) return [{ type: 'snowball', pct: 1.0 }];
     const totalW = mixArr.reduce((s, m) => s + m.weight, 0);
     let roll = Math.random() * totalW;
     for (const m of mixArr) {
@@ -4680,7 +4895,8 @@ function parseParagraphInput() {
   if (combo) {
     let t = combo[1].toLowerCase().replace(/\s+/g, ' ');
     if (t === 'freezing rain') t = 'ice';
-    if (t !== 'snow') explicitType = t;
+    t = normalizePrecipType(t);   // bare "snow" in prose means snowball snow
+    if (t !== 'snowball') explicitType = t;
   }
   // "<type> of X inches" — e.g. "sleet of 2 inches"
   if (!explicitType) {
@@ -4774,8 +4990,9 @@ function parseParagraphInput() {
       if (!am) continue;
       const amt = phraseToInches(am[1], am[2]);
       if (amt === null) continue;
-      let type = am[3] ? am[3].toLowerCase().replace(/\s+/g, ' ') : 'snow';
+      let type = am[3] ? am[3].toLowerCase().replace(/\s+/g, ' ') : 'snowball';
       if (type === 'freezing rain') type = 'ice';
+      type = normalizePrecipType(type);   // bare "snow" in prose means snowball snow
       perCityAnchor[fc.n] = { amount: amt, type };
       break;
     }
@@ -5159,7 +5376,7 @@ function parseParagraphInput() {
   const centerCount = Math.max(1, Math.round(chosen.length * 0.35));
 
   function pickPrecipMix(mixArr) {
-    if (!mixArr || !mixArr.length) return [{ type:'snow', pct:1.0 }];
+    if (!mixArr || !mixArr.length) return [{ type:'snowball', pct:1.0 }];
     const totalW = mixArr.reduce((s,m) => s + m.weight, 0);
     let roll = Math.random() * totalW;
     for (const m of mixArr) { roll -= m.weight; if (roll <= 0) return m.phases; }
@@ -5177,15 +5394,15 @@ function parseParagraphInput() {
   });
   if (isTrace) {
     foundCities.forEach(fc => {
-      if (anchorMap[fc.n] === undefined) anchorMap[fc.n] = { amount: Math.round((0.05 + Math.random() * 0.2) * 10) / 10, type: 'snow' };
+      if (anchorMap[fc.n] === undefined) anchorMap[fc.n] = { amount: Math.round((0.05 + Math.random() * 0.2) * 10) / 10, type: 'snowball' };
     });
   } else if (foundCities.length === 1 && explicitInches !== null && anchorMap[foundCities[0].n] === undefined) {
-    anchorMap[foundCities[0].n] = { amount: explicitInches, type: explicitType || 'snow' };
+    anchorMap[foundCities[0].n] = { amount: explicitInches, type: explicitType || 'snowball' };
   }
 
   // Default precip type for cities without a specific anchor: snow, unless the
   // user globally specified sleet/ice (e.g. "3 inches of sleet across Texas").
-  const defaultType = explicitType || 'snow';
+  const defaultType = explicitType || 'snowball';
   // How much to scale non-anchor amounts when the default type is ice/sleet.
   const defaultTypeScale = { snow: 1.0, sleet: 0.5, ice: 0.25, rain: 1.0 };
 
@@ -5232,7 +5449,7 @@ function parseParagraphInput() {
       // Global default type is sleet/ice — scale down since those don't stack
       // like snow (e.g. "3 inches of sleet across Texas" means padding cities
       // get ~1.5 inches of sleet, not 8 inches).
-      if (defaultType !== 'snow' && !elsewherePrecip) {
+      if (defaultType !== 'snowball' && !elsewherePrecip) {
         totalAmount = Math.round(totalAmount * (defaultTypeScale[defaultType] ?? 0.5) * 10) / 10;
       }
     }
@@ -5251,7 +5468,7 @@ function parseParagraphInput() {
       // Mentioned but unanchored city (e.g. "down to Austin, TX") — it's the
       // corridor edge, so it gets the elsewhere precip too.
       phases = [{ type: elsewherePrecip, amount: Math.max(0.05, totalAmount) }];
-    } else if (defaultType !== 'snow') {
+    } else if (defaultType !== 'snowball') {
       // Global explicit type (e.g. "3 inches of sleet"): build a mix centered
       // on that type, with small snow/rain fringes for realism.
       const primary = defaultType;
@@ -5262,12 +5479,12 @@ function parseParagraphInput() {
       // Add a touch of snow (ahead of the precip transition) for ice/sleet events
       if (primary === 'ice' || primary === 'sleet') {
         const snowPhase = Math.max(0.05, Math.round(totalAmount * secondaryPct * 10) / 10);
-        phases.unshift({ type: 'snow', amount: snowPhase });
+        phases.unshift({ type: 'snowball', amount: snowPhase });
       }
     } else {
       const mixTemplate = pickPrecipMix(template.precipMix);
       if (totalAmount <= 0.05) {
-        phases = [{ type:'snow', amount: totalAmount }];
+        phases = [{ type:'snowball', amount: totalAmount }];
       } else {
         phases = mixTemplate.map(mp => ({
           type: mp.type,
@@ -5526,7 +5743,7 @@ function tuneToTargetRSI(targetRSI, template) {
   // Preserve precip mix ratio (if the storm is ice/sleet/snow mix)
   const mixPhases = origCity.phases && origCity.phases.length
     ? origCity.phases.map(p => ({ type: p.type, pct: p.amount }))
-    : [{ type: 'snow', pct: 1 }];
+    : [{ type: 'snowball', pct: 1 }];
   const mixTotal = mixPhases.reduce((s,p) => s + p.pct, 0) || 1;
   mixPhases.forEach(p => p.pct /= mixTotal);
 
@@ -5547,11 +5764,11 @@ function tuneToTargetRSI(targetRSI, template) {
       const phases = mixPhases.map(mp => ({
         type: mp.type,
         amount: Math.max(0, Math.round(totalAmt * mp.pct * 10) / 10)
-      })).filter(p => p.amount > 0 || p.type === 'snow');
-      const derived = computeDerivedPrecip(phases.length ? phases : [{ type: 'snow', amount: totalAmt }]);
+      })).filter(p => p.amount > 0 || p.type === 'snowball');
+      const derived = computeDerivedPrecip(phases.length ? phases : [{ type: 'snowball', amount: totalAmt }]);
       cities.push({
         name: c.n,
-        phases: phases.length ? phases : [{ type: 'snow', amount: totalAmt }],
+        phases: phases.length ? phases : [{ type: 'snowball', amount: totalAmt }],
         snow: derived.snow,
         snowEquivalent: derived.snowEquivalent,
         pop: c.pop, region: c.r, annualSnow: c.snow,
@@ -5761,8 +5978,14 @@ function estimateSnowForCity(candidate) {
   // mixed-precip storm carries each component into the candidate at the
   // right magnitude (the legacy single-total approach silently zeroed rain
   // and halved every component of mixed events).
-  const PHASE_TYPES = ['snow', 'ice', 'sleet', 'rain'];
-  const phaseAmounts = { snow: 0, ice: 0, sleet: 0, rain: 0 };
+  // Interpolate every type the anchors actually carry, not a fixed shortlist —
+  // a thundersnow or snow-grains anchor used to fall through to an undefined
+  // accumulator and interpolate to NaN. Tornado is excluded because its amount
+  // is a wind speed in mph and averaging it across distance is meaningless.
+  const PHASE_TYPES = [...new Set(
+    anchors.flatMap(a => (a.phases || []).map(p => p.type)).filter(t => !isMphType(t))
+  )];
+  const phaseAmounts = Object.fromEntries(PHASE_TYPES.map(t => [t, 0]));
   let totalW = 0;
   const coldReports = [], windReports = [], gustReports = [], pressureReports = [];
   let minDist = Infinity;
@@ -5779,7 +6002,7 @@ function estimateSnowForCity(candidate) {
       return {
         snow: a.snow, snowEquivalent: a.snowEquivalent || a.snow,
         snowUnrounded: a.snow, snowEquivalentUnrounded: a.snowEquivalent || a.snow,
-        phases: a.phases ? a.phases.map(p => ({ ...p })) : [{ type: 'snow', amount: a.snow }],
+        phases: a.phases ? a.phases.map(p => ({ ...p })) : [{ type: 'snowball', amount: a.snow }],
         recordCold: a.recordCold, coldTemp: a.coldTemp,
         windSpeed: a.windSpeed, gustSpeed: a.gustSpeed, pressure: a.pressure ?? null,
         minDistance: 0, falloff: 1, climateFactor: 1, exactMatch: a.name
@@ -5875,12 +6098,17 @@ function estimateSnowForCity(candidate) {
   const phases = [];
   for (const type of orderSeen) {
     if (totalW <= 0) break;
+    // The nearest anchor can contribute an ordering for a type we don't
+    // interpolate (tornado). Skip rather than divide an undefined into NaN.
+    if (!(type in phaseAmounts)) continue;
     const raw = phaseAmounts[type] / totalW;
     const factor = (type === 'rain') ? falloff : (falloff * climateFactor);
     const amt = Math.max(0, raw * factor);
     if (amt <= 0) continue;
-    const rounded = Math.round(amt * 10) / 10;
-    if (rounded < 0.1) continue;
+    // Report down to a hundredth of an inch. Below that an interpolated phase
+    // is numerical residue from a distant anchor rather than a real forecast.
+    const rounded = roundPrecip(amt);
+    if (rounded < 0.01) continue;
     interpolatedPhasesUnrounded.push({ type, amount: amt });
     phases.push({ type, amount: rounded });
   }
@@ -5937,7 +6165,7 @@ function renderGapFillEntries() {
     const res = rainOnly
       ? getRainResilienceLabel(estimateAnnualRain(e.candidate.lat, e.candidate.r), e.candidate.lat)
       : getResilienceLabel(e.candidate.snow, e.candidate.lat);
-    const phaseTxt = (e.phases || []).map(p => `${PRECIP_ICONS[p.type]} ${p.amount.toFixed(1)}"`).join(' + ') || '0.0"';
+    const phaseTxt = (e.phases || []).map(p => `${PRECIP_ICONS[p.type]} ${formatAmt(p)}`).join(' + ') || '0.0″';
     const coldTxt = e.recordCold ? ` &middot; \u{1F976} ${e.coldTemp}\u00b0F` : '';
     const windTxt = e.windSpeed ? ` &middot; \u{1F4A8} ${e.windSpeed}${e.gustSpeed?'/G'+e.gustSpeed:''} mph` : '';
     const pressTxt = (e.pressure != null) ? ` &middot; <span style="color:#fbbf24">\u{1F32A}\ufe0f ${e.pressure} mb</span>` : '';
@@ -6087,7 +6315,7 @@ function addAllGapFillToSim() {
     let phases = (e.phases && e.phases.length) ? e.phases.map(p => ({ ...p })) : null;
     if (!phases) {
       const amt = Math.max(0.01, Math.round((e.snowUnrounded || 0) * 100) / 100);
-      phases = [{ type: 'snow', amount: amt }];
+      phases = [{ type: 'snowball', amount: amt }];
     }
     cities.push({
       name: e.candidate.n,
