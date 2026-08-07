@@ -177,7 +177,7 @@
   .impact-pill { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
   .res-pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.68rem; font-weight: 600; white-space: nowrap; }
 
-  /* Snow war activity (50 tiers, banded into 10 colors) */
+  /* Snow war activity (119 tiers, banded into 16 colors) */
   .war-pill { display: inline-block; padding: 3px 9px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
   .war-desc { display: block; margin-top: 4px; opacity: 0.62; font-size: 0.72rem; line-height: 1.35; }
   .war-w0 { background: #0f172a; color: #334155; }
@@ -190,6 +190,14 @@
   .war-w7 { background: #4a2a13; color: #fb923c; }
   .war-w8 { background: #4a1a1a; color: #f87171; }
   .war-w9 { background: #3d1240; color: #f0abfc; }
+  /* Past 200": the war outlives everyone who started it. Magenta gives way to
+     violet, then indigo, then the void tiers borrowed from the impact ladder. */
+  .war-w10 { background: #2f1155; color: #d8b4fe; }
+  .war-w11 { background: #241068; color: #c4b5fd; }
+  .war-w12 { background: #16114d; color: #a5b4fc; }
+  .war-w13 { background: #0b1030; color: #e0e7ff; }
+  .war-w14 { background: #000; color: #fff; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.45); }
+  .war-w15 { background: radial-gradient(circle,#fff,#cbd5e1); color: #000; text-shadow: 0 0 6px rgba(255,255,255,0.9); }
 
   /* Impact levels (40+ tiers) */
   .impact-none-impact  { background: #0f172a; color: #334155; }
@@ -564,6 +572,27 @@
     .historic-row .hs-cat { min-width: 0; }
   }
 
+  /* Snow War Tiers reference list */
+  .war-row { align-items: flex-start; }
+  .war-row .wt-depth {
+    min-width: 84px; text-align: center;
+    padding: 4px 7px; border-radius: 6px;
+    font-weight: 700; font-size: 0.72rem;
+    flex-shrink: 0;
+  }
+  .war-row .wt-body { flex: 1; min-width: 0; }
+  .war-row .wt-label {
+    font-weight: 600; line-height: 1.3;
+  }
+  .war-row .wt-label .wt-icon { margin-right: 6px; }
+  .war-row .wt-desc {
+    display: block; margin-top: 4px;
+    opacity: 0.6; font-size: 0.76rem; line-height: 1.4;
+  }
+  @media (max-width: 720px) {
+    .war-row .wt-depth { min-width: 62px; font-size: 0.68rem; }
+  }
+
   /* Color-coded tier ladders anchored to the viewport margins */
   .tier-ladder {
     position: fixed; top: 0; bottom: 0;
@@ -782,7 +811,7 @@
 
 <div class="container">
   <h1>Snow Event Profile Maker 3.1.4</h1>
-  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">5883 lines of code</p>
+  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">6597 lines of code</p>
   <p class="subtitle">Powered by real NOAA RSI methodology with location-based impact scaling</p>
 
   <div class="card">
@@ -798,7 +827,14 @@
       <button type="button" class="mode-btn" data-mode="paragraph">Paragraph Mode</button>
       <button type="button" class="mode-btn" data-mode="historic">Historic Reference</button>
       <button type="button" class="mode-btn" data-mode="replay">Historic Replay</button>
+      <button type="button" class="mode-btn" data-mode="snowwar">Snow War Tiers</button>
     </div>
+  </div>
+
+  <div class="card" id="snowWarCard" style="display:none">
+    <h2>Snow War Tiers</h2>
+    <p class="paragraph-hint">All <span id="snowWarCount">&mdash;</span> snow war activity tiers, ordered by the packable snow depth that reaches them &mdash; from a single disputed flake up past 10,000&Prime;. Every city in a storm lands on exactly one of these, based on how much of its precipitation packs.</p>
+    <div class="historic-list" id="snowWarList"></div>
   </div>
 
   <div class="card" id="historicReplayCard" style="display:none">
@@ -2147,110 +2183,249 @@ function snowWarScore(phases) {
   return roundPrecip(6 * p * p);
 }
 
-// Fifty tiers, keyed by the upper bound of packable inches that reaches them.
-// css picks a color band; the ladder darkens from grey through blue and amber
-// into magenta as the war stops resembling recreation.
+// 119 tiers, keyed by the upper bound of packable inches that reaches them.
+// Runs from a single disputed flake to 10,000" and beyond, matching the reach
+// of the snow impact ladder. css picks a color band; the ladder darkens from
+// grey through blue and amber into magenta, then violet into the white void.
 const SNOW_WAR_TIERS = [
   { maxP: 0,       css:'w0', icon:'🚫', label:'No Ammo',
-    desc:'Not one packable flake anywhere. The snow war exists only as a thing older siblings claim happened once, in a better year, before you were paying attention.' },
+    desc:'Not one packable flake across the entire measured area. The snow war exists only in accounts from older siblings, all of whom place it in a different year and none of whom agree on the participant count. Zero throws attempted, zero completed, and the season opens with the ledger blank.' },
+  { maxP: 0.00001, css:'w0', icon:'⚛️', label:'Molecular',
+    desc:'Frozen water is present at the molecular level and nowhere else. Roughly one ten-millionth of an inch lies on any given surface, which is to say a few thousand molecules deep. No instrument on the block can register it and no arrangement of it constitutes a projectile.' },
   { maxP: 0.0001,  css:'w0', icon:'🔬', label:'Subatomic',
-    desc:'Frozen material is technically present. Confirming this requires instruments, and closing your fist around the entire supply accomplishes nothing measurable.' },
+    desc:'Frozen material is technically present at one ten-thousandth of an inch. Confirming it requires instruments, and closing a fist around the entire available supply produces no measurable change in mass, shape, or temperature. Block-wide yield works out to a thousandth of one snowball.' },
+  { maxP: 0.0004,  css:'w0', icon:'📟', label:'Instrument-Only',
+    desc:'Depth reaches four ten-thousandths of an inch, enough for a sensitive gauge to read and not enough for a hand to feel. Two independent readings agree to within ten percent, which is the strongest evidence of snow anyone will collect this week. Nothing can be lifted, packed, or thrown.' },
   { maxP: 0.001,   css:'w0', icon:'🧫', label:'Theoretical',
-    desc:'The snowball exists as a mathematical object. It can be described, diagrammed, and argued about at length, but under no circumstances can it be thrown.' },
+    desc:'The snowball exists as a mathematical object with a defined radius, density, and trajectory. It can be described, diagrammed, and specified to four decimal places, but at a thousandth of an inch of coverage it cannot be assembled. Every projected engagement resolves to zero throws per side.' },
+  { maxP: 0.0025,  css:'w0', icon:'🗣️', label:'Anecdotal',
+    desc:'Someone describes packing one. The account is detailed — three inches across, thrown forty feet, a confirmed hit — and no part of it can be checked. Four witnesses were reportedly present and two of them decline to confirm. Measured depth stands at two and a half thousandths of an inch.' },
   { maxP: 0.005,   css:'w0', icon:'🌫️', label:'Rumored',
-    desc:'Someone insists they packed one successfully. Nobody can reproduce the result, and the block quietly divides into believers and skeptics who will not speak of it again.' },
+    desc:'Someone reports packing one successfully. The result fails to reproduce across an estimated forty subsequent attempts, no photograph exists, and no physical evidence survives more than about ninety seconds in open air. The claim is logged, disputed, and left unresolved for the season.' },
+  { maxP: 0.01,    css:'w0', icon:'⁉️', label:'Disputed',
+    desc:'Two accounts of the same throw differ on every measurable point: the range, the size, whether it landed. Depth is a hundredth of an inch, which is enough for a mark on a dark sleeve and not enough for a projectile. The block splits roughly evenly and neither side produces a sample.' },
   { maxP: 0.02,    css:'w0', icon:'🫥', label:'Imperceptible',
-    desc:'Enough to whiten a dark glove for about two seconds. Any attempt at compression returns it directly to the air it came from.' },
+    desc:'Enough to whiten a dark glove for about two seconds before it sublimates. Two hundredths of an inch lies on every exposed surface, and any attempt at compression returns the material directly to the air it came from. Total block-wide yield is one marginal snowball, and it does not hold.' },
+  { maxP: 0.032,   css:'w0', icon:'👻', label:'Barely There',
+    desc:'Visible at a glance across a whole lawn, invisible at arm’s length. Three hundredths of an inch is enough to outline a footprint for about a minute before it fills back in. Sweeping four hundred square feet produces a marble-sized lump that survives roughly a second in a closed hand.' },
   { maxP: 0.05,    css:'w1', icon:'🤏', label:'A Pinch',
-    desc:'Stripping an entire porch railing yields something roughly pea-sized. It disintegrates in transit and its existence is disputed on landing.' },
+    desc:'Stripping an entire porch railing — twelve linear feet — yields something roughly pea-sized, about half an inch across. It disintegrates within four feet of transit and leaves no visible mark at the point of impact. Two participants, one throw each, and the supply is gone inside a minute.' },
+  { maxP: 0.072,   css:'w1', icon:'🪡', label:'Thimbleful',
+    desc:'Seven hundredths of an inch, which is a thimble’s worth off ten square feet of clean surface. A packed round reaches three quarters of an inch and holds together for about six feet of flight. Three or four exist at once if every car, railing, and step on the property is stripped.' },
   { maxP: 0.1,     css:'w1', icon:'🥄', label:'Scrapings',
-    desc:'Harvest the whole hood of a car and you get one crumbly lump held together mostly by hope. It survives about two feet of flight before reverting to loose crystals.' },
-  { maxP: 0.15,    css:'w1', icon:'🧂', label:"A Dusting's Worth",
-    desc:'There is visibly snow on the ground and visibly not enough of it. This is the most frustrating tier on the entire ladder and everyone here knows it.' },
+    desc:'Harvest the whole hood of a car, roughly fifteen square feet, and you get one crumbly lump with no structural core. It survives about two feet of flight before reverting to loose crystals. A determined pair working the entire block can produce five or six, none of which arrive intact.' },
+  { maxP: 0.125,   css:'w1', icon:'🧹', label:'Sweepings',
+    desc:'An eighth of an inch, gathered by sweeping rather than scooping. Yield runs about one round per thirty square feet, at an inch and a quarter across and mostly grit by volume. Ten to twelve can be assembled in twenty minutes and roughly two in three fail on release.' },
+  { maxP: 0.15,    css:'w1', icon:'🧂', label:'A Dusting’s Worth',
+    desc:'There is visibly snow on the ground and visibly not enough of it. Coverage is unbroken across every surface, and a packed round reaches an inch and a half before it starts shedding. Sustained fire is impossible: the whole yard supports about two throws each for four people.' },
+  { maxP: 0.185,   css:'w1', icon:'🌗', label:'Half a Snowball',
+    desc:'Just short of the material for one complete round. What can be packed reaches an inch and three quarters, holds its shape in the hand, and comes apart at the seam on release about half the time. Yard-wide supply supports one usable throw and one that will be argued about.' },
   { maxP: 0.22,    css:'w1', icon:'⚪', label:'One Bad Snowball',
-    desc:'A single snowball, poorly made, composed largely of grass and driveway grit. It is thrown once, it misses, and the war concludes.' },
+    desc:'A single round about two inches across, poorly made, composed largely of grass and driveway grit. It is thrown once at a range of maybe twenty feet, it misses, and no material remains for a second attempt. Total engagement duration is under ten seconds with one participant per side.' },
+  { maxP: 0.26,    css:'w1', icon:'🥌', label:'One Good Snowball',
+    desc:'Enough clean material for one properly packed round: two and a quarter inches, uniform density, no debris. It carries thirty-five feet and arrives intact. There is exactly one on the property, both sides know where it is, and the engagement consists of a single throw.' },
   { maxP: 0.3,     css:'w1', icon:'🎯', label:'Two Snowballs',
-    desc:'Enough for exactly one throw each. The engagement lasts four seconds and is recounted at dinner for a week with substantial embellishment.' },
+    desc:'Enough for exactly one throw each at two and a half inches of diameter. Both are released within the same second at a range of thirty feet, one connects, and the yard is stripped bare afterward. The engagement runs four seconds and total supply at the opening throw is two.' },
   { maxP: 0.4,     css:'w2', icon:'✊', label:'Handful',
-    desc:'A modest stockpile fits inside one mitten. Ammunition discipline is invented on the spot and abandoned within ninety seconds.' },
+    desc:'A stockpile of six to eight fits inside one mitten. Ammunition is rationed at the outset at two throws a minute and fully expended within ninety seconds of the opening exchange. Two to four participants, no fixed positions, and no resupply available anywhere on the property.' },
+  { maxP: 0.47,    css:'w2', icon:'🧥', label:'Pocketful',
+    desc:'Ten to twelve rounds, carried in coat pockets because there is nowhere else to put them. Effective range reaches twenty-five feet and hit rate runs about one in five. Both sides open at full supply and the engagement is decided within two minutes by whoever throws slower.' },
   { maxP: 0.55,    css:'w2', icon:'🥎', label:'Skirmish',
-    desc:'Real snowballs, briefly. Both sides run dry before anyone manages to establish cover, and it ends in a negotiated draw nobody is happy with.' },
+    desc:'Real snowballs, briefly — roughly a dozen per side at three inches across. Both sides run dry inside two minutes, before anyone establishes cover, and the engagement ends on exhausted supply rather than on a decision. Hit rate holds around one in four at the typical twenty-five-foot range.' },
+  { maxP: 0.62,    css:'w2', icon:'🏃', label:'Flanking Run',
+    desc:'Supply reaches about eighteen per side, enough that one participant can break off and circle without disarming the line. The first indirect approach of the season covers sixty feet in eleven seconds. It works once, and both sides post a watcher on the open side from then on.' },
   { maxP: 0.7,     css:'w2', icon:'💥', label:'Ambush',
-    desc:'Enough to crouch behind a tree with three in reserve. This is where the first genuine tactical decision of the season gets made.' },
+    desc:'Enough to crouch behind a tree with three in reserve and fifteen in total supply. Position starts to matter, holding fire becomes a usable option, and opening range drops under fifteen feet. Engagements run three to five minutes and turn on who holds more when the first volley ends.' },
+  { maxP: 0.8,     css:'w2', icon:'🧍', label:'Standoff',
+    desc:'Both sides hold about twenty rounds and neither will spend them first. The pause runs four to six minutes at a separation of forty feet, with an average of one probing throw a minute. It resolves when a third participant arrives and commits to a side.' },
   { maxP: 0.9,     css:'w2', icon:'🤺', label:'Duel',
-    desc:'Two committed participants, adequate ammunition, and an audience. Rules are agreed beforehand and violated immediately by whoever proposed them.' },
+    desc:'Two committed participants, roughly twenty rounds apiece, and an audience of four to six. Rules are set beforehand covering range, permitted target areas, and a throw count per side. First to five confirmed hits takes it, and the whole thing runs eight to twelve minutes including resupply.' },
+  { maxP: 1.0,     css:'w2', icon:'🌀', label:'Free-For-All',
+    desc:'Eight or nine participants, no teams, and about twenty-five rounds each. Alliances last under thirty seconds and average four per participant over the course of the engagement. It runs fifteen minutes, produces no agreed outcome, and ends when the last stockpile is spent.' },
   { maxP: 1.1,     css:'w2', icon:'⚔️', label:'Snowball Fight',
-    desc:'A proper fight at last. Cover behind parked cars, a running stockpile, and an ending determined entirely by when hands stop working.' },
+    desc:'A proper fight at last: six to ten participants, cover behind parked cars, and a running stockpile resupplied mid-engagement at about forty rounds per side. Effective range extends to thirty-five feet. Duration is set by how long hands stay warm, which in practice means twenty to thirty minutes.' },
+  { maxP: 1.25,    css:'w3', icon:'🎽', label:'Running Battle',
+    desc:'The engagement stops holding still and moves across three yards and a driveway, covering four hundred feet over half an hour. Rounds are packed on the move at about one every fifteen seconds. Neither side holds a position for more than ninety seconds and total supply never exceeds fifty.' },
   { maxP: 1.4,     css:'w3', icon:'🧤', label:'Extended Engagement',
-    desc:'Ammunition now outlasts the participants. Gloves soak through, hostilities pause for a hot chocolate armistice, and then resume with damp fury.' },
+    desc:'Ammunition now outlasts the participants, with each side holding eighty or more at any moment. Gloves soak through around the forty-minute mark, hostilities pause fifteen to twenty minutes while everyone dries out indoors, and the engagement resumes at full strength afterward.' },
+  { maxP: 1.55,    css:'w3', icon:'⏱️', label:'War of Attrition',
+    desc:'Neither side can be driven off and neither can resupply faster than it fires. Production runs four rounds a minute per side against an expenditure of six. Engagements now end by material exhaustion after seventy to ninety minutes, with cumulative hit counts in the low hundreds.' },
   { maxP: 1.7,     css:'w3', icon:'🪖', label:'Pitched Battle',
-    desc:'Enough material for sustained volleys from fixed positions. Someone starts keeping score, which ruins it for everyone and does not stop.' },
+    desc:'Enough material for sustained volleys from fixed positions at six to eight throws a minute per side. Score is kept, hits are called aloud, and the running count is contested at roughly every third call. Engagements pass an hour and involve eight to fourteen participants.' },
+  { maxP: 1.9,     css:'w3', icon:'🪨', label:'Dug-In Line',
+    desc:'Positions are scraped out rather than built up: a shallow trough eight inches deep and twenty feet long, with the spoil banked in front. It stops a low throw and nothing else. Two such lines face each other at fifty feet and neither is abandoned for the rest of the afternoon.' },
   { maxP: 2.1,     css:'w3', icon:'🧱', label:'First Wall',
-    desc:'The first defensive structure of the season. Knee-high, structurally dubious, and instantly the most important object in the neighborhood.' },
+    desc:'The first built structure of the season: knee-high at eighteen to twenty-four inches, packed by hand over about forty minutes. It runs eight to twelve feet long and is thick enough to stop a direct throw from fifteen feet out. One wall, one side, and no equivalent facing it yet.' },
+  { maxP: 2.3,     css:'w3', icon:'⚒️', label:'Wall and Ditch',
+    desc:'The material for the wall now comes from a ditch in front of it, doubling effective height to four feet from the attacking side. Combined works run fourteen feet across and take ninety minutes. A direct charge must cross the ditch, which adds about four seconds of exposure.' },
   { maxP: 2.5,     css:'w3', icon:'🏗️', label:'Fort Building',
-    desc:'Walls go up in earnest, with ammunition piled behind them. Teams form, rules are negotiated in good faith, and they are broken within minutes.' },
+    desc:'Walls go up in earnest at thirty inches high and a foot thick, with two to three hundred rounds piled behind them. Teams of four to six form per side, and rules are negotiated covering wall height, throw range, and resupply intervals. Construction runs ninety minutes before the first exchange.' },
+  { maxP: 2.75,    css:'w3', icon:'🛖', label:'Redoubt',
+    desc:'A second, smaller position is built behind the main wall as a fallback — six feet across, three feet high, holding a reserve of eighty rounds. It is used twice in an afternoon and both times the line is recovered within ten minutes. Works per side now exceed thirty feet of frontage.' },
   { maxP: 3.0,     css:'w3', icon:'🚩', label:'Two Forts',
-    desc:'Rival construction begins across the yard. Both sides overbuild the front wall and completely neglect the flanks, as tradition demands.' },
+    desc:'Rival construction begins across the yard at a separation of forty to sixty feet. Both sides build the front wall to full height, three feet or better, and leave the flanks open across a sixty-degree approach. Combined labor runs four person-hours before either side throws anything.' },
+  { maxP: 3.3,     css:'w4', icon:'🥊', label:'Contested Yard',
+    desc:'The ground between the forts changes hands six times in an afternoon. Neither side holds it for more than eleven minutes, and every attempt costs about forty rounds. Combined stockpiles pass six hundred and production keeps pace with expenditure for the first time all season.' },
   { maxP: 3.6,     css:'w4', icon:'🛡️', label:'Fortified Position',
-    desc:'Walls thick enough to absorb a direct hit without shedding. A dedicated ammunition-maker is appointed and begins resenting the assignment immediately.' },
+    desc:'Walls eighteen inches thick, enough to absorb a direct hit without shedding, running twenty feet of frontage. A dedicated ammunition-maker is appointed and works continuously behind the line at a sustained twelve rounds a minute. Standing stockpiles pass five hundred per side.' },
+  { maxP: 3.95,    css:'w4', icon:'🧰', label:'Outworks',
+    desc:'Detached positions are pushed twenty feet in front of the main wall to break up approaches — two per side, each manned by one. They fall on average within four minutes of a serious push and are rebuilt overnight. Defended depth increases from six feet to about thirty.' },
   { maxP: 4.3,     css:'w4', icon:'🏰', label:'Siege Begins',
-    desc:'Neither fort can be taken by direct assault anymore. This produces the first prolonged standoff of the winter and, reliably, the first betrayal.' },
+    desc:'Neither fort can be taken by direct assault anymore; three attempts across two hours all fail short of the wall. The standoff is settled by stockpile size rather than by any single charge. Both sides hold over eight hundred rounds and produce faster than they can throw.' },
+  { maxP: 4.65,    css:'w4', icon:'🔄', label:'Circumvallation',
+    desc:'A continuous line is built all the way around the opposing fort, a hundred and eighty feet of wall enclosing it completely. Construction takes two days and nine people. Resupply into the enclosed position drops to zero and the garrison inside is down to four hundred rounds.' },
   { maxP: 5.0,     css:'w4', icon:'🗼', label:'Battlements',
-    desc:'Walls acquire height, firing notches, and a lookout position. Someone erects a purely decorative tower that serves no function and is defended fanatically.' },
+    desc:'Walls acquire height at four to five feet, four firing notches per side, and a lookout position. A tower rises two feet above the main wall, extending sightlines to a hundred feet and increasing warning on an approach from three seconds to twelve. Garrison strength reaches twelve per fort.' },
+  { maxP: 5.5,     css:'w4', icon:'⏰', label:'Watch Rotation',
+    desc:'Positions are manned continuously for the first time, in two-hour shifts across four people per fort. Coverage runs from first light to full dark, roughly nine hours. Two night attempts are made in a week and both are detected within forty feet of the wall.' },
   { maxP: 6.0,     css:'w4', icon:'🎪', label:'Multi-Fort Campaign',
-    desc:'Three or more strongholds now hold the block. Alliances form strictly along lines of who has stockpiled the most, and dissolve the moment that changes.' },
+    desc:'Three or more strongholds hold the block across four hundred feet of frontage and thirty participants. Alliances form along lines of stockpile size and shift as supply is spent and rebuilt, averaging two realignments an afternoon. No single fort can hold against the other two together.' },
+  { maxP: 6.5,     css:'w4', icon:'🪓', label:'Fieldworks',
+    desc:'Construction moves beyond the forts into the ground between them: firing steps, banked approaches, and cut lanes totalling three hundred feet of prepared position. Eleven people work it for a full day. Every approach to every fort now crosses at least one built obstacle.' },
   { maxP: 7.0,     css:'w4', icon:'🕳️', label:'Trenches',
-    desc:'Connected firing positions are dug between the forts. Movement under cover becomes possible and the war quietly goes three-dimensional.' },
+    desc:'Connected firing positions are dug between the forts, two feet deep and sixty to ninety feet in total run. Movement under cover becomes possible and the engagement extends below the snow line for the first time. Transit between positions goes from an exposed ten seconds to a covered thirty.' },
+  { maxP: 7.6,     css:'w5', icon:'🔗', label:'Communication Trench',
+    desc:'A dedicated rear trench links every forward position to the ammunition store, a hundred and twenty feet of it at three feet deep. Resupply runs that previously drew fire now complete unobserved in forty seconds. Sustainable rate of fire at the front line roughly doubles.' },
   { maxP: 8.2,     css:'w5', icon:'⛏️', label:'Tunnel Networks',
-    desc:'Passages link the trench system beneath the surface. Adults are informed only once the tunnels are structurally complete and far too extensive to fill in.' },
+    desc:'Passages link the trench system beneath the surface, three feet down and a hundred and fifty feet in aggregate length. Adults are informed once the network is complete, and the tunnels are inspected and reinforced with sled slats at six-foot intervals. Four entrances, two of them concealed.' },
+  { maxP: 8.85,    css:'w5', icon:'🔨', label:'Undermining',
+    desc:'A tunnel is driven under the opposing wall — twenty-two feet, four hours, two diggers working in shifts. The collapse takes out eight feet of frontage in a second and a half. Both sides begin listening at the base of their own walls each morning, which becomes standard practice.' },
   { maxP: 9.5,     css:'w5', icon:'🏯', label:'The Keep',
-    desc:'A central stronghold with a genuine interior chamber. The chamber is cold, dark, steadily dripping, and the most coveted real estate in the known world.' },
+    desc:'A central stronghold with a genuine interior chamber, six feet across and four feet at the ceiling. It is cold, dark, dripping at about a drop a second, and large enough to hold four people seated. Interior temperature holds near twenty-eight degrees regardless of the outside reading.' },
+  { maxP: 10.2,    css:'w5', icon:'🚪', label:'Inner Bailey',
+    desc:'A second wall is raised inside the first, enclosing the keep and the main store — sixty feet of circuit at five feet high. Taking the outer wall no longer ends anything. Two full assaults reach the outer circuit in a week and neither penetrates the inner.' },
   { maxP: 11,      css:'w5', icon:'🧊', label:'Ice-Armored Walls',
-    desc:'Water is deliberately poured over the ramparts and left overnight to glaze. Snowballs now shatter on impact, and an arms race begins that nobody wins.' },
+    desc:'Water is deliberately poured over the ramparts, five to eight gallons per side, and left overnight to glaze. Rounds now shatter on impact rather than pack in, cutting effective damage by roughly two thirds, and both sides begin glazing within a day. Wall service life triples.' },
+  { maxP: 12,      css:'w5', icon:'💧', label:'Glazing Crews',
+    desc:'Glazing becomes a standing assignment: three people per fort, forty gallons a night, hauled from a basement tap in relays. Coverage extends from the front face to the full circuit, about two hundred square feet. Untreated sections are marked on the map and become the standard target.' },
   { maxP: 13,      css:'w5', icon:'🎣', label:'Siege Engines',
-    desc:'The first catapult, assembled from a sled, a fence post, and bungee cords taken without permission. It works exactly once, spectacularly, and is never rebuilt.' },
+    desc:'The first catapult, assembled from a sled, a fence post, and bungee cords taken without permission. It launches a four-inch round a measured hundred and ten feet, roughly triple hand-throw range, then comes apart on the second attempt. Assembly took two hours and five people.' },
+  { maxP: 14,      css:'w5', icon:'🎱', label:'Counter-Battery',
+    desc:'Engines are now built specifically to destroy other engines, at ranges out to a hundred and forty feet. Four are in service across the block and three are disabled within a week, two of them by other engines. Median operational life of a siege engine falls to nine shots.' },
   { maxP: 15,      css:'w5', icon:'🏭', label:'Ammunition Factory',
-    desc:'A dedicated production line with an actual foreman. Output is counted in the hundreds and quality control is enforced with a seriousness that alarms passing adults.' },
+    desc:'A dedicated production line with a foreman and six workers. Output runs sixty to ninety rounds an hour, standing inventory passes two thousand, and every round is checked for a three-inch diameter and consistent density before stacking. Rejection rate settles around one in eight.' },
+  { maxP: 16.2,    css:'w6', icon:'⚙️', label:'Quarry Works',
+    desc:'Clean snow becomes the constraint rather than labor, and dedicated cutting sites are opened away from the fighting — four of them, each yielding about six hundred rounds a day. Haul distance averages three hundred feet. Two of the four are contested within the first week.' },
   { maxP: 17.5,    css:'w6', icon:'🗺️', label:'Front Lines',
-    desc:'The conflict has outgrown a single block. Territory is mapped on notebook paper, and the map is guarded considerably more carefully than any of the forts.' },
+    desc:'The conflict has outgrown a single block and runs across four, roughly two thousand feet of contested frontage. Territory is mapped on notebook paper, held by one person per side, and revised after every change of position — about nine times a day. Combined participation passes sixty.' },
+  { maxP: 18.7,    css:'w6', icon:'📐', label:'Salients',
+    desc:'The line stops being straight. Three bulges push into opposing territory at depths of sixty to a hundred feet, each defended on three sides and each requiring about forty percent more people per foot of frontage. Two are given up voluntarily within a week.' },
   { maxP: 20,      css:'w6', icon:'🚚', label:'Supply Lines',
-    desc:'Ammunition must now be moved to where it is needed. Sleds are requisitioned, and logistics quietly replaces enthusiasm as the binding constraint on the war.' },
+    desc:'Ammunition must be moved to where it is needed over hauls of five hundred feet or more. Sleds are requisitioned at two per side, routes are fixed, and delivery rate — about four hundred rounds an hour — sets the pace of the entire war. Forward positions hold ninety minutes of supply.' },
+  { maxP: 21.5,    css:'w6', icon:'📦', label:'Depots',
+    desc:'Forward stores are established behind each sector, six of them holding fifteen hundred rounds apiece. Time from request to delivery at the line drops from twenty-five minutes to four. Two depots sit within range of the opposing works and are moved after the first one is hit.' },
   { maxP: 23,      css:'w6', icon:'🏛️', label:'Snow Citadel',
-    desc:'A multi-chamber fortress with a roof that holds. It is given a name, and the name is argued over for substantially longer than the walls took to build.' },
+    desc:'A multi-chamber fortress with a roof that holds: five rooms, forty feet on its longest axis, six feet of interior height at the center. It is given a name, marked at the entrance, and used as the reference point for every position on the map. Construction consumed sixty person-hours.' },
+  { maxP: 24.7,    css:'w6', icon:'📋', label:'Conscription',
+    desc:'Participation stops being voluntary. Every household across four blocks is assessed at one body per two children, producing a roll of a hundred and forty. Exemptions are granted for injury and for anyone with a working stove. Compliance runs about seventy percent.' },
   { maxP: 26.5,    css:'w6', icon:'👑', label:'Standing Army',
-    desc:'Participation stops being casual. There are ranks, uniforms improvised from scarves, and a chain of command that is obeyed with genuinely unsettling consistency.' },
+    desc:'Participation stops being casual at a roster of ninety across both sides. There are four ranks, uniforms improvised from scarves, and a chain of command routing every order through one person. Attendance is tracked daily and turnout holds above eighty percent for eleven straight days.' },
+  { maxP: 28.2,    css:'w6', icon:'🎗️', label:'Officer Corps',
+    desc:'Command becomes a separate function from fighting: eleven officers across both sides, none of whom have thrown a round in nine days. Orders are written rather than shouted, at about thirty a day. Time from decision to execution at the front runs six minutes.' },
   { maxP: 30,      css:'w6', icon:'📜', label:'Treaties',
-    desc:'Formal agreements are drafted and signed on flattened cardboard. Every single one is violated before the ink finishes drying, which everyone anticipated.' },
+    desc:'Formal agreements are drafted and signed on flattened cardboard by delegations of six. They set boundaries to the foot, ammunition limits at three hundred per side, and terms for resuming hostilities. Four documents are in force at once and two of them conflict on the same line.' },
+  { maxP: 32,      css:'w7', icon:'🧾', label:'Border Commission',
+    desc:'A standing body of nine is seated to interpret the treaties, drawn equally from both sides plus one neutral. It rules on forty-one disputes in a month and its findings are accepted in thirty-four. Boundary markers are placed at fifty-foot intervals across two miles.' },
   { maxP: 34,      css:'w7', icon:'🔥', label:'Total Snow War',
-    desc:'A regional campaign across multiple neighborhoods with coordinated offensives. The war has now outlasted the storm that started it and shows no sign of resolving.' },
+    desc:'A regional campaign across seven neighborhoods with coordinated offensives on a shared timetable. The war has outlasted the storm that started it by nine days and involves upward of three hundred participants. Daily expenditure across all fronts passes twelve thousand rounds.' },
+  { maxP: 36.5,    css:'w7', icon:'📣', label:'General Mobilization',
+    desc:'Every eligible participant across the region is called up at once — eleven hundred bodies inside forty-eight hours. Production shifts entirely to ammunition at four thousand rounds a day. Attendance across four school districts drops under half and is not recorded that week.' },
   { maxP: 39,      css:'w7', icon:'⚡', label:'Blitz Doctrine',
-    desc:'Massed ammunition and speed displace fortification entirely. The old fort-building school is declared obsolete, chiefly by people who were never good at building forts.' },
+    desc:'Massed ammunition and speed displace fortification entirely. Forts are abandoned mid-campaign in favor of fast columns carrying four hundred rounds and covering a quarter mile in under six minutes. Average engagement length falls from fifty minutes to nine and frontage advances a block a day.' },
+  { maxP: 42,      css:'w7', icon:'🐺', label:'Deep Raiding',
+    desc:'Parties of four operate up to two miles behind the opposing line for as long as three days. Their targets are depots and quarries rather than positions; nine are destroyed in a month, costing an estimated sixty thousand rounds. About a third of raiding parties miss their return schedule.' },
   { maxP: 45,      css:'w7', icon:'🏔️', label:'Fortress Cities',
-    desc:'Strongholds large enough to house their own garrisons overnight. Interior tunnels connect chambers that connect to further chambers nobody has fully surveyed.' },
+    desc:'Strongholds large enough to house their own garrisons overnight, forty to sixty residents apiece at eight feet of interior height. Interior tunnels connect chambers that connect to further chambers still being extended, currently past nine hundred feet of mapped passage and an unknown remainder.' },
+  { maxP: 48,      css:'w7', icon:'🏫', label:'Staff College',
+    desc:'Planning becomes a taught discipline. Twenty-two candidates a year study supply, frontage, and the nine campaigns fought so far, across a course running four months. Graduates plan at a horizon of three weeks rather than an afternoon, and campaign duration roughly doubles.' },
   { maxP: 51,      css:'w7', icon:'🎖️', label:'War Academy',
-    desc:'Technique is formally taught to newcomers. There is a correct way to pack, a correct way to throw, and an extensively documented correct way to lose gracefully.' },
+    desc:'Technique is formally taught to newcomers across a six-session curriculum. There is a correct way to pack — four compressions, three seconds — a correct way to throw, and a documented sequence for withdrawing under fire. Roughly forty students an intake, graduating at eighty percent.' },
+  { maxP: 54.5,    css:'w7', icon:'🗾', label:'Provinces',
+    desc:'Territory is divided into eleven administrative units, each with its own quarry, depot, and roll of about two hundred. Orders from the center reach the furthest in a day and a half. Three provinces produce more than they consume and are taxed at a fifth of output.' },
   { maxP: 58,      css:'w7', icon:'🗿', label:'Snow Empire',
-    desc:'Fortifications visible from an upstairs window and arguably from the air. Outlying forts pay tribute in packed ammunition and receive protection of uncertain value.' },
+    desc:'Fortifications visible from an upstairs window and from the air, spanning two and a half miles of continuous works. Outlying forts pay tribute at two thousand packed rounds a week and receive garrison support in return. Twenty-two settlements are enrolled and four more are under negotiation.' },
+  { maxP: 62,      css:'w8', icon:'🎭', label:'Court Politics',
+    desc:'Decisions move indoors. Nine advisors surround the commander, none of them holding a position on the line, and four of the last six senior appointments went to people who have never built a wall. Two field commands change hands in a month for reasons never entered in the record.' },
   { maxP: 66,      css:'w8', icon:'💎', label:'Hereditary Aristocracy',
-    desc:'Command begins passing to younger siblings by succession rather than merit. This proceeds exactly as badly as it sounds, and takes four days to unravel.' },
+    desc:'Command begins passing to younger siblings by succession rather than merit, across eleven separate lines. Authority is fixed by birth order and holds about four days before the first contested claim. Average tenure of a hereditary commander runs thirty-one hours before replacement.' },
+  { maxP: 70,      css:'w8', icon:'🤝', label:'Client Kingdoms',
+    desc:'Nine smaller polities keep their own flags, calendars, and internal law while surrendering foreign policy entirely. Each supplies three hundred bodies on demand and receives protection and a fixed ammunition allowance. Two attempt to renegotiate in the same season and one succeeds.' },
   { maxP: 75,      css:'w8', icon:'🌐', label:'Continental War',
-    desc:'Separate cities’ snow wars make contact and merge into one conflict. No participant can name every belligerent, and several are fighting on two sides simultaneously.' },
+    desc:'Separate cities’ snow wars make contact and merge into one conflict spanning four hundred miles. No participant can name every belligerent — the count stands at nineteen and is still rising — and some are counted on two sides at once. Aggregate participation is estimated at eleven thousand.' },
+  { maxP: 80,      css:'w8', icon:'⚖️', label:'Doctrinal Councils',
+    desc:'Assemblies are convened to settle questions of practice rather than territory: permitted round density, the status of ice cores, and the minimum age of participants. Four councils sit in two years, one of them for eleven weeks, and none of the four rulings is accepted everywhere.' },
   { maxP: 85,      css:'w8', icon:'🏴', label:'The Great Schism',
-    desc:'The war splits along doctrinal lines over whether ice-cored snowballs are permissible. Both factions consider the other monstrous, and both are entirely correct.' },
+    desc:'The war splits along doctrinal lines over whether ice-cored rounds are permissible. Each faction bans the other’s practice and enforces the ban internally with inspections at every checkpoint. The split runs through thirty-one settlements and divides fourteen of them down the middle.' },
+  { maxP: 91,      css:'w8', icon:'🏘️', label:'Settlement Law',
+    desc:'Written law replaces negotiated custom: four hundred and twelve articles covering construction rights, quarry access, and the standing of anyone who has never thrown. Courts sit in nine settlements and hear about two hundred cases a year, a fifth of them concerning property rather than combat.' },
   { maxP: 97,      css:'w8', icon:'⛩️', label:'Snow Civilization',
-    desc:'Permanent structures, permanent institutions, and a permanent resident population. The fighting is now the smaller and less interesting part of what exists out there.' },
+    desc:'Permanent structures, permanent institutions, and a resident population above four thousand. Fighting now occupies under a fifth of the settlement’s labor; the rest goes to construction, food, mapping, and maintenance. Ninety percent of standing structures predate the current campaign.' },
+  { maxP: 103,     css:'w8', icon:'🎙️', label:'Oral Canon',
+    desc:'A fixed body of recited material forms — roughly two hundred pieces, none written down, held by about forty specialists. Reciting the full canon takes eleven hours and is done twice a year. Comparison of two distant reciters shows agreement on ninety-four percent of lines.' },
   { maxP: 110,     css:'w8', icon:'📖', label:'Founding Myths',
-    desc:'Origin stories are told about the first snowball ever thrown. They contradict each other on every material point and all of them are demonstrably wrong.' },
+    desc:'Origin stories are told about the first round ever thrown, in at least eight competing versions. They contradict each other on every material point — the thrower, the range, the year — and none can be checked against a record. Six of the eight have never been written down.' },
+  { maxP: 117,     css:'w9', icon:'✍️', label:'Chroniclers',
+    desc:'Events begin to be recorded as they happen rather than remembered afterward. Four chroniclers work continuously, producing about nine hundred entries a year across the major settlements. Their accounts disagree with the oral canon on roughly a third of the events both cover.' },
   { maxP: 125,     css:'w9', icon:'🕰️', label:'Its Own Calendar',
-    desc:'Time is reckoned from the storm itself. Events are dated Before Snow and After Snow, and nobody out there finds this remarkable any longer.' },
+    desc:'Time is reckoned from the storm itself. Events are dated Before Snow and After Snow, the year stands at 3 A.S., and the convention appears in every record kept out there. A standard year runs three hundred and forty days on the local count, with a twelve-day gap nobody has reconciled.' },
+  { maxP: 135,     css:'w9', icon:'🕯️', label:'Ancestor Rites',
+    desc:'Observances are established for those who fought in the earliest campaigns, held four times a year at nine sites. Attendance at the largest passes two thousand. The named honorees number sixty-three and about half of them are attested only in the oral canon.' },
   { maxP: 145,     css:'w9', icon:'⚰️', label:'Its Own Dead',
-    desc:'There are memorials now. They are built of snow, they are carefully maintained by people who never knew the honored, and they are genuinely moving to stand before.' },
+    desc:'There are memorials now, sixty-one of them across the territory. They are built of snow, maintained by people who never knew the honored, and visited on a fixed schedule — four observances a year, the largest drawing above two thousand. The oldest has stood eleven months.' },
+  { maxP: 157,     css:'w9', icon:'🌘', label:'Interregnum',
+    desc:'Central authority lapses for a hundred and nine days with no recognized commander anywhere on the sheet. Nineteen settlements govern themselves, four fight each other, and ammunition production falls by sixty percent. The archive is moved twice and loses about a tenth of its volumes.' },
   { maxP: 170,     css:'w9', icon:'🌋', label:'Age of Warring Forts',
-    desc:'Centuries of conflict compressed into a single school break. Dynasties rise, overreach, and collapse entirely before the streetlights come on.' },
+    desc:'Centuries of conflict compressed into a single school break. Nine dynasties rise, expand past their supply lines at an average reach of two miles, and collapse before the streetlights come on. Mean dynastic lifespan is thirty-one hours and no line has held its capital more than twice.' },
+  { maxP: 185,     css:'w9', icon:'🏺', label:'Classical Period',
+    desc:'A century of stable borders, uninterrupted archives, and the construction of the works everything afterward is measured against. Nine of the eleven great citadels date from it. Later ages copy its wall proportions to within a few inches without recovering the reason they hold better.' },
   { maxP: 200,     css:'w9', icon:'🌌', label:'Mythic',
-    desc:'The snow war has become a civilization unto itself, with a calendar, a canon, its own dead, and its own founding myths. Nobody alive remembers who threw first.' },
-  { maxP: Infinity,css:'w9', icon:'♾️', label:'Beyond Reckoning',
-    desc:'The scale has run out of names. Whatever is taking place out there stopped being describable as a snowball fight some time ago, and continues to escalate.' }
+    desc:'The snow war has become a civilization unto itself, with a calendar, a canon of four hundred entries, its own dead, and its own founding myths. No record of the first throw survives, and the earliest confirmable event postdates it by an estimated six years on the local count.' },
+  { maxP: 240,     css:'w10', icon:'📚', label:'Written Record',
+    desc:'Scribes are appointed and the oral tradition is fixed in writing for the first time — twelve hundred entries across nine volumes. Disputes that ran for years are settled in an afternoon by consulting the page. Four earlier accounts are formally retired and the archive is copied twice against loss.' },
+  { maxP: 285,     css:'w10', icon:'🕊️', label:'The Long Armistice',
+    desc:'Hostilities halt entirely for the longest period on record: forty-one days without a confirmed throw. Fortifications are maintained but not manned, stockpiles hold at nine thousand rounds, and eight in ten participants take up construction or archive work instead. No document calls it permanent.' },
+  { maxP: 340,     css:'w10', icon:'🗡️', label:'Wars of Reunification',
+    desc:'The armistice ends and the successor territories are forced back together across a fourteen-month campaign. Twenty-six settlements are absorbed, six by treaty and twenty by assault, and frontage extends past nine miles. Peak daily expenditure crosses ninety thousand rounds.' },
+  { maxP: 405,     css:'w10', icon:'🏳️', label:'Successor States',
+    desc:'The reunified territory fragments again within a season into five polities holding between two and eleven settlements each. Borders are drawn on the master map to the foot and redrawn on average every nineteen days. Combined standing forces exceed forty thousand and none holds a third.' },
+  { maxP: 480,     css:'w10', icon:'🧭', label:'The Colonial Period',
+    desc:'Expeditions push beyond the storm’s original footprint, establishing thirty-one outposts at ranges of six to forty miles. Each carries a founding charter, eight thousand rounds, and a return schedule it does not keep. Eleven outposts lose contact within the first two months.' },
+  { maxP: 575,     css:'w11', icon:'🦅', label:'Hegemony',
+    desc:'One polity accumulates enough advantage to set terms for all the others: sixty-two percent of standing forces and seventy percent of production capacity. The remaining four states keep their flags, their calendars, and none of their foreign policy. The arrangement holds two hundred days.' },
+  { maxP: 685,     css:'w11', icon:'🗄️', label:'The Deep Archive',
+    desc:'A subsurface vault forty feet down holds the complete record — nine thousand volumes, three hundred maps, and the master census. Temperature holds at twenty-two degrees year-round and never varies more than a degree. Access requires two keys held by different offices and both are used weekly.' },
+  { maxP: 815,     css:'w11', icon:'⏳', label:'Millennial Siege',
+    desc:'A single fortress is invested and holds. The siege runs eight hundred and forty days, consumes an estimated four million rounds, and outlasts the government that ordered it. The garrison rotates eleven times and the besiegers nine; neither original commander sees the end of it.' },
+  { maxP: 970,     css:'w11', icon:'⛪', label:'Ice Cathedrals',
+    desc:'Construction turns to structures with no military function at all — nine of them, the tallest ninety feet to the vault, each taking four to six years. Walls run twelve feet thick at the base and carry a glaze renewed every season. Combined labor exceeds two hundred thousand person-hours.' },
+  { maxP: 1150,    css:'w11', icon:'🪦', label:'Glacial Dynasties',
+    desc:'Rule passes through documented lines spanning six to nine generations, at an average reign of fourteen years. Succession is recorded, contested in court rather than in the field, and settled by the archive in eight cases out of ten. The longest unbroken line has held its capital a hundred and ten years.' },
+  { maxP: 1400,    css:'w12', icon:'🗻', label:'The Frozen Interior',
+    desc:'The snowpack is deep enough to hold a habitable interior: eleven hundred miles of mapped passage, four hundred chambers, and a permanent subsurface population of ninety thousand. Surface travel becomes the exception. Interior temperature holds at twenty-six degrees in every season.' },
+  { maxP: 1650,    css:'w12', icon:'🧬', label:'Subglacial Nations',
+    desc:'Distinct peoples emerge below the surface — seven of them, separated by ice rather than distance, in places by as little as forty feet of it. Dialects diverge past mutual intelligibility within three generations. Contact between the two most distant requires a nine-day transit through neutral passage.' },
+  { maxP: 2000,    css:'w12', icon:'⚱️', label:'The Buried Age',
+    desc:'Everything predating the snow is now under it — every original fort, every first wall, every early memorial, at depths of a hundred and sixty feet. Excavation becomes a recognized profession employing four thousand. Eleven original sites are recovered and nine are deliberately reburied.' },
+  { maxP: 2400,    css:'w12', icon:'🏙️', label:'Ice Sheet Polity',
+    desc:'A single administration spans the full sheet: two hundred thousand square miles, a census of one point four million, and a standing force of two hundred thousand. Orders take nineteen days to reach the far frontier. Ammunition output is measured in tons a day rather than rounds an hour.' },
+  { maxP: 2850,    css:'w12', icon:'🌍', label:'Continental Cryosphere',
+    desc:'The snowpack becomes a continental system with its own weather, generating storms independent of the one that started it — forty-one recorded in a single year. Surface elevation gains two hundred and thirty feet. The original storm is now a minor entry in a record it no longer drives.' },
+  { maxP: 3400,    css:'w13', icon:'🔱', label:'Planetary Snow Order',
+    desc:'Governance unifies across every remaining landmass under a single charter of nine hundred articles. Population stands at ninety million, ninety-six percent of it subsurface, and the standing force at four million. The last independent fort accedes in year 214 A.S. after a seven-year negotiation.' },
+  { maxP: 4100,    css:'w13', icon:'📡', label:'The Long Winter Compact',
+    desc:'An agreement is signed to end the war permanently, running to eleven thousand articles and ratified by every polity on the sheet. It holds thirty-one years — the longest peace on record — before the first violation, which involves four participants and nine rounds. Hostilities resume within a month.' },
+  { maxP: 4900,    css:'w13', icon:'🌑', label:'Hemispheric Dominion',
+    desc:'One hemisphere falls entirely under a single command; the other organizes against it within two years. Frontage runs the full circumference at the equator, twenty-five thousand miles, defended at an average of nine hundred personnel per mile. Neither side has advanced a net mile in a decade.' },
+  { maxP: 5800,    css:'w13', icon:'☄️', label:'World-Encasing War',
+    desc:'The conflict reaches every point on the surface simultaneously with no rear area anywhere. Four hundred million are enrolled on one side or the other and the neutral population stands at zero. Daily expenditure passes nine billion rounds against a supply no longer meaningfully finite.' },
+  { maxP: 7000,    css:'w14', icon:'🪐', label:'Snowball Earth Conflict',
+    desc:'The planet is fully encased at an average depth of five hundred and eighty feet and the war is the sole organizing activity of the species. Surface albedo reaches point nine, locking the climate in place. The engagement has run nine hundred years with no recorded month of ceasefire.' },
+  { maxP: 8400,    css:'w14', icon:'🛰️', label:'Post-Terrestrial Campaign',
+    desc:'Fighting extends off the surface entirely: eleven orbital positions, four of them permanently garrisoned, with transit times measured in days. Rounds are launched at nine thousand feet per second and take four hours to arrive. The oldest held position has been under fire for sixty years.' },
+  { maxP: 10000,   css:'w14', icon:'🌠', label:'The Final Front',
+    desc:'The last contested boundary in the reachable universe, held by two formations whose composition has not changed in four thousand years. Neither has gained ground. Every other question — supply, succession, doctrine, the archive itself — was settled long enough ago to survive only in the deep record.' },
+  { maxP: Infinity,css:'w15', icon:'♾️', label:'Beyond Reckoning',
+    desc:'The scale runs out of names at ten thousand inches and the measured depth continues past it. Whatever is taking place stopped matching the definition of a snowball fight an estimated forty thousand years ago. Participation, expenditure, and frontage are all reported as unbounded.' }
 ];
 
 // Resolve a city's phases to its snow war tier. The first tier is reserved for
@@ -5663,10 +5838,12 @@ function setInputMode(mode) {
   const para = document.getElementById('paragraphCard');
   const historic = document.getElementById('historicCard');
   const replay = document.getElementById('historicReplayCard');
+  const snowWar = document.getElementById('snowWarCard');
   detailed.style.display = (mode === 'detailed')  ? '' : 'none';
   para.style.display     = (mode === 'paragraph') ? '' : 'none';
   historic.style.display = (mode === 'historic')  ? '' : 'none';
   replay.style.display   = (mode === 'replay')    ? '' : 'none';
+  snowWar.style.display  = (mode === 'snowwar')   ? '' : 'none';
 }
 document.querySelectorAll('.mode-btn').forEach(b => {
   b.addEventListener('click', () => setInputMode(b.dataset.mode));
@@ -6359,6 +6536,33 @@ gapFillAddAllBtn.addEventListener('click', addAllGapFillToSim);
       <span class="hs-rsi rsi-${cat.css}">${s.rsi.toFixed(1)}</span>
       <span class="hs-cat">Cat ${cat.cat} &middot; ${cat.label}</span>
       <span class="hs-name">${escapeHtml(s.name)}</span>
+    </div>`;
+  }).join('');
+})();
+
+/* ---- Populate Snow War Tiers list (all 50, shallowest to deepest) ---- */
+(function populateSnowWarList() {
+  const list = document.getElementById('snowWarList');
+  if (!list) return;
+  const escapeHtml = (s) => String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // Two significant figures below an inch (0.00001 stays 0.00001, not 0),
+  // thousands separators above it (10000 reads 10,000) in a narrow chip.
+  const fmt = (n) => (n < 1 ? parseFloat(n.toPrecision(2)) : n)
+    .toLocaleString('en-US', { maximumFractionDigits: 20 });
+  const count = document.getElementById('snowWarCount');
+  if (count) count.textContent = SNOW_WAR_TIERS.length;
+  const last = SNOW_WAR_TIERS.length - 1;
+  list.innerHTML = SNOW_WAR_TIERS.map((t, i) => {
+    const depth = i === 0    ? '0&Prime;'
+                : i === last ? fmt(SNOW_WAR_TIERS[last - 1].maxP) + '&Prime;+'
+                : '&le;' + fmt(t.maxP) + '&Prime;';
+    return `<div class="historic-row war-row">
+      <span class="wt-depth war-${t.css}">${depth}</span>
+      <span class="wt-body">
+        <span class="wt-label"><span class="wt-icon">${t.icon}</span>${escapeHtml(t.label)}</span>
+        <span class="wt-desc">${escapeHtml(t.desc)}</span>
+      </span>
     </div>`;
   }).join('');
 })();
