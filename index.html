@@ -177,7 +177,7 @@
   .impact-pill { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
   .res-pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.68rem; font-weight: 600; white-space: nowrap; }
 
-  /* Snow war activity (119 tiers, banded into 16 colors) */
+  /* Snow war activity (121 tiers, banded into 16 colors) */
   .war-pill { display: inline-block; padding: 3px 9px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
   .war-desc { display: block; margin-top: 4px; opacity: 0.62; font-size: 0.72rem; line-height: 1.35; }
   .war-w0 { background: #0f172a; color: #334155; }
@@ -2183,7 +2183,7 @@ function snowWarScore(phases) {
   return roundPrecip(6 * p * p);
 }
 
-// 119 tiers, keyed by the upper bound of packable inches that reaches them.
+// 121 tiers, keyed by the upper bound of packable inches that reaches them.
 // Runs from a single disputed flake to 10,000" and beyond, matching the reach
 // of the snow impact ladder. css picks a color band; the ladder darkens from
 // grey through blue and amber into magenta, then violet into the white void.
@@ -2272,6 +2272,8 @@ const SNOW_WAR_TIERS = [
     desc:'Detached positions are pushed twenty feet in front of the main wall to break up approaches — two per side, each manned by one. They fall on average within four minutes of a serious push and are rebuilt overnight. Defended depth increases from six feet to about thirty.' },
   { maxP: 4.3,     css:'w4', icon:'🏰', label:'Siege Begins',
     desc:'Neither fort can be taken by direct assault anymore; three attempts across two hours all fail short of the wall. The standoff is settled by stockpile size rather than by any single charge. Both sides hold over eight hundred rounds and produce faster than they can throw.' },
+  { maxP: 4.5,     css:'w4', icon:'🏹', label:'Fortress & Siege',
+    desc:'The siege becomes a standing condition rather than an event. Each fort holds six with three in reserve, and the ground between them goes unclaimed for stretches of forty minutes. Production and consumption reach equilibrium near nine hundred rounds a side, and neither stockpile moves.' },
   { maxP: 4.65,    css:'w4', icon:'🔄', label:'Circumvallation',
     desc:'A continuous line is built all the way around the opposing fort, a hundred and eighty feet of wall enclosing it completely. Construction takes two days and nine people. Resupply into the enclosed position drops to zero and the garrison inside is down to four hundred rounds.' },
   { maxP: 5.0,     css:'w4', icon:'🗼', label:'Battlements',
@@ -2286,6 +2288,8 @@ const SNOW_WAR_TIERS = [
     desc:'Connected firing positions are dug between the forts, two feet deep and sixty to ninety feet in total run. Movement under cover becomes possible and the engagement extends below the snow line for the first time. Transit between positions goes from an exposed ten seconds to a covered thirty.' },
   { maxP: 7.6,     css:'w5', icon:'🔗', label:'Communication Trench',
     desc:'A dedicated rear trench links every forward position to the ammunition store, a hundred and twenty feet of it at three feet deep. Resupply runs that previously drew fire now complete unobserved in forty seconds. Sustainable rate of fire at the front line roughly doubles.' },
+  { maxP: 7.9,     css:'w5', icon:'💣', label:'Trench Warfare',
+    desc:'Nobody stands upright in the open anymore. The trench line runs two hundred feet across both positions and every exchange comes from behind a lip of packed snow, dropping hit rates from one in four to one in eleven. An afternoon of fighting moves the front about six feet.' },
   { maxP: 8.2,     css:'w5', icon:'⛏️', label:'Tunnel Networks',
     desc:'Passages link the trench system beneath the surface, three feet down and a hundred and fifty feet in aggregate length. Adults are informed once the network is complete, and the tunnels are inspected and reinforced with sled slats at six-foot intervals. Four entrances, two of them concealed.' },
   { maxP: 8.85,    css:'w5', icon:'🔨', label:'Undermining',
@@ -6540,7 +6544,7 @@ gapFillAddAllBtn.addEventListener('click', addAllGapFillToSim);
   }).join('');
 })();
 
-/* ---- Populate Snow War Tiers list (all 50, shallowest to deepest) ---- */
+/* ---- Populate Snow War Tiers list (all tiers, shallowest to deepest) ---- */
 (function populateSnowWarList() {
   const list = document.getElementById('snowWarList');
   if (!list) return;
