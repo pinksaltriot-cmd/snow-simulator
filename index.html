@@ -118,6 +118,7 @@
   .timeline-cell .tl-first { color: #93c5fd; }
   .timeline-cell .tl-peak { color: #fbbf24; font-weight: 600; }
   .timeline-cell .tl-last { color: #6ee7b7; }
+  .timeline-cell .tl-melt { color: #7dd3fc; }
   .btn-remove { background: none; color: #f87171; font-size: 1.1rem; padding: 2px 8px; opacity: 0.6; }
   .btn-remove:hover { opacity: 1; }
 
@@ -3759,10 +3760,19 @@ function generateProfile(rsiOverride) {
       tlCell = `<td class="timeline-cell">${phaseLines}</td>`;
     }
 
+    // Melt-out cell
+    let meltCell = '<td class="timeline-cell" style="opacity:0.4">—</td>';
+    if (c.melt) {
+      const when = c.melt.permanent ? 'Permanent' : formatTimeline(c.melt.meltOutDate);
+      const how = formatMeltDuration(c.melt.meltOutDays);
+      meltCell = `<td class="timeline-cell"><div class="tl-melt">\u{1F4A7} ${when}</div><div style="opacity:0.6">${how}</div></td>`;
+    }
+
     return `<tr>
       <td>${esc(c.name)}${locTag}</td>
       ${precipCell}
       ${tlCell}
+      ${meltCell}
       <td><span class="res-pill res-${res.css}">${res.icon} ${res.label}</span></td>
       <td><span class="impact-pill impact-${imp.css}">${imp.level}</span></td>
       <td style="font-size:0.82rem">\u{1F3EB} ${imp.school}</td>
@@ -3898,7 +3908,7 @@ function generateProfile(rsiOverride) {
     ${earliestFirst && latestLast ? `<div style="font-size:0.78rem;opacity:0.5;margin-bottom:8px">\u{1F552} Storm window: ${formatTimeline(earliestFirst)} \u2192 ${formatTimeline(latestLast)}</div>` : ''}
     <div class="impact-table-wrap">
     <table class="impact-table">
-      <thead><tr><th>City</th><th>Precip</th><th>Storm Timeline</th><th>Resilience</th><th>Impact</th><th>School Impact</th><th>Snow War Activity</th><th>Details</th></tr></thead>
+      <thead><tr><th>City</th><th>Precip</th><th>Storm Timeline</th><th>Melt-Out</th><th>Resilience</th><th>Impact</th><th>School Impact</th><th>Snow War Activity</th><th>Details</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
     </div>
