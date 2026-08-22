@@ -4744,6 +4744,22 @@ function projectAnnualLoss(city, fromDate) {
   return total;
 }
 
+// One formatter for the whole scale. Takes days, returns a human string.
+// Below a quarter day the engine has no diurnal cycle to justify a number,
+// so it says so rather than claiming a 36-minute melt-out.
+function formatMeltDuration(days) {
+  if (!isFinite(days)) return 'Permanent';
+  if (days < 0.25) return 'within hours';
+  if (days < 2) return Math.round(days * 24) + 'h';
+  if (days < 21) return Math.floor(days) + 'd ' + Math.round((days % 1) * 24) + 'h';
+  if (days < 90) return (days / 7).toFixed(1) + ' weeks';
+  if (days < 730) return (days / 30.44).toFixed(1) + ' months';
+  const years = days / 365.25;
+  if (years < 100) return years.toFixed(1) + ' years';
+  if (years < PERMANENT_YEARS) return Math.round(years / 100) + ' centuries';
+  return 'Permanent';
+}
+
 function computeAllTimelines() {
   // Seed the PRNG so the timeline is a deterministic function of the inputs.
   const nativeRandom = Math.random;
@@ -7130,6 +7146,19 @@ window.__snowTests.push((t, approx) => {
     hasStormTemp:true, stormTemp:10, warming:{long:'locked'},
     phases:[{type:'snowball', amount:12}]}, dec);
   t('pack still clears past the horizon', isFinite(lockedForever.meltOutDays));
+});
+
+window.__snowTests.push((t, approx) => {
+  t('sub-resolution', formatMeltDuration(0.03) === 'within hours');
+  t('quarter day boundary', formatMeltDuration(0.3) === '7h');
+  t('hours', formatMeltDuration(0.5) === '12h');
+  t('two days', formatMeltDuration(2) === '2d 0h');
+  t('days and hours', formatMeltDuration(5.25) === '5d 6h');
+  t('weeks', formatMeltDuration(30) === '4.3 weeks');
+  t('months', formatMeltDuration(200) === '6.6 months');
+  t('years', formatMeltDuration(1200) === '3.3 years');
+  t('centuries', formatMeltDuration(400000) === '11 centuries');
+  t('permanent', formatMeltDuration(Infinity) === 'Permanent');
 });
 
 window.addEventListener('load', () => {
