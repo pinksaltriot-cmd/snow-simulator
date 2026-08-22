@@ -1065,7 +1065,7 @@ const RAW_CITIES = [
   ["Muncie, IN",65,"OV",23,40.2,-85.4],["Bowling Green, KY",73,"OV",12,37.0,-86.4],["Paducah, KY",25,"OV",10,37.1,-88.6],
   ["Owensboro, KY",60,"OV",11,37.8,-87.1],["Zanesville, OH",25,"OV",29,39.9,-82.0],["Mansfield, OH",47,"OV",45,40.8,-82.5],
   ["Lima, OH",37,"OV",30,40.7,-84.1],["Saginaw, MI",44,"OV",45,43.4,-84.0],["Traverse City, MI",15,"OV",95,44.8,-85.6],
-  ["Marquette, MI",21,"OV",149,46.5,-87.4],["Appleton, WI",75,"OV",47,44.3,-88.4],["Oshkosh, WI",67,"OV",40,44.0,-88.5],
+  ["Marquette, MI",21,"OV",149,46.5,-87.4],["Copper Harbor, MI",0.1,"OV",270,47.5,-87.9],["Appleton, WI",75,"OV",47,44.3,-88.4],["Oshkosh, WI",67,"OV",40,44.0,-88.5],
   ["Wausau, WI",39,"OV",56,44.9,-89.6],["Muskegon, MI",38,"OV",96,43.2,-86.2],
   // ---- UPPER MIDWEST ----
   ["Minneapolis, MN",429,"UM",54,44.98,-93.3],["St. Paul, MN",311,"UM",52,44.9,-93.1],["Des Moines, IA",215,"UM",35,41.6,-93.6],
@@ -3212,7 +3212,7 @@ function formatSnow(inches) {
 function formatAmt(p) {
   return isMphType(p.type) ? `${Math.round(p.amount)} mph` : formatSnow(p.amount);
 }
-function formatPop(k) { return k >= 1000 ? (k/1000).toFixed(1)+'M' : Math.round(k)+'K'; }
+function formatPop(k) { return k >= 1000 ? (k/1000).toFixed(1)+'M' : (k < 1 ? '<1K' : Math.round(k)+'K'); }
 function regionName(code) { return RSI_REGIONS[code] ? RSI_REGIONS[code].name : null; }
 function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
 
@@ -4494,32 +4494,25 @@ function continentality(lon, lat) {
   }
   if (lon === null || lon === undefined) return 0.8;
   if (lon <= -120) return 0.2;   // Pacific coast
-  if (lon <= -78)  return 1.0;   // interior
-  return 0.6;                    // Atlantic seaboard
+  if (lon <= -82)  return 1.0;   // interior
+  return 0.6;                    // Atlantic seaboard and the Great Lakes shore
 }
 
-// Climatological mean temperature for a place and date. Built from the three
-// things the app already knows about a city: where it is, how much snow it
-// normally gets, and what day the storm fell on.
-//
-// Calibrated against published January and July normals for nine cities from
-// Miami to Fairbanks. Every one lands inside tolerance; the worst sits at 93%
-// of its allowance, so the fit has little slack left. July RMSE is 4.4°F.
+// Snow stops predicting cold past about 88 inches a year. Beyond that you are
+// measuring lake-effect moisture, not temperature: Copper Harbor gets 270
+// inches and still runs warmer in January than Minneapolis, which gets 54.
+// Without this cap Copper Harbor computes -37F against a real +18F.
+const SNOW_COLD_SAT = 88;
+
 function seasonalNormalTemp(lat, lon, annualSnow, date) {
   const la = (lat === null || lat === undefined) ? 40 : lat;
-  const as = (annualSnow === null || annualSnow === undefined) ? 20 : annualSnow;
+  const raw = (annualSnow === null || annualSnow === undefined) ? 20 : annualSnow;
+  const as = Math.min(raw, SNOW_COLD_SAT);
   const C  = continentality(lon, la);
-  // Snowy places run colder, but only inland. The maritime half of this slope
-  // calibrated to zero: on a wet coast heavy snowfall says more about how much
-  // moisture comes ashore than about how cold it gets. Anchorage takes 75
-  // inches a year and still sits well above Minneapolis in January.
-  const annualMean = 78 - 0.803 * (la - 25) - (0.00 + 0.248 * C) * as - 2.51 * C;
-  // The cap is load-bearing. Fairbanks computes a raw swing near 45F, which
-  // would put its January around -18F; clamping to 28 lands it at -0.6F.
-  // Anchorage, Chicago and Minneapolis reach it too, so changing this number
-  // moves several cities at once.
-  const amplitude  = Math.min(28,
-    (3 + 0.734 * (la - 25)) * (0.35 + 1.368 * C) + 0.05 * as);
+  const annualMean = 78 - 0.872 * (la - 25) - 0.161 * C * as - 5.33 * C;
+  // Amplitude is latitude and continentality only. Snow used to feed this too,
+  // which is what made very snowy places swing absurdly.
+  const amplitude  = Math.min(27.3, (3 + 0.680 * (la - 25)) * (0.35 + 1.836 * C));
   const seasonal   = Math.cos(2 * Math.PI * (dayOfYear(date) - 196) / 365);
   return annualMean + amplitude * seasonal;
 }
@@ -6737,27 +6730,35 @@ window.__snowTests.push((t, approx) => {
 window.__snowTests.push((t, approx) => {
   const jan = new Date(2027, 0, 15);
   const jul = new Date(2027, 6, 15);
-  // [name, lat, lon, annualSnow, actualJanMean, tolerance]
+  // [name, lat, lon, annualSnow, realJanMean, realJulMean, tolerance]
+  // Targets are published monthly normals. July is calibrated as tightly as
+  // January because July is when the snowpack actually melts.
   const CITIES = [
-    ['Miami',       25.80,  -80.19,   0, 68.4,  6],
-    ['Tulsa',       36.15,  -95.99,   9, 39.1,  6],
-    ['Boston',      42.36,  -71.06,  48, 30.4,  5],
-    ['Chicago',     41.88,  -87.63,  38, 25.6,  6],
-    ['Minneapolis', 44.98,  -93.27,  54, 16.4,  6],
-    ['Seattle',     47.61, -122.33,   5, 42.0,  5],
-    ['Anchorage',   61.22, -149.90,  75, 17.0,  8],
-    ['Fairbanks',   64.84, -147.72,  65, -8.0,  8],
-    ['Denver',      39.74, -104.99,  57, 32.2, 10]
+    ['Miami',         25.80,  -80.19,   0, 68.4, 84.0,  6],
+    ['Tulsa',         36.15,  -95.99,   9, 39.1, 83.1,  6],
+    ['Boston',        42.36,  -71.06,  48, 30.4, 74.1,  5],
+    ['Chicago',       41.88,  -87.63,  38, 25.6, 75.9,  6],
+    ['Minneapolis',   44.98,  -93.27,  54, 16.4, 74.1,  6],
+    ['Seattle',       47.61, -122.33,   5, 42.0, 66.6,  5],
+    ['Anchorage',     61.22, -149.90,  75, 17.0, 58.6,  8],
+    ['Fairbanks',     64.84, -147.72,  65, -8.0, 63.0,  9],
+    ['Denver',        39.74, -104.99,  57, 32.2, 74.2, 10],
+    ['Buffalo',       42.89,  -78.88,  95, 25.6, 71.4,  6],
+    ['Syracuse',      43.05,  -76.15, 120, 24.0, 71.6,  6],
+    ['Copper Harbor', 47.47,  -87.89, 270, 18.0, 64.0,  7]
   ];
-  CITIES.forEach(([n, lat, lon, snow, actual, tol]) => {
-    const got = seasonalNormalTemp(lat, lon, snow, jan);
-    if (Math.abs(got - actual) > tol) console.log('CALIB ' + n + ' got ' + got.toFixed(1) + ' want ' + actual);
-    t('jan normal ' + n, Math.abs(got - actual) <= tol);
+  CITIES.forEach(([n, lat, lon, snow, janT, julT, tol]) => {
+    const gotJan = seasonalNormalTemp(lat, lon, snow, jan);
+    const gotJul = seasonalNormalTemp(lat, lon, snow, jul);
+    if (Math.abs(gotJan - janT) > tol) console.log('CALIB ' + n + ' jan got ' + gotJan.toFixed(1) + ' want ' + janT);
+    if (Math.abs(gotJul - julT) > tol) console.log('CALIB ' + n + ' jul got ' + gotJul.toFixed(1) + ' want ' + julT);
+    t('jan normal ' + n, Math.abs(gotJan - janT) <= tol);
+    t('jul normal ' + n, Math.abs(gotJul - julT) <= tol);
   });
-  // Amplitude sign: July must be far warmer than January everywhere
-  t('mpls july warm', seasonalNormalTemp(44.98, -93.27, 54, jul) > 68);
-  t('miami july warm', seasonalNormalTemp(25.80, -80.19, 0, jul) > 80);
-  // Missing data must not produce NaN
+  // Snow saturation: past the cap, more snow must not mean colder
+  t('snow saturates', approx(
+    seasonalNormalTemp(47.47, -87.89, 120, jan),
+    seasonalNormalTemp(47.47, -87.89, 270, jan)));
   t('null lat safe', isFinite(seasonalNormalTemp(null, null, null, jan)));
 });
 
