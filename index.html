@@ -4628,6 +4628,122 @@ function hasWarmingPicks(city) {
   return !!w && ['short','medium','long'].some(k => w[k] && w[k] !== 'auto');
 }
 
+// Degree-day factor: inches of snow-water melted per °F above the melt
+// threshold per day. Rises from midwinter to midsummer with the sun angle,
+// which is what makes a March pack behave nothing like a December one at the
+// same temperature.
+function ddf(date, lat) {
+  const seasonal = Math.cos(2 * Math.PI * (dayOfYear(date) - 196) / 365); // -1 Jan, +1 Jul
+  const base = 0.0775 + 0.0325 * seasonal;      // 0.045 in January, 0.110 in July
+  const la = (lat === null || lat === undefined) ? 40 : lat;
+  return Math.max(0.02, base * (1 - 0.004 * (la - 40)));
+}
+
+// Melt starts below freezing, because a daily *mean* of 30°F still contains a
+// sunny afternoon above it. 30°F is the standard operational threshold.
+const MELT_THRESHOLD_F = 30;
+
+// Ground heat, sublimation and wind scour, lumped into one always-on term.
+// This is what actually removes a trace: at a 30°F mean the degree-day term is
+// zero, and without this a dusting would sit on the lawn for years. Flat
+// rather than proportional because these are surface processes — a 1,000-inch
+// pack does not sublimate a thousand times faster than a 1-inch one.
+const GROUND_FLUX = 0.004;             // inches SWE per day
+
+const MELT_SIM_DAY_LIMIT = 1826;       // 5 years of daily steps
+const PERMANENT_YEARS = 10000;
+
+function windowTempFor(dayIndex, temps, date, city) {
+  if (dayIndex <= 2) return temps.short;
+  if (dayIndex <= 7) return temps.medium;
+  if (dayIndex <= PICK_HORIZON_DAYS) return temps.long;
+  // Past the horizon a pick stops governing; climatology takes over. A user's
+  // read on "days 8+" is a forecast, not a climate.
+  return seasonalNormalTemp(city.lat, city.lon, city.annualSnow, date);
+}
+
+// Keep the plotted curve under a fixed budget: daily for the first month,
+// fortnightly through the first year, every two months after that. A five-year
+// simulation must still fit in about 90 points.
+function shouldSample(day) {
+  if (day <= 30) return true;
+  if (day <= 365) return day % 14 === 0;
+  return day % 60 === 0;
+}
+
+function simulateMelt(city, stormEnd) {
+  let swe = packSWE(city.phases);
+  if (swe <= 0) return null;
+
+  const temps = resolveWindowTemps(city, stormEnd);
+  const fresh = freshDensityRatio(city.phases);
+  const peakDepth = swe * fresh;
+
+  // Rain that fell during the storm is already on the pack. Rain never falls
+  // colder than 33°F, whatever the window mean says.
+  const rainInches = (city.phases || [])
+    .filter(p => p.type === 'rain')
+    .reduce((s, p) => s + Math.max(0, p.amount || 0), 0);
+  const rainTemp = Math.max(33, temps.short);
+
+  const curve = [{ day: 0, date: stormEnd, depth: peakDepth, swe }];
+  let day = 0, meltOutDay = null;
+
+  while (swe > 0.001 && day < MELT_SIM_DAY_LIMIT) {
+    day++;
+    const date = addDays(stormEnd, day);
+    const tmean = windowTempFor(day, temps, date, city);
+
+    let melt = ddf(date, city.lat) * Math.max(0, tmean - MELT_THRESHOLD_F) + GROUND_FLUX;
+    if (day === 1 && rainInches > 0) melt += 0.007 * rainInches * (rainTemp - 32);
+
+    const before = swe;
+    swe = Math.max(0, swe - melt);
+    if (shouldSample(day) || swe <= 0.001) {
+      curve.push({ day, date, depth: swe * packRatioAt(fresh, day), swe });
+    }
+    // Resolve melt-out to a fraction of the day rather than snapping to the
+    // integer step. A 0.05" dusting and a 3" pack must not both "last one
+    // day", and any effect smaller than one day's melt — rain-on-snow above
+    // all, which is worth about 0.04" of SWE — would otherwise round away to
+    // nothing. `melt` is always at least GROUND_FLUX, so it is never zero.
+    if (swe <= 0.001) meltOutDay = (day - 1) + Math.min(1, before / melt);
+  }
+
+  let permanent = false;
+  if (meltOutDay === null) {
+    // Past five years, project on an annual balance instead of stepping days.
+    const annualLoss = projectAnnualLoss(city, addDays(stormEnd, MELT_SIM_DAY_LIMIT));
+    if (annualLoss <= 0) {
+      permanent = true;
+    } else {
+      const yearsLeft = swe / annualLoss;
+      if (yearsLeft > PERMANENT_YEARS) permanent = true;
+      else meltOutDay = MELT_SIM_DAY_LIMIT + yearsLeft * 365.25;
+    }
+  }
+
+  return {
+    curve, peakDepth, temps, permanent,
+    meltOutDays: permanent ? Infinity : meltOutDay,
+    meltOutDate: permanent ? null : addDays(stormEnd, meltOutDay),
+    stormEnd
+  };
+}
+
+// Twelve monthly samples of the climatological melt rate, summed into an
+// annual loss. Used only past the daily simulation's five-year limit.
+function projectAnnualLoss(city, fromDate) {
+  let total = 0;
+  for (let m = 0; m < 12; m++) {
+    const d = addDays(fromDate, m * 30.44);
+    const tmean = seasonalNormalTemp(city.lat, city.lon, city.annualSnow, d);
+    const daily = ddf(d, city.lat) * Math.max(0, tmean - MELT_THRESHOLD_F) + GROUND_FLUX;
+    total += daily * 30.44;
+  }
+  return total;
+}
+
 function computeAllTimelines() {
   // Seed the PRNG so the timeline is a deterministic function of the inputs.
   const nativeRandom = Math.random;
@@ -6956,6 +7072,64 @@ window.__snowTests.push((t, approx) => {
   t('empty warming object', hasWarmingPicks({...tulsa, warming:{}}) === false);
   t('all auto', hasWarmingPicks({...tulsa, warming:{short:'auto',medium:'auto',long:'auto'}}) === false);
   t('one real pick', hasWarmingPicks({...tulsa, warming:{medium:'rapid'}}) === true);
+});
+
+window.__snowTests.push((t, approx) => {
+  const dec = new Date(2026, 11, 15, 18, 0);
+  const mar = new Date(2027, 2, 14, 18, 0);
+  const base = { lat: 36.15, lon: -95.99, annualSnow: 9, phases: [{type:'snowball', amount:34}] };
+
+  const cold = simulateMelt({...base, hasStormTemp:true, stormTemp:5}, dec);
+  const warm = simulateMelt({...base, hasStormTemp:true, stormTemp:38}, dec);
+  t('cold pack outlasts warm pack', cold.meltOutDays > warm.meltOutDays);
+  t('peak depth is what fell', approx(cold.peakDepth, 34));
+  t('curve starts at peak', approx(cold.curve[0].depth, 34));
+  t('curve ends bare', cold.curve[cold.curve.length - 1].depth < 0.5);
+  t('melt-out is a date', cold.meltOutDate instanceof Date);
+
+  // Seasonality: the same storm in March melts faster than in December
+  const decMelt = simulateMelt({...base, hasStormTemp:true, stormTemp:28}, dec);
+  const marMelt = simulateMelt({...base, hasStormTemp:true, stormTemp:28}, mar);
+  t('march beats december', marMelt.meltOutDays < decMelt.meltOutDays);
+
+  // Warming picks move the answer in the right direction
+  const locked = simulateMelt({...base, hasStormTemp:true, stormTemp:28, warming:{short:'locked',medium:'locked',long:'locked'}}, dec);
+  const thaw   = simulateMelt({...base, hasStormTemp:true, stormTemp:28, warming:{short:'rapid',medium:'rapid',long:'rapid'}}, dec);
+  t('locked cold holds the pack', locked.meltOutDays > decMelt.meltOutDays);
+  t('rapid thaw clears it', thaw.meltOutDays < decMelt.meltOutDays);
+
+  // Rain during the storm eats the pack
+  const dry = simulateMelt({...base, hasStormTemp:true, stormTemp:33}, dec);
+  const wet = simulateMelt({...base, hasStormTemp:true, stormTemp:33,
+                            phases:[{type:'snowball', amount:34},{type:'rain', amount:1.5}]}, dec);
+  t('rain on snow accelerates', wet.meltOutDays < dry.meltOutDays);
+
+  // Determinism
+  const a = simulateMelt({...base, hasStormTemp:true, stormTemp:12}, dec);
+  const b = simulateMelt({...base, hasStormTemp:true, stormTemp:12}, dec);
+  t('deterministic', a.meltOutDays === b.meltOutDays && a.curve.length === b.curve.length);
+
+  // Trace melts in hours, not days
+  const trace = simulateMelt({...base, phases:[{type:'snowball', amount:0.05}], hasStormTemp:true, stormTemp:30}, dec);
+  t('trace goes fast', trace.meltOutDays <= 3);
+
+  // Absurd depth terminates, reports in years, and does not hang or NaN
+  const monster = simulateMelt({...base, lat:64, lon:-147, annualSnow:70,
+    phases:[{type:'powder', amount:10000}], hasStormTemp:true, stormTemp:-20}, dec);
+  t('monster terminates', isFinite(monster.meltOutDays) || monster.permanent);
+  t('monster is not NaN', !isNaN(monster.peakDepth));
+  t('monster takes years', monster.permanent || monster.meltOutDays > 365);
+  t('curve stays plottable', monster.curve.length <= 120);
+
+  // Rain-only city has no pack at all
+  const rainOnly = simulateMelt({...base, phases:[{type:'rain', amount:2}]}, dec);
+  t('rain-only has no pack', rainOnly === null);
+
+  // The pick horizon: a pick must stop governing after 60 days
+  const lockedForever = simulateMelt({lat:44.98, lon:-93.27, annualSnow:54,
+    hasStormTemp:true, stormTemp:10, warming:{long:'locked'},
+    phases:[{type:'snowball', amount:12}]}, dec);
+  t('pack still clears past the horizon', isFinite(lockedForever.meltOutDays));
 });
 
 window.addEventListener('load', () => {
