@@ -890,11 +890,11 @@
       </div>
     </div>
     <div class="cold-row">
-      <label class="cold-toggle"><input type="checkbox" id="coldCheck"> Record cold?</label>
+      <label class="cold-toggle"><input type="checkbox" id="coldCheck"> Storm temp?</label>
       <div class="cold-field" id="coldField">
         <div>
-          <label for="coldInput">Low temp</label>
-          <input type="number" id="coldInput" placeholder="e.g. -5">
+          <label for="coldInput">Storm temp</label>
+          <input type="number" id="coldInput" placeholder="e.g. 18">
         </div>
         <span class="unit">&deg;F</span>
       </div>
@@ -2446,57 +2446,57 @@ function getSnowWar(phases) {
    physical regimes (Arctic to Vostok to absolute zero) and extended into
    theoretical / cosmic regimes for full coherence with the Omega-scale
    precipitation tiers. */
-function getColdMultiplier(coldTemp) {
-  if (coldTemp === null || coldTemp === undefined || isNaN(coldTemp)) return 1.0;
-  if (coldTemp >  20) return 1.10;   // Cool
-  if (coldTemp >  10) return 1.15;   // Cold
-  if (coldTemp >   0) return 1.25;   // Bitter
-  if (coldTemp > -10) return 1.40;   // Hard Freeze
-  if (coldTemp > -20) return 1.60;   // Severe Cold
-  if (coldTemp > -40) return 1.80;   // Extreme Cold (lower-48 records)
-  if (coldTemp > -60) return 2.10;   // Brutal Cold (Alaska interior)
-  if (coldTemp > -80) return 2.50;   // Polar Vortex Core
-  if (coldTemp > -100) return 2.95;  // Antarctic-Class
-  if (coldTemp > -130) return 3.50;  // Vostok-Class (Earth's coldest)
-  if (coldTemp > -160) return 4.20;  // Beyond Earth Records
-  if (coldTemp > -200) return 5.10;  // Stratopause-Class
-  if (coldTemp > -250) return 6.30;  // Cryogenic
-  if (coldTemp > -300) return 7.80;  // Deep Cryogenic
-  if (coldTemp > -350) return 9.80;  // Lunar-Surface-Class
-  if (coldTemp > -400) return 12.5;  // Approaching Liquid-N₂
-  if (coldTemp > -440) return 16.0;  // Below Absolute Zero (unphysical)
-  if (coldTemp > -500) return 21.0;  // Negative Kelvin Regime
-  if (coldTemp > -700) return 28.0;  // Quantum Coldlock
-  if (coldTemp > -1000) return 40.0; // Stellar-Void Cold
-  if (coldTemp > -2000) return 60.0; // Cosmic Frost Wall
-  if (coldTemp > -5000) return 90.0; // Pre-Big-Bang Heat Death
+function getColdMultiplier(stormTemp) {
+  if (stormTemp === null || stormTemp === undefined || isNaN(stormTemp)) return 1.0;
+  if (stormTemp >  20) return 1.10;   // Cool
+  if (stormTemp >  10) return 1.15;   // Cold
+  if (stormTemp >   0) return 1.25;   // Bitter
+  if (stormTemp > -10) return 1.40;   // Hard Freeze
+  if (stormTemp > -20) return 1.60;   // Severe Cold
+  if (stormTemp > -40) return 1.80;   // Extreme Cold (lower-48 records)
+  if (stormTemp > -60) return 2.10;   // Brutal Cold (Alaska interior)
+  if (stormTemp > -80) return 2.50;   // Polar Vortex Core
+  if (stormTemp > -100) return 2.95;  // Antarctic-Class
+  if (stormTemp > -130) return 3.50;  // Vostok-Class (Earth's coldest)
+  if (stormTemp > -160) return 4.20;  // Beyond Earth Records
+  if (stormTemp > -200) return 5.10;  // Stratopause-Class
+  if (stormTemp > -250) return 6.30;  // Cryogenic
+  if (stormTemp > -300) return 7.80;  // Deep Cryogenic
+  if (stormTemp > -350) return 9.80;  // Lunar-Surface-Class
+  if (stormTemp > -400) return 12.5;  // Approaching Liquid-N₂
+  if (stormTemp > -440) return 16.0;  // Below Absolute Zero (unphysical)
+  if (stormTemp > -500) return 21.0;  // Negative Kelvin Regime
+  if (stormTemp > -700) return 28.0;  // Quantum Coldlock
+  if (stormTemp > -1000) return 40.0; // Stellar-Void Cold
+  if (stormTemp > -2000) return 60.0; // Cosmic Frost Wall
+  if (stormTemp > -5000) return 90.0; // Pre-Big-Bang Heat Death
   return 150.0;                      // Omega Frost Singularity
 }
 
-function getColdLabel(coldTemp) {
-  if (coldTemp === null || coldTemp === undefined || isNaN(coldTemp)) return null;
-  if (coldTemp >  20) return { label: 'Cool',                    icon: '\u{1F321}️' };
-  if (coldTemp >  10) return { label: 'Cold',                    icon: '\u{1F976}' };
-  if (coldTemp >   0) return { label: 'Bitter Cold',             icon: '\u{1F976}' };
-  if (coldTemp > -10) return { label: 'Hard Freeze',             icon: '❄️' };
-  if (coldTemp > -20) return { label: 'Severe Cold',             icon: '❄️❄️' };
-  if (coldTemp > -40) return { label: 'Extreme Cold',            icon: '\u{1F9CA}' };
-  if (coldTemp > -60) return { label: 'Brutal Cold',             icon: '\u{1F9CA}\u{1F9CA}' };
-  if (coldTemp > -80) return { label: 'Polar Vortex Core',       icon: '\u{1F300}' };
-  if (coldTemp > -100) return { label: 'Antarctic-Class',        icon: '\u{1F9CA}\u{1F9CA}\u{1F9CA}' };
-  if (coldTemp > -130) return { label: 'Vostok-Class',           icon: '\u{1F30D}\u{1F9CA}' };
-  if (coldTemp > -160) return { label: 'Beyond Earth Records',   icon: '\u{1F6A8}' };
-  if (coldTemp > -200) return { label: 'Stratopause-Class',      icon: '\u{1F31F}' };
-  if (coldTemp > -250) return { label: 'Cryogenic',              icon: '\u{1F9EA}' };
-  if (coldTemp > -300) return { label: 'Deep Cryogenic',         icon: '\u{1F9EA}\u{1F9EA}' };
-  if (coldTemp > -350) return { label: 'Lunar-Surface-Class',    icon: '\u{1F315}' };
-  if (coldTemp > -400) return { label: 'Approaching Liquid-N₂', icon: '⚠️\u{1F9CA}' };
-  if (coldTemp > -440) return { label: 'Below Absolute Zero',    icon: '⛔\u{1F9CA}' };
-  if (coldTemp > -500) return { label: 'Negative Kelvin Regime', icon: '♾️' };
-  if (coldTemp > -700) return { label: 'Quantum Coldlock',       icon: '⚛️' };
-  if (coldTemp > -1000) return { label: 'Stellar-Void Cold',     icon: '\u{1F30C}' };
-  if (coldTemp > -2000) return { label: 'Cosmic Frost Wall',     icon: '\u{1F30C}\u{1F30C}' };
-  if (coldTemp > -5000) return { label: 'Pre-Big-Bang Heat Death', icon: '\u{1F4A0}' };
+function getColdLabel(stormTemp) {
+  if (stormTemp === null || stormTemp === undefined || isNaN(stormTemp)) return null;
+  if (stormTemp >  20) return { label: 'Cool',                    icon: '\u{1F321}️' };
+  if (stormTemp >  10) return { label: 'Cold',                    icon: '\u{1F976}' };
+  if (stormTemp >   0) return { label: 'Bitter Cold',             icon: '\u{1F976}' };
+  if (stormTemp > -10) return { label: 'Hard Freeze',             icon: '❄️' };
+  if (stormTemp > -20) return { label: 'Severe Cold',             icon: '❄️❄️' };
+  if (stormTemp > -40) return { label: 'Extreme Cold',            icon: '\u{1F9CA}' };
+  if (stormTemp > -60) return { label: 'Brutal Cold',             icon: '\u{1F9CA}\u{1F9CA}' };
+  if (stormTemp > -80) return { label: 'Polar Vortex Core',       icon: '\u{1F300}' };
+  if (stormTemp > -100) return { label: 'Antarctic-Class',        icon: '\u{1F9CA}\u{1F9CA}\u{1F9CA}' };
+  if (stormTemp > -130) return { label: 'Vostok-Class',           icon: '\u{1F30D}\u{1F9CA}' };
+  if (stormTemp > -160) return { label: 'Beyond Earth Records',   icon: '\u{1F6A8}' };
+  if (stormTemp > -200) return { label: 'Stratopause-Class',      icon: '\u{1F31F}' };
+  if (stormTemp > -250) return { label: 'Cryogenic',              icon: '\u{1F9EA}' };
+  if (stormTemp > -300) return { label: 'Deep Cryogenic',         icon: '\u{1F9EA}\u{1F9EA}' };
+  if (stormTemp > -350) return { label: 'Lunar-Surface-Class',    icon: '\u{1F315}' };
+  if (stormTemp > -400) return { label: 'Approaching Liquid-N₂', icon: '⚠️\u{1F9CA}' };
+  if (stormTemp > -440) return { label: 'Below Absolute Zero',    icon: '⛔\u{1F9CA}' };
+  if (stormTemp > -500) return { label: 'Negative Kelvin Regime', icon: '♾️' };
+  if (stormTemp > -700) return { label: 'Quantum Coldlock',       icon: '⚛️' };
+  if (stormTemp > -1000) return { label: 'Stellar-Void Cold',     icon: '\u{1F30C}' };
+  if (stormTemp > -2000) return { label: 'Cosmic Frost Wall',     icon: '\u{1F30C}\u{1F30C}' };
+  if (stormTemp > -5000) return { label: 'Pre-Big-Bang Heat Death', icon: '\u{1F4A0}' };
   return                       { label: 'Omega Frost Singularity', icon: '\u{1F300}\u{1F300}\u{1F300}' };
 }
 
@@ -2650,9 +2650,9 @@ function getPressureLabel(pressure) {
   return                       { label: 'Omega Pressure Singularity', icon: '\u{1F300}\u{1F300}\u{1F300}' };
 }
 
-function getImpact(snow, annualSnow, recordCold, coldTemp, snowEquivalent, windSpeed, gustSpeed, lat, pressure) {
+function getImpact(snow, annualSnow, hasStormTemp, stormTemp, snowEquivalent, windSpeed, gustSpeed, lat, pressure) {
   const factor = getResilienceFactor(annualSnow, lat);
-  const coldMult = recordCold ? getColdMultiplier(coldTemp) : 1.0;
+  const coldMult = hasStormTemp ? getColdMultiplier(stormTemp) : 1.0;
   const windMult = getWindMultiplier(windSpeed, gustSpeed);
   const pressureMult = getPressureMultiplier(pressure);
   // Use snowEquivalent (precip-type-weighted) when available, otherwise raw snow
@@ -2662,8 +2662,8 @@ function getImpact(snow, annualSnow, recordCold, coldTemp, snowEquivalent, windS
   // low-resilience regions (Florida, Caribbean, Deep South) where infrastructure
   // and population are unprepared for freezing temperatures.
   let coldBaseline = 0;
-  if (recordCold && coldTemp !== null && coldTemp !== undefined) {
-    const degBelow = Math.max(0, 32 - coldTemp);
+  if (hasStormTemp && stormTemp !== null && stormTemp !== undefined) {
+    const degBelow = Math.max(0, 32 - stormTemp);
     const rawCold = degBelow * 0.1;
     coldBaseline = rawCold / factor;
   }
@@ -3261,9 +3261,9 @@ function addCity() {
   if (!phases) { inputError.textContent = 'Add at least one precipitation phase with a valid amount (number, "Trace", or "Half a Trace").'; return; }
   if (!phases.length) { inputError.textContent = 'Add at least one precipitation phase.'; return; }
   const db = lookupCity(name);
-  const recordCold = coldCheck.checked;
-  const coldTemp = recordCold ? parseFloat(coldInput.value) : null;
-  if (recordCold && isNaN(coldTemp)) { inputError.textContent = 'Enter a valid temperature for record cold.'; return; }
+  const hasStormTemp = coldCheck.checked;
+  const stormTemp = hasStormTemp ? parseFloat(coldInput.value) : null;
+  if (hasStormTemp && isNaN(stormTemp)) { inputError.textContent = 'Enter a valid storm temperature.'; return; }
   const windSpeed = windInput.value ? parseFloat(windInput.value) : null;
   const gustSpeedVal = gustInput.value ? parseFloat(gustInput.value) : null;
   if (windSpeed !== null && isNaN(windSpeed)) { inputError.textContent = 'Enter a valid wind speed.'; return; }
@@ -3275,7 +3275,7 @@ function addCity() {
     name, phases, snow: derived.snow, snowEquivalent: derived.snowEquivalent,
     pop: db?db.pop:null, region: db?db.r:null, annualSnow: db?db.snow:null,
     lat: db?db.lat:null, lon: db?db.lon:null,
-    recordCold, coldTemp,
+    hasStormTemp, stormTemp,
     windSpeed, gustSpeed: gustSpeedVal,
     pressure
   });
@@ -3299,7 +3299,8 @@ function renderCityList() {
     const res = getResilienceLabel(c.annualSnow, c.lat);
     const rn = regionName(c.region);
     const meta = [rn||'Non-RSI', `${res.icon} ${res.label}`].join(' | ');
-    const coldTag = c.recordCold ? ` <span style="color:#93c5fd;font-size:0.8rem">\u{1F976} ${c.coldTemp}\u00b0F</span>` : '';
+    const tempLbl = c.hasStormTemp ? getColdLabel(c.stormTemp) : null;
+    const coldTag = c.hasStormTemp ? ` <span style="color:#93c5fd;font-size:0.8rem">${tempLbl.icon} ${c.stormTemp}\u00b0F</span>` : '';
     const windTag = c.windSpeed ? ` <span style="color:#a5b4fc;font-size:0.8rem">\u{1F4A8} ${c.windSpeed}${c.gustSpeed ? '/G'+c.gustSpeed : ''} mph</span>` : '';
     const pressTag = (c.pressure !== null && c.pressure !== undefined) ? ` <span style="color:#fbbf24;font-size:0.8rem">\u{1F32A}\ufe0f ${c.pressure} mb</span>` : '';
     const phaseSummary = formatPhasesSummary(c.phases);
@@ -3391,8 +3392,8 @@ function classifyStormType(cityList) {
   const totalCities = cityList.length;
   const maxSnow = Math.max(...cityList.map(c => c.snow));
   const avgSnow = cityList.reduce((s, c) => s + c.snow, 0) / totalCities;
-  const hasCold = cityList.some(c => c.recordCold);
-  const coldestTemp = hasCold ? Math.min(...cityList.filter(c => c.recordCold).map(c => c.coldTemp)) : null;
+  const hasCold = cityList.some(c => c.hasStormTemp);
+  const coldestTemp = hasCold ? Math.min(...cityList.filter(c => c.hasStormTemp).map(c => c.stormTemp)) : null;
   const maxWind = Math.max(...cityList.filter(c => c.windSpeed).map(c => c.windSpeed), 0);
 
   // Precip composition across all cities
@@ -3558,8 +3559,8 @@ function generateProfile(rsiOverride) {
   const maxSnowEquiv = Math.max(...sorted.map(c => c.snowEquivalent || c.snow));
   const avgSnow = cities.reduce((s,c) => s+c.snow, 0) / cities.length;
   const storm = getStormClass(maxSnowEquiv);
-  const coldCities = cities.filter(c => c.recordCold);
-  const coldestTemp = coldCities.length ? Math.min(...coldCities.map(c => c.coldTemp)) : null;
+  const coldCities = cities.filter(c => c.hasStormTemp);
+  const coldestTemp = coldCities.length ? Math.min(...coldCities.map(c => c.stormTemp)) : null;
   const stormName = document.getElementById('stormName').value.trim();
   const classification = classifyStormType(cities);
   const rsiResult = calculateRSI();
@@ -3600,7 +3601,7 @@ function generateProfile(rsiOverride) {
     const rainOnly = isRainOnly(c.phases);
     const imp = rainOnly
       ? getRainImpact(totalRainInches(c.phases), c.lat, c.windSpeed, c.gustSpeed, c.pressure)
-      : getImpact(c.snow, c.annualSnow, c.recordCold, c.coldTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure);
+      : getImpact(c.snow, c.annualSnow, c.hasStormTemp, c.stormTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure);
     const res = rainOnly
       ? getRainResilienceLabel(estimateAnnualRain(c.lat, c.lon, c.region), c.lat)
       : getResilienceLabel(c.annualSnow, c.lat);
@@ -3653,11 +3654,14 @@ function generateProfile(rsiOverride) {
       if (c.phases && c.phases.length > 1 && c.snowEquivalent !== c.snow) {
         detail += ` <em style="opacity:0.6">(Snow-equivalent impact: ${formatSnow(c.snowEquivalent)})</em>`;
       }
-      if (c.recordCold) {
+      if (c.hasStormTemp) {
+        const tl = getColdLabel(c.stormTemp);
         if (imp.coldDriven) {
-          detail += ` <em style="color:#93c5fd">\u{1F976} Impact driven by record cold of ${c.coldTemp}\u00b0F \u2014 extreme freeze in an unprepared area</em>`;
-        } else {
-          detail += ` <em style="color:#93c5fd">\u{1F976} Record cold of ${c.coldTemp}\u00b0F amplifies impact (\u00d7${imp.coldMult.toFixed(2)})</em>`;
+          detail += ` <em style="color:#93c5fd">\u{1F976} Impact driven by record cold of ${c.stormTemp}\u00b0F \u2014 extreme freeze in an unprepared area</em>`;
+        } else if (imp.coldMult > 1.0) {
+          detail += ` <em style="color:#93c5fd">\u{1F976} ${tl.label} storm temp of ${c.stormTemp}\u00b0F amplifies impact (\u00d7${imp.coldMult.toFixed(2)})</em>`;
+        } else if (imp.coldMult < 1.0) {
+          detail += ` <em style="color:#fdba74">\u{1F321}\ufe0f ${tl.label} storm temp of ${c.stormTemp}\u00b0F reduces impact (\u00d7${imp.coldMult.toFixed(2)}) \u2014 marginal surfaces, wet snow, early melt</em>`;
         }
       }
       if (c.windSpeed && imp.windMult > 1.0) {
@@ -3699,7 +3703,7 @@ function generateProfile(rsiOverride) {
   const peakCity = sorted.reduce((best, c) => {
     const imp = isRainOnly(c.phases)
       ? getRainImpact(totalRainInches(c.phases), c.lat, c.windSpeed, c.gustSpeed, c.pressure)
-      : getImpact(c.snow, c.annualSnow, c.recordCold, c.coldTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure);
+      : getImpact(c.snow, c.annualSnow, c.hasStormTemp, c.stormTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure);
     return imp.effective > best.eff ? { eff: imp.effective, level: imp.level, name: c.name } : best;
   }, { eff: 0, level: 'None', name: '' });
   const peakEffective = peakCity.eff;
@@ -4641,8 +4645,8 @@ function runTestLadder(ladderType) {
       region: anchor.r,
       annualSnow: anchor.snow,
       lat: anchor.lat, lon: anchor.lon,
-      recordCold: false,
-      coldTemp: null,
+      hasStormTemp: false,
+      stormTemp: null,
       windSpeed: null,
       gustSpeed: null,
       pressure: null
@@ -4683,8 +4687,8 @@ function runRainTestLadder() {
       region: anchor.r,
       annualSnow: anchor.snow,
       lat: anchor.lat, lon: anchor.lon,
-      recordCold: false,
-      coldTemp: null,
+      hasStormTemp: false,
+      stormTemp: null,
       windSpeed: null,
       gustSpeed: null,
       pressure: null
@@ -4824,8 +4828,8 @@ function generateRandomStorm() {
     }
 
     const derived = computeDerivedPrecip(phases);
-    const recordCold = Math.random() < sev.coldChance;
-    const coldTemp = recordCold ? randInt(sev.coldRange[0], sev.coldRange[1]) : null;
+    const hasStormTemp = Math.random() < sev.coldChance;
+    const stormTemp = hasStormTemp ? randInt(sev.coldRange[0], sev.coldRange[1]) : null;
 
     // Generate wind from template wind profile, scaling with severity
     let windSpeed = null, gustSpeedVal = null;
@@ -4864,8 +4868,8 @@ function generateRandomStorm() {
       region: c.r,
       annualSnow: c.snow,
       lat: c.lat, lon: c.lon,
-      recordCold,
-      coldTemp,
+      hasStormTemp,
+      stormTemp,
       windSpeed,
       gustSpeed: gustSpeedVal,
       pressure
@@ -5695,13 +5699,13 @@ function parseParagraphInput() {
     const derived = computeDerivedPrecip(phases);
 
     // Cold
-    let recordCold = false, coldTemp = null;
+    let hasStormTemp = false, stormTemp = null;
     if (coldHint !== null) {
-      recordCold = true;
-      coldTemp = coldHint + randInt(-3, 3);
+      hasStormTemp = true;
+      stormTemp = coldHint + randInt(-3, 3);
     } else if (Math.random() < sev.coldChance) {
-      recordCold = true;
-      coldTemp = randInt(sev.coldRange[0], sev.coldRange[1]);
+      hasStormTemp = true;
+      stormTemp = randInt(sev.coldRange[0], sev.coldRange[1]);
     }
 
     // Wind
@@ -5738,7 +5742,7 @@ function parseParagraphInput() {
       snow: derived.snow, snowEquivalent: derived.snowEquivalent,
       pop: c.pop, region: c.r, annualSnow: c.snow,
       lat: c.lat, lon: c.lon,
-      recordCold, coldTemp, windSpeed, gustSpeed: gustSpeedVal, pressure
+      hasStormTemp, stormTemp, windSpeed, gustSpeed: gustSpeedVal, pressure
     });
   });
 
@@ -5916,8 +5920,8 @@ function tuneToTargetRSI(targetRSI, template) {
 
   // Preserve storm context from the original generator run
   const origCity = cities[0] || {};
-  const hadCold = cities.some(c => c.recordCold);
-  const origColdTemp = cities.find(c => c.recordCold)?.coldTemp ?? null;
+  const hadCold = cities.some(c => c.hasStormTemp);
+  const origColdTemp = cities.find(c => c.hasStormTemp)?.stormTemp ?? null;
   const origWind = origCity.windSpeed ?? null;
   const origGust = origCity.gustSpeed ?? null;
   const origPressure = origCity.pressure ?? null;
@@ -5954,7 +5958,7 @@ function tuneToTargetRSI(targetRSI, template) {
         snowEquivalent: derived.snowEquivalent,
         pop: c.pop, region: c.r, annualSnow: c.snow,
         lat: c.lat, lon: c.lon,
-        recordCold: hadCold, coldTemp: origColdTemp,
+        hasStormTemp: hadCold, stormTemp: origColdTemp,
         windSpeed: origWind, gustSpeed: origGust, pressure: origPressure
       });
     });
@@ -6141,7 +6145,7 @@ function estimateSnowForCity(candidate) {
   if (!anchors.length) return null;
 
   const outOfReach = () => ({
-    snow: 0, snowEquivalent: 0, phases: [], recordCold: false, coldTemp: null,
+    snow: 0, snowEquivalent: 0, phases: [], hasStormTemp: false, stormTemp: null,
     windSpeed: null, gustSpeed: null, pressure: null, minDistance: Infinity, falloff: 0,
     climateFactor: 0, outOfReach: true
   });
@@ -6184,7 +6188,7 @@ function estimateSnowForCity(candidate) {
         snow: a.snow, snowEquivalent: a.snowEquivalent || a.snow,
         snowUnrounded: a.snow, snowEquivalentUnrounded: a.snowEquivalent || a.snow,
         phases: a.phases ? a.phases.map(p => ({ ...p })) : [{ type: 'snowball', amount: a.snow }],
-        recordCold: a.recordCold, coldTemp: a.coldTemp,
+        hasStormTemp: a.hasStormTemp, stormTemp: a.stormTemp,
         windSpeed: a.windSpeed, gustSpeed: a.gustSpeed, pressure: a.pressure ?? null,
         minDistance: 0, falloff: 1, climateFactor: 1, exactMatch: a.name
       };
@@ -6200,7 +6204,7 @@ function estimateSnowForCity(candidate) {
         .reduce((s, p) => s + (p.amount || 0), 0);
       phaseAmounts[type] += w * amt;
     }
-    if (a.recordCold && a.coldTemp != null) coldReports.push({ d, v: a.coldTemp, w });
+    if (a.hasStormTemp && a.stormTemp != null) coldReports.push({ d, v: a.stormTemp, w });
     if (a.windSpeed) windReports.push({ d, v: a.windSpeed, w });
     if (a.gustSpeed) gustReports.push({ d, v: a.gustSpeed, w });
     if (a.pressure != null) pressureReports.push({ d, v: a.pressure, w });
@@ -6318,8 +6322,8 @@ function estimateSnowForCity(candidate) {
   }
   const coldShare = coldReports.reduce((s,r) => s + r.w, 0) / totalW;
   const windShare = windReports.reduce((s,r) => s + r.w, 0) / totalW;
-  const recordCold = coldShare > 0.4;
-  const coldTemp = recordCold ? weightedMean(coldReports) : null;
+  const hasStormTemp = coldShare > 0.4;
+  const stormTemp = hasStormTemp ? weightedMean(coldReports) : null;
   const windSpeed = windShare > 0.3 ? weightedMean(windReports) : null;
   const gustSpeed = windShare > 0.3 ? weightedMean(gustReports) : null;
   // Pressure: report whenever any anchor reported it (very common in synthetic
@@ -6331,7 +6335,7 @@ function estimateSnowForCity(candidate) {
     pressure = Math.round((vSum / pSum) * 10) / 10;
   }
 
-  return { snow, snowEquivalent, snowUnrounded, snowEquivalentUnrounded, phases, recordCold, coldTemp, windSpeed, gustSpeed, pressure, minDistance: minDist, falloff, climateFactor };
+  return { snow, snowEquivalent, snowUnrounded, snowEquivalentUnrounded, phases, hasStormTemp, stormTemp, windSpeed, gustSpeed, pressure, minDistance: minDist, falloff, climateFactor };
 }
 
 function renderGapFillEntries() {
@@ -6342,12 +6346,12 @@ function renderGapFillEntries() {
     const rainOnly = isRainOnly(e.phases);
     const imp = rainOnly
       ? getRainImpact(totalRainInches(e.phases), e.candidate.lat, e.windSpeed, e.gustSpeed, e.pressure)
-      : getImpact(impSnow, e.candidate.snow, e.recordCold, e.coldTemp, impEquiv, e.windSpeed, e.gustSpeed, e.candidate.lat, e.pressure);
+      : getImpact(impSnow, e.candidate.snow, e.hasStormTemp, e.stormTemp, impEquiv, e.windSpeed, e.gustSpeed, e.candidate.lat, e.pressure);
     const res = rainOnly
       ? getRainResilienceLabel(estimateAnnualRain(e.candidate.lat, e.candidate.r), e.candidate.lat)
       : getResilienceLabel(e.candidate.snow, e.candidate.lat);
     const phaseTxt = (e.phases || []).map(p => `${PRECIP_ICONS[p.type]} ${formatAmt(p)}`).join(' + ') || '0.0″';
-    const coldTxt = e.recordCold ? ` &middot; \u{1F976} ${e.coldTemp}\u00b0F` : '';
+    const coldTxt = e.hasStormTemp ? ` &middot; \u{1F976} ${e.stormTemp}\u00b0F` : '';
     const windTxt = e.windSpeed ? ` &middot; \u{1F4A8} ${e.windSpeed}${e.gustSpeed?'/G'+e.gustSpeed:''} mph` : '';
     const pressTxt = (e.pressure != null) ? ` &middot; <span style="color:#fbbf24">\u{1F32A}\ufe0f ${e.pressure} mb</span>` : '';
     const meta = `Interpolated from ${cities.length} ${cities.length===1?'city':'cities'} &middot; nearest ${Math.round(e.minDistance)} mi &middot; confidence ${Math.round(e.falloff*e.climateFactor*100)}%`;
@@ -6393,7 +6397,7 @@ function runGapFill() {
   const impEquiv = est.snowEquivalentUnrounded ?? est.snowEquivalent;
   const imp = isRainOnly(est.phases)
     ? getRainImpact(totalRainInches(est.phases), candidate.lat, est.windSpeed, est.gustSpeed, est.pressure)
-    : getImpact(impSnow, candidate.snow, est.recordCold, est.coldTemp, impEquiv, est.windSpeed, est.gustSpeed, candidate.lat, est.pressure);
+    : getImpact(impSnow, candidate.snow, est.hasStormTemp, est.stormTemp, impEquiv, est.windSpeed, est.gustSpeed, candidate.lat, est.pressure);
   if (imp.level === 'None' || imp.level === 'Trace' || imp.level === 'Dusting' || imp.level === 'Bone Dry' || imp.level === 'Mist' || imp.level === 'Spitting' || imp.level === 'Drizzle') {
     gapFillError.textContent = `${candidate.n} would see no meaningful impact from this storm.`;
     return;
@@ -6465,7 +6469,7 @@ function runGapFillAll() {
     const impEquiv = est.snowEquivalentUnrounded ?? est.snowEquivalent;
     const imp = isRainOnly(est.phases)
       ? getRainImpact(totalRainInches(est.phases), candidate.lat, est.windSpeed, est.gustSpeed, est.pressure)
-      : getImpact(impSnow, candidate.snow, est.recordCold, est.coldTemp, impEquiv, est.windSpeed, est.gustSpeed, candidate.lat, est.pressure);
+      : getImpact(impSnow, candidate.snow, est.hasStormTemp, est.stormTemp, impEquiv, est.windSpeed, est.gustSpeed, candidate.lat, est.pressure);
     if (imp.level === 'None' || imp.level === 'Trace' || imp.level === 'Dusting' || imp.level === 'Bone Dry' || imp.level === 'Mist' || imp.level === 'Spitting' || imp.level === 'Drizzle') continue;
     additions.push({ candidate, ...est });
   }
@@ -6507,8 +6511,8 @@ function addAllGapFillToSim() {
       region: e.candidate.r,
       annualSnow: e.candidate.snow,
       lat: e.candidate.lat, lon: e.candidate.lon,
-      recordCold: e.recordCold,
-      coldTemp: e.coldTemp,
+      hasStormTemp: e.hasStormTemp,
+      stormTemp: e.stormTemp,
       windSpeed: e.windSpeed,
       gustSpeed: e.gustSpeed,
       pressure: e.pressure ?? null
