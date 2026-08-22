@@ -2448,6 +2448,10 @@ function getSnowWar(phases) {
    precipitation tiers. */
 function getColdMultiplier(stormTemp) {
   if (stormTemp === null || stormTemp === undefined || isNaN(stormTemp)) return 1.0;
+  if (stormTemp >  50) return 0.65;   // Torch — pavement never freezes, melt starts on contact
+  if (stormTemp >  40) return 0.78;   // Warm
+  if (stormTemp >  33) return 0.90;   // Mild
+  if (stormTemp >  28) return 1.00;   // Marginal — the neutral case
   if (stormTemp >  20) return 1.10;   // Cool
   if (stormTemp >  10) return 1.15;   // Cold
   if (stormTemp >   0) return 1.25;   // Bitter
@@ -2475,6 +2479,10 @@ function getColdMultiplier(stormTemp) {
 
 function getColdLabel(stormTemp) {
   if (stormTemp === null || stormTemp === undefined || isNaN(stormTemp)) return null;
+  if (stormTemp >  50) return { label: 'Torch',                   icon: '\u{1F525}' };
+  if (stormTemp >  40) return { label: 'Warm',                    icon: '\u{1F321}️' };
+  if (stormTemp >  33) return { label: 'Mild',                    icon: '\u{1F326}️' };
+  if (stormTemp >  28) return { label: 'Marginal',                icon: '\u{1F327}️' };
   if (stormTemp >  20) return { label: 'Cool',                    icon: '\u{1F321}️' };
   if (stormTemp >  10) return { label: 'Cold',                    icon: '\u{1F976}' };
   if (stormTemp >   0) return { label: 'Bitter Cold',             icon: '\u{1F976}' };
@@ -3300,7 +3308,7 @@ function renderCityList() {
     const rn = regionName(c.region);
     const meta = [rn||'Non-RSI', `${res.icon} ${res.label}`].join(' | ');
     const tempLbl = c.hasStormTemp ? getColdLabel(c.stormTemp) : null;
-    const coldTag = c.hasStormTemp ? ` <span style="color:#93c5fd;font-size:0.8rem">${tempLbl.icon} ${c.stormTemp}\u00b0F</span>` : '';
+    const coldTag = c.hasStormTemp ? ` <span style="color:#93c5fd;font-size:0.8rem">${(tempLbl && tempLbl.icon) || '\u{1F321}\ufe0f'} ${c.stormTemp}\u00b0F</span>` : '';
     const windTag = c.windSpeed ? ` <span style="color:#a5b4fc;font-size:0.8rem">\u{1F4A8} ${c.windSpeed}${c.gustSpeed ? '/G'+c.gustSpeed : ''} mph</span>` : '';
     const pressTag = (c.pressure !== null && c.pressure !== undefined) ? ` <span style="color:#fbbf24;font-size:0.8rem">\u{1F32A}\ufe0f ${c.pressure} mb</span>` : '';
     const phaseSummary = formatPhasesSummary(c.phases);
@@ -3659,9 +3667,9 @@ function generateProfile(rsiOverride) {
         if (imp.coldDriven) {
           detail += ` <em style="color:#93c5fd">\u{1F976} Impact driven by record cold of ${c.stormTemp}\u00b0F \u2014 extreme freeze in an unprepared area</em>`;
         } else if (imp.coldMult > 1.0) {
-          detail += ` <em style="color:#93c5fd">\u{1F976} ${tl.label} storm temp of ${c.stormTemp}\u00b0F amplifies impact (\u00d7${imp.coldMult.toFixed(2)})</em>`;
+          detail += ` <em style="color:#93c5fd">\u{1F976} ${(tl && tl.label) || 'Storm'} storm temp of ${c.stormTemp}\u00b0F amplifies impact (\u00d7${imp.coldMult.toFixed(2)})</em>`;
         } else if (imp.coldMult < 1.0) {
-          detail += ` <em style="color:#fdba74">\u{1F321}\ufe0f ${tl.label} storm temp of ${c.stormTemp}\u00b0F reduces impact (\u00d7${imp.coldMult.toFixed(2)}) \u2014 marginal surfaces, wet snow, early melt</em>`;
+          detail += ` <em style="color:#fdba74">\u{1F321}\ufe0f ${(tl && tl.label) || 'Storm'} storm temp of ${c.stormTemp}\u00b0F reduces impact (\u00d7${imp.coldMult.toFixed(2)}) \u2014 marginal surfaces, wet snow, early melt</em>`;
         }
       }
       if (c.windSpeed && imp.windMult > 1.0) {
@@ -6611,6 +6619,27 @@ window.__snowTests = [];
 window.__snowTests.push((t, approx) => {
   t('harness runs', true);
   t('approx works', approx(0.1 + 0.2, 0.3));
+});
+
+window.__snowTests.push((t, approx) => {
+  // New warm bands
+  t('torch 55F', getColdMultiplier(55) === 0.65);
+  t('warm 45F', getColdMultiplier(45) === 0.78);
+  t('mild 36F', getColdMultiplier(36) === 0.90);
+  t('marginal 30F', getColdMultiplier(30) === 1.00);
+  t('cool 24F', getColdMultiplier(24) === 1.10);
+  // Cold ladder untouched
+  t('20F unchanged', getColdMultiplier(20) === 1.15);
+  t('15F unchanged', getColdMultiplier(15) === 1.15);
+  t('5F unchanged', getColdMultiplier(5) === 1.25);
+  t('-5F unchanged', getColdMultiplier(-5) === 1.40);
+  t('-100F unchanged', getColdMultiplier(-100) === 3.50);
+  t('null is neutral', getColdMultiplier(null) === 1.0);
+  // Labels
+  t('torch label', getColdLabel(55).label === 'Torch');
+  t('mild label', getColdLabel(36).label === 'Mild');
+  t('cool label', getColdLabel(24).label === 'Cool');
+  t('bitter label unchanged', getColdLabel(5).label === 'Bitter Cold');
 });
 
 // Baseline recorded from shipped behavior before the melt work began.
