@@ -3965,9 +3965,7 @@ function generateProfile(rsiOverride) {
     // stand-in instead.
     const rank = c => isFinite(c.melt.meltOutDays) ? c.melt.meltOutDays : Number.MAX_VALUE;
     const blocks = meltCities.slice().sort((a, b) => rank(b) - rank(a)).map(c => {
-      const impForSchool = isRainOnly(c.phases) ? { school: '' }
-        : getImpact(c.snow, c.annualSnow, c.hasStormTemp, c.stormTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure, c.persistenceMult);
-      const ms = meltMilestones(c.melt, { ...c, lat: c.meltLat, annualSnow: c.meltSnow }, impForSchool);
+      const ms = meltMilestones(c.melt, { ...c, lat: c.meltLat, annualSnow: c.meltSnow });
       // A milestone with no date never arrives. "Never" says that on its own —
       // pairing it with the duration reads as "Never Permanent".
       const rows = ms.map(m => {
@@ -4930,8 +4928,16 @@ function projectAnnualLoss(city, fromDate) {
 function formatMeltDuration(days) {
   if (!isFinite(days)) return 'Permanent';
   if (days < 0.25) return 'within hours';
-  if (days < 2) return Math.round(days * 24) + 'h';
-  if (days < 21) return Math.floor(days) + 'd ' + Math.round((days % 1) * 24) + 'h';
+  // Round hours first, then carry — otherwise 5.98 days prints as "5d 24h".
+  if (days < 2) {
+    const h = Math.round(days * 24);
+    return h >= 48 ? '2d 0h' : h + 'h';
+  }
+  if (days < 21) {
+    let d = Math.floor(days), h = Math.round((days - d) * 24);
+    if (h >= 24) { d += 1; h = 0; }
+    return d + 'd ' + h + 'h';
+  }
   if (days < 90) return (days / 7).toFixed(1) + ' weeks';
   if (days < 730) return (days / 30.44).toFixed(1) + ' months';
   const years = days / 365.25;
@@ -4975,7 +4981,7 @@ function firstDayAtDepth(melt, threshold) {
 // Five recovery milestones, sorted into the order a city actually experiences
 // them. Plow capability moves roads and schools only — it does not speed up
 // nature. Nothing here reads the impact tier's flavour text.
-function meltMilestones(melt, city, imp) {
+function meltMilestones(melt, city) {
   if (!melt) return [];
   const peak = melt.peakDepth;
   const plow = Math.min(2.5, getResilienceFactor(city.annualSnow, city.lat));
