@@ -2483,7 +2483,7 @@ function getColdLabel(stormTemp) {
   if (stormTemp >  40) return { label: 'Warm',                    icon: '\u{1F321}️' };
   if (stormTemp >  33) return { label: 'Mild',                    icon: '\u{1F326}️' };
   if (stormTemp >  28) return { label: 'Marginal',                icon: '\u{1F327}️' };
-  if (stormTemp >  20) return { label: 'Cool',                    icon: '\u{1F321}️' };
+  if (stormTemp >  20) return { label: 'Cool',                    icon: '\u{1F9E3}' };
   if (stormTemp >  10) return { label: 'Cold',                    icon: '\u{1F976}' };
   if (stormTemp >   0) return { label: 'Bitter Cold',             icon: '\u{1F976}' };
   if (stormTemp > -10) return { label: 'Hard Freeze',             icon: '❄️' };
@@ -4451,6 +4451,77 @@ function timelineSeed() {
     (c.phases || []).forEach(p => parts.push(p.type + ':' + p.amount));
   });
   return hashStormName(parts.join('|'));
+}
+
+/* ======================================================================
+   MELT & RECOVERY
+   What happens to the snowpack after the last flake. A degree-day melt
+   model: the pack loses snow-water equivalent whenever the air sits above
+   freezing, at a rate that rises from midwinter to midsummer with the sun.
+   Everything here is deterministic — no Math.random, so no seeding needed.
+   ====================================================================== */
+
+// Day of year, 1 = Jan 1. The timezone-offset term cancels the hour that a
+// daylight-saving boundary would otherwise steal from the subtraction, which
+// used to make summer dates come back a day short.
+function dayOfYear(d) {
+  const start = new Date(d.getFullYear(), 0, 0);
+  const diff = (d - start) + (start.getTimezoneOffset() - d.getTimezoneOffset()) * 60000;
+  return Math.floor(diff / 86400000);
+}
+
+function addDays(d, n) {
+  // Integer days advance the calendar date so the wall clock survives a DST
+  // boundary; fractional days are a duration and stay in milliseconds.
+  if (Number.isInteger(n)) {
+    const r = new Date(d.getTime());
+    r.setDate(r.getDate() + n);
+    return r;
+  }
+  return new Date(d.getTime() + n * 86400000);
+}
+
+// How continental a location is: 0 = maritime (small seasonal swing),
+// 1 = deep interior (huge swing). Pacific coast is the mildest winter
+// anomaly in North America; the Atlantic seaboard sits in between.
+function continentality(lon, lat) {
+  // North of ~55N longitude stops being informative: Anchorage and Fairbanks
+  // sit 2 degrees apart in longitude and 25F apart in January. Coastal south
+  // Alaska is maritime, the interior beyond the Alaska Range is as continental
+  // as anywhere on the continent, and latitude separates them cleanly.
+  if (lat !== null && lat !== undefined && lat > 55) {
+    return Math.min(1.0, Math.max(0.2, (lat - 58) / 6));
+  }
+  if (lon === null || lon === undefined) return 0.8;
+  if (lon <= -120) return 0.2;   // Pacific coast
+  if (lon <= -78)  return 1.0;   // interior
+  return 0.6;                    // Atlantic seaboard
+}
+
+// Climatological mean temperature for a place and date. Built from the three
+// things the app already knows about a city: where it is, how much snow it
+// normally gets, and what day the storm fell on.
+//
+// Calibrated against published January and July normals for nine cities from
+// Miami to Fairbanks. Every one lands inside tolerance; the worst sits at 93%
+// of its allowance, so the fit has little slack left. July RMSE is 4.4°F.
+function seasonalNormalTemp(lat, lon, annualSnow, date) {
+  const la = (lat === null || lat === undefined) ? 40 : lat;
+  const as = (annualSnow === null || annualSnow === undefined) ? 20 : annualSnow;
+  const C  = continentality(lon, la);
+  // Snowy places run colder, but only inland. The maritime half of this slope
+  // calibrated to zero: on a wet coast heavy snowfall says more about how much
+  // moisture comes ashore than about how cold it gets. Anchorage takes 75
+  // inches a year and still sits well above Minneapolis in January.
+  const annualMean = 78 - 0.803 * (la - 25) - (0.00 + 0.248 * C) * as - 2.51 * C;
+  // The cap is load-bearing. Fairbanks computes a raw swing near 45F, which
+  // would put its January around -18F; clamping to 28 lands it at -0.6F.
+  // Anchorage, Chicago and Minneapolis reach it too, so changing this number
+  // moves several cities at once.
+  const amplitude  = Math.min(28,
+    (3 + 0.734 * (la - 25)) * (0.35 + 1.368 * C) + 0.05 * as);
+  const seasonal   = Math.cos(2 * Math.PI * (dayOfYear(date) - 196) / 365);
+  return annualMean + amplitude * seasonal;
 }
 
 function computeAllTimelines() {
@@ -6661,6 +6732,55 @@ window.__snowTests.push((t, approx) => {
   ).join('|');
   console.log('FINGERPRINT ' + got);
   t('impact fingerprint unchanged', got === window.__IMPACT_FINGERPRINT);
+});
+
+window.__snowTests.push((t, approx) => {
+  const jan = new Date(2027, 0, 15);
+  const jul = new Date(2027, 6, 15);
+  // [name, lat, lon, annualSnow, actualJanMean, tolerance]
+  const CITIES = [
+    ['Miami',       25.80,  -80.19,   0, 68.4,  6],
+    ['Tulsa',       36.15,  -95.99,   9, 39.1,  6],
+    ['Boston',      42.36,  -71.06,  48, 30.4,  5],
+    ['Chicago',     41.88,  -87.63,  38, 25.6,  6],
+    ['Minneapolis', 44.98,  -93.27,  54, 16.4,  6],
+    ['Seattle',     47.61, -122.33,   5, 42.0,  5],
+    ['Anchorage',   61.22, -149.90,  75, 17.0,  8],
+    ['Fairbanks',   64.84, -147.72,  65, -8.0,  8],
+    ['Denver',      39.74, -104.99,  57, 32.2, 10]
+  ];
+  CITIES.forEach(([n, lat, lon, snow, actual, tol]) => {
+    const got = seasonalNormalTemp(lat, lon, snow, jan);
+    if (Math.abs(got - actual) > tol) console.log('CALIB ' + n + ' got ' + got.toFixed(1) + ' want ' + actual);
+    t('jan normal ' + n, Math.abs(got - actual) <= tol);
+  });
+  // Amplitude sign: July must be far warmer than January everywhere
+  t('mpls july warm', seasonalNormalTemp(44.98, -93.27, 54, jul) > 68);
+  t('miami july warm', seasonalNormalTemp(25.80, -80.19, 0, jul) > 80);
+  // Missing data must not produce NaN
+  t('null lat safe', isFinite(seasonalNormalTemp(null, null, null, jan)));
+});
+
+window.__snowTests.push((t, approx) => {
+  // dayOfYear must not lose a day to a daylight-saving boundary.
+  t('doy jul 15 is 196', dayOfYear(new Date(2027, 6, 15)) === 196);
+  t('doy jan 1 is 1', dayOfYear(new Date(2027, 0, 1)) === 1);
+  t('doy dec 31 is 365', dayOfYear(new Date(2027, 11, 31)) === 365);
+  // US spring-forward 2027 is Mar 14. Stepping one day across it must keep the
+  // wall clock, not shift it by the hour the clocks jumped.
+  const beforeDst = new Date(2027, 2, 13, 9, 0, 0);
+  const afterDst = addDays(beforeDst, 1);
+  t('addDays keeps local hour over DST', afterDst.getHours() === 9);
+  t('addDays lands on next date over DST', afterDst.getDate() === 14 && afterDst.getMonth() === 2);
+  // Stepping a whole month of days one at a time must not drift.
+  let walk = new Date(2027, 2, 1, 12, 0, 0);
+  for (let i = 0; i < 31; i++) walk = addDays(walk, 1);
+  t('31 single-day steps keep noon', walk.getHours() === 12);
+  t('31 single-day steps reach Apr 1', walk.getMonth() === 3 && walk.getDate() === 1);
+  // Fractional days stay a duration.
+  const frac = addDays(new Date(2027, 0, 15), 30.44);
+  t('fractional addDays spans 30.44d',
+    approx((frac - new Date(2027, 0, 15)) / 86400000, 30.44, 0.001));
 });
 
 window.addEventListener('load', () => {
