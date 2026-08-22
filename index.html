@@ -2658,7 +2658,8 @@ function getPressureLabel(pressure) {
   return                       { label: 'Omega Pressure Singularity', icon: '\u{1F300}\u{1F300}\u{1F300}' };
 }
 
-function getImpact(snow, annualSnow, hasStormTemp, stormTemp, snowEquivalent, windSpeed, gustSpeed, lat, pressure) {
+function getImpact(snow, annualSnow, hasStormTemp, stormTemp, snowEquivalent, windSpeed, gustSpeed, lat, pressure, persistenceMult) {
+  const persistMult = (persistenceMult === undefined || persistenceMult === null) ? 1.0 : persistenceMult;
   const factor = getResilienceFactor(annualSnow, lat);
   const coldMult = hasStormTemp ? getColdMultiplier(stormTemp) : 1.0;
   const windMult = getWindMultiplier(windSpeed, gustSpeed);
@@ -2676,7 +2677,7 @@ function getImpact(snow, annualSnow, hasStormTemp, stormTemp, snowEquivalent, wi
     coldBaseline = rawCold / factor;
   }
 
-  const snowEffective = (effectiveSnow / factor) * coldMult * windMult * pressureMult;
+  const snowEffective = (effectiveSnow / factor) * coldMult * windMult * pressureMult * persistMult;
   const effective = Math.max(snowEffective, coldBaseline * pressureMult);  // Whichever is worse
 
   let result;
@@ -2731,6 +2732,7 @@ function getImpact(snow, annualSnow, hasStormTemp, stormTemp, snowEquivalent, wi
   result.coldMult = coldMult;
   result.windMult = windMult;
   result.pressureMult = pressureMult;
+  result.persistenceMult = persistMult;
   result.coldDriven = coldBaseline > 0 && coldBaseline >= snowEffective;
   return result;
 }
@@ -3562,6 +3564,23 @@ function generateProfile(rsiOverride) {
   // Compute timelines for all cities before rendering
   computeAllTimelines();
 
+  // Cities with no CITY_DB match have no latitude or annual snowfall, which the
+  // climatology needs. Borrow the storm's median rather than a global default.
+  const knownLats = cities.map(c => c.lat).filter(v => v !== null && v !== undefined).sort((a,b) => a-b);
+  const knownSnow = cities.map(c => c.annualSnow).filter(v => v !== null && v !== undefined).sort((a,b) => a-b);
+  const medLat = knownLats.length ? knownLats[Math.floor(knownLats.length/2)] : null;
+  const medSnow = knownSnow.length ? knownSnow[Math.floor(knownSnow.length/2)] : null;
+
+  // Melt runs from the end of each city's precipitation, not the storm's start.
+  cities.forEach(c => {
+    c.meltLat = (c.lat === null || c.lat === undefined) ? medLat : c.lat;
+    c.meltSnow = (c.annualSnow === null || c.annualSnow === undefined) ? medSnow : c.annualSnow;
+    const stormEnd = (c.timeline && c.timeline.lastSnow) ? c.timeline.lastSnow : getStormDate();
+    const forMelt = { ...c, lat: c.meltLat, annualSnow: c.meltSnow };
+    c.melt = simulateMelt(forMelt, stormEnd);
+    c.persistenceMult = persistenceMultiplier(forMelt, stormEnd);
+  });
+
   const sorted = [...cities].sort((a,b) => b.snow - a.snow);
   const maxSnow = sorted[0].snow;
   const maxSnowEquiv = Math.max(...sorted.map(c => c.snowEquivalent || c.snow));
@@ -3609,7 +3628,8 @@ function generateProfile(rsiOverride) {
     const rainOnly = isRainOnly(c.phases);
     const imp = rainOnly
       ? getRainImpact(totalRainInches(c.phases), c.lat, c.windSpeed, c.gustSpeed, c.pressure)
-      : getImpact(c.snow, c.annualSnow, c.hasStormTemp, c.stormTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure);
+      : getImpact(c.snow, c.annualSnow, c.hasStormTemp, c.stormTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure, c.persistenceMult);
+    c.__lastImpact = imp.level;
     const res = rainOnly
       ? getRainResilienceLabel(estimateAnnualRain(c.lat, c.lon, c.region), c.lat)
       : getResilienceLabel(c.annualSnow, c.lat);
@@ -3672,6 +3692,16 @@ function generateProfile(rsiOverride) {
           detail += ` <em style="color:#fdba74">\u{1F321}\ufe0f ${(tl && tl.label) || 'Storm'} storm temp of ${c.stormTemp}\u00b0F reduces impact (\u00d7${imp.coldMult.toFixed(2)}) \u2014 marginal surfaces, wet snow, early melt</em>`;
         }
       }
+      if (c.persistenceMult && c.persistenceMult !== 1.0 && c.melt) {
+        const exp = simulateMelt({ ...c, lat: c.meltLat, annualSnow: c.meltSnow, warming: null }, c.melt.stormEnd);
+        const times = (exp && isFinite(exp.meltOutDays) && isFinite(c.melt.meltOutDays) && exp.meltOutDays > 0)
+          ? (c.melt.meltOutDays / exp.meltOutDays).toFixed(1) : null;
+        if (c.persistenceMult > 1.0) {
+          detail += ` <em style="color:#93c5fd">\u{1F321}\ufe0f Warming outlook holds the pack${times ? ' ' + times + '\u00d7' : ''} longer than expected (\u00d7${c.persistenceMult.toFixed(2)})</em>`;
+        } else {
+          detail += ` <em style="color:#fdba74">\u{1F321}\ufe0f Warming outlook clears the pack${times ? ' ' + times + '\u00d7' : ''} faster than expected (\u00d7${c.persistenceMult.toFixed(2)})</em>`;
+        }
+      }
       if (c.windSpeed && imp.windMult > 1.0) {
         const wl = getWindLabel(c.windSpeed, c.gustSpeed);
         let windDesc = `\u{1F4A8} ${wl.label} winds of ${c.windSpeed} mph`;
@@ -3711,7 +3741,7 @@ function generateProfile(rsiOverride) {
   const peakCity = sorted.reduce((best, c) => {
     const imp = isRainOnly(c.phases)
       ? getRainImpact(totalRainInches(c.phases), c.lat, c.windSpeed, c.gustSpeed, c.pressure)
-      : getImpact(c.snow, c.annualSnow, c.hasStormTemp, c.stormTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure);
+      : getImpact(c.snow, c.annualSnow, c.hasStormTemp, c.stormTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure, c.persistenceMult);
     return imp.effective > best.eff ? { eff: imp.effective, level: imp.level, name: c.name } : best;
   }, { eff: 0, level: 'None', name: '' });
   const peakEffective = peakCity.eff;
@@ -4831,6 +4861,23 @@ function meltMilestones(melt, city, imp) {
     mk('mounds', '\u{1F3D4}️', 'Plow mounds gone', moundDay),
     mk('patch',  '\u{1FA79}', 'Last shaded patch', patchDay)
   ];
+}
+
+// How far the pack's life deviates from what Storm Temp alone predicted.
+// This is the guard against double-counting: Storm Temp already pushes impact
+// down for a warm storm, so this measures only the surprise. With every window
+// on Auto the two simulations are identical, so it returns exactly 1.0.
+function persistenceMultiplier(city, stormEnd) {
+  if (!hasWarmingPicks(city)) return 1.0;
+  const actual = simulateMelt(city, stormEnd);
+  const expected = simulateMelt({ ...city, warming: null }, stormEnd);
+  if (!actual || !expected) return 1.0;
+  if (!isFinite(expected.meltOutDays) || expected.meltOutDays <= 0) return 1.0;
+  const actualDays = isFinite(actual.meltOutDays)
+    ? actual.meltOutDays
+    : expected.meltOutDays * 10;   // permanent is the extreme of "longer"
+  const ratio = actualDays / expected.meltOutDays;
+  return Math.min(1.35, Math.max(0.75, Math.pow(ratio, 0.35)));
 }
 
 function computeAllTimelines() {
@@ -7284,6 +7331,38 @@ window.__snowTests.push((t, approx) => {
   t('school single day', schoolDaysFloor({ school: '1 snow day.' }) === 1);
   t('school none', schoolDaysFloor({ school: '0-minute delay; normal schedule.' }) === 0);
   t('school missing', schoolDaysFloor(null) === 0);
+});
+
+window.__snowTests.push((t, approx) => {
+  const dec = new Date(2026, 11, 15, 18, 0);
+  const base = { lat:36.15, lon:-95.99, annualSnow:9, hasStormTemp:true, stormTemp:26,
+                 phases:[{type:'snowball', amount:18}] };
+
+  t('auto is exactly 1.0', persistenceMultiplier(base, dec) === 1.0);
+  t('empty warming is exactly 1.0', persistenceMultiplier({...base, warming:{}}, dec) === 1.0);
+  t('all-auto object is exactly 1.0',
+    persistenceMultiplier({...base, warming:{short:'auto',medium:'auto',long:'auto'}}, dec) === 1.0);
+
+  const locked = persistenceMultiplier({...base, warming:{short:'locked',medium:'locked',long:'locked'}}, dec);
+  const thaw   = persistenceMultiplier({...base, warming:{short:'rapid',medium:'rapid',long:'rapid'}}, dec);
+  t('locked cold amplifies', locked > 1.0);
+  t('thaw reduces', thaw < 1.0);
+  t('clamped high', locked <= 1.35);
+  t('clamped low', thaw >= 0.75);
+
+  // A rain-only city has no pack, so there is nothing to persist
+  t('no pack is neutral', persistenceMultiplier({...base, phases:[{type:'rain',amount:2}],
+      warming:{short:'locked'}}, dec) === 1.0);
+
+  // getImpact honors it, and defaults to neutral when omitted
+  const neutral = getImpact(18, 9, true, 26, 18, 0, 0, 36.15, null).level;
+  const same    = getImpact(18, 9, true, 26, 18, 0, 0, 36.15, null, 1.0).level;
+  t('omitted param is neutral', neutral === same);
+  const heavier = getImpact(18, 9, true, 26, 18, 0, 0, 36.15, null, 1.35);
+  const lighter = getImpact(18, 9, true, 26, 18, 0, 0, 36.15, null, 0.75);
+  t('persistence raises impact', heavier.effective > lighter.effective);
+  t('persistence surfaced', heavier.persistenceMult === 1.35);
+  t('null param is neutral', getImpact(18, 9, true, 26, 18, 0, 0, 36.15, null, null).persistenceMult === 1.0);
 });
 
 window.addEventListener('load', () => {
