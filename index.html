@@ -475,6 +475,13 @@
   .precip-tag { display: inline-block; font-size: 0.78rem; margin-right: 4px; }
   .precip-breakdown { font-size: 0.78rem; line-height: 1.5; }
 
+  /* Warming outlook row */
+  .warming-row { margin-bottom: 12px; }
+  .warming-label { font-size: 0.78rem; opacity: 0.6; margin-bottom: 6px; }
+  .warming-fields { display: flex; gap: 10px; flex-wrap: wrap; }
+  .warming-fields > div { display: flex; flex-direction: column; gap: 3px; }
+  .warming-fields label { font-size: 0.72rem; opacity: 0.5; }
+
   /* Wind input row */
   .wind-row { display: flex; gap: 12px; align-items: flex-end; margin-top: 10px; flex-wrap: wrap; }
   .wind-field { display: flex; align-items: flex-end; gap: 6px; }
@@ -897,6 +904,23 @@
           <input type="number" id="coldInput" placeholder="e.g. 18">
         </div>
         <span class="unit">&deg;F</span>
+      </div>
+    </div>
+    <div class="warming-row">
+      <div class="warming-label">Warming outlook <span class="help-text">Optional. Auto uses climatology for the city and date.</span></div>
+      <div class="warming-fields">
+        <div>
+          <label for="warmShort">Days 1&ndash;2</label>
+          <select id="warmShort"></select>
+        </div>
+        <div>
+          <label for="warmMedium">Days 3&ndash;7</label>
+          <select id="warmMedium"></select>
+        </div>
+        <div>
+          <label for="warmLong">Days 8+</label>
+          <select id="warmLong"></select>
+        </div>
       </div>
     </div>
     <div class="wind-row">
@@ -2964,6 +2988,9 @@ const cityInput = document.getElementById('cityInput');
 const coldCheck = document.getElementById('coldCheck');
 const coldField = document.getElementById('coldField');
 const coldInput = document.getElementById('coldInput');
+const warmShort = document.getElementById('warmShort');
+const warmMedium = document.getElementById('warmMedium');
+const warmLong = document.getElementById('warmLong');
 const windInput = document.getElementById('windInput');
 const gustInput = document.getElementById('gustInput');
 const pressureInput = document.getElementById('pressureInput');
@@ -3286,10 +3313,12 @@ function addCity() {
     pop: db?db.pop:null, region: db?db.r:null, annualSnow: db?db.snow:null,
     lat: db?db.lat:null, lon: db?db.lon:null,
     hasStormTemp, stormTemp,
+    warming: { short: warmShort.value, medium: warmMedium.value, long: warmLong.value },
     windSpeed, gustSpeed: gustSpeedVal,
     pressure
   });
   cityInput.value = ''; clearPhaseBuilder(); coldCheck.checked = false; coldField.classList.remove('visible'); coldInput.value = ''; windInput.value = ''; gustInput.value = ''; pressureInput.value = ''; cityInput.focus();
+  warmShort.value = 'auto'; warmMedium.value = 'auto'; warmLong.value = 'auto';
   acList.classList.remove('open');
   renderCityList();
 }
@@ -3313,15 +3342,20 @@ function renderCityList() {
     const coldTag = c.hasStormTemp ? ` <span style="color:#93c5fd;font-size:0.8rem">${(tempLbl && tempLbl.icon) || '\u{1F321}\ufe0f'} ${c.stormTemp}\u00b0F</span>` : '';
     const windTag = c.windSpeed ? ` <span style="color:#a5b4fc;font-size:0.8rem">\u{1F4A8} ${c.windSpeed}${c.gustSpeed ? '/G'+c.gustSpeed : ''} mph</span>` : '';
     const pressTag = (c.pressure !== null && c.pressure !== undefined) ? ` <span style="color:#fbbf24;font-size:0.8rem">\u{1F32A}\ufe0f ${c.pressure} mb</span>` : '';
+    const wp = c.warming || {};
+    const warmPicks = ['short','medium','long'].map(k => wp[k]).filter(v => v && v !== 'auto');
+    const warmTag = warmPicks.length
+      ? ` <span style="color:#fdba74;font-size:0.8rem">\u{1F321}\ufe0f ${warmPicks.map(v => (WARMING_PICKS.find(p => p.v === v) || {}).label).join(' \u2192 ')}</span>`
+      : '';
     const phaseSummary = formatPhasesSummary(c.phases);
     return `<div class="city-item">
-      <span>${esc(c.name)} &mdash; ${phaseSummary}${coldTag}${windTag}${pressTag} <span class="city-meta">${meta}</span></span>
+      <span>${esc(c.name)} &mdash; ${phaseSummary}${coldTag}${windTag}${pressTag}${warmTag} <span class="city-meta">${meta}</span></span>
       <button class="btn-remove" onclick="removeCity(${i})">&times;</button>
     </div>`;
   }).join('');
 }
 
-function clearAll() { cities.length=0; clearPhaseBuilder(); windInput.value=''; gustInput.value=''; pressureInput.value=''; renderCityList(); profileEl.classList.remove('visible'); resetGapFillState(); }
+function clearAll() { cities.length=0; clearPhaseBuilder(); windInput.value=''; gustInput.value=''; pressureInput.value=''; warmShort.value='auto'; warmMedium.value='auto'; warmLong.value='auto'; renderCityList(); profileEl.classList.remove('visible'); resetGapFillState(); }
 
 function resetGapFillState() {
   if (typeof gapFillEntries !== 'undefined') {
@@ -4598,6 +4632,15 @@ const WARMING_PICKS = [
   { v: 'torch',  label: 'Torch' }
 ];
 
+// Populated here (not up near the other form-element consts) because
+// WARMING_PICKS is declared in this later section of the file — a const is
+// in the temporal dead zone until its declaration executes, so populating
+// the selects up top would throw "Cannot access 'WARMING_PICKS' before
+// initialization".
+[warmShort, warmMedium, warmLong].forEach(sel => {
+  sel.innerHTML = WARMING_PICKS.map(p => `<option value="${p.v}">${p.label}</option>`).join('');
+});
+
 // A pick governs at most this long. A user's read on "days 8+" is a forecast,
 // not a climate — past two months the season takes back over.
 const PICK_HORIZON_DAYS = 60;
@@ -5082,6 +5125,7 @@ function runTestLadder(ladderType) {
       lat: anchor.lat, lon: anchor.lon,
       hasStormTemp: false,
       stormTemp: null,
+      warming: null,
       windSpeed: null,
       gustSpeed: null,
       pressure: null
@@ -5124,6 +5168,7 @@ function runRainTestLadder() {
       lat: anchor.lat, lon: anchor.lon,
       hasStormTemp: false,
       stormTemp: null,
+      warming: null,
       windSpeed: null,
       gustSpeed: null,
       pressure: null
@@ -6948,6 +6993,7 @@ function addAllGapFillToSim() {
       lat: e.candidate.lat, lon: e.candidate.lon,
       hasStormTemp: e.hasStormTemp,
       stormTemp: e.stormTemp,
+      warming: null,
       windSpeed: e.windSpeed,
       gustSpeed: e.gustSpeed,
       pressure: e.pressure ?? null
