@@ -829,7 +829,7 @@
 
 <div class="container">
   <h1>Snow Event Profile Maker 3.1.4</h1>
-  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">7713 lines of code</p>
+  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">7697 lines of code</p>
   <p class="subtitle">Powered by real NOAA RSI methodology with location-based impact scaling</p>
 
   <div class="card">
@@ -3676,7 +3676,6 @@ function generateProfile(rsiOverride) {
     const imp = rainOnly
       ? getRainImpact(totalRainInches(c.phases), c.lat, c.windSpeed, c.gustSpeed, c.pressure)
       : getImpact(c.snow, c.annualSnow, c.hasStormTemp, c.stormTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure, c.persistenceMult);
-    c.__lastImpact = imp.level;
     const res = rainOnly
       ? getRainResilienceLabel(estimateAnnualRain(c.lat, c.lon, c.region), c.lat)
       : getResilienceLabel(c.annualSnow, c.lat);
@@ -3732,9 +3731,9 @@ function generateProfile(rsiOverride) {
       if (c.hasStormTemp) {
         const tl = getColdLabel(c.stormTemp);
         if (imp.coldDriven) {
-          detail += ` <em style="color:#93c5fd">\u{1F976} Impact driven by record cold of ${c.stormTemp}\u00b0F \u2014 extreme freeze in an unprepared area</em>`;
+          detail += ` <em style="color:#93c5fd">${(tl && tl.icon) || '\u{1F976}'} Impact driven by the storm temp of ${c.stormTemp}\u00b0F alone \u2014 extreme freeze in an unprepared area</em>`;
         } else if (imp.coldMult > 1.0) {
-          detail += ` <em style="color:#93c5fd">\u{1F976} ${(tl && tl.label) || 'Storm'} storm temp of ${c.stormTemp}\u00b0F amplifies impact (\u00d7${imp.coldMult.toFixed(2)})</em>`;
+          detail += ` <em style="color:#93c5fd">${(tl && tl.icon) || '\u{1F976}'} ${(tl && tl.label) || 'Storm'} storm temp of ${c.stormTemp}\u00b0F amplifies impact (\u00d7${imp.coldMult.toFixed(2)})</em>`;
         } else if (imp.coldMult < 1.0) {
           detail += ` <em style="color:#fdba74">\u{1F321}\ufe0f ${(tl && tl.label) || 'Storm'} storm temp of ${c.stormTemp}\u00b0F reduces impact (\u00d7${imp.coldMult.toFixed(2)}) \u2014 marginal surfaces, wet snow, early melt</em>`;
         }
@@ -3954,6 +3953,7 @@ function generateProfile(rsiOverride) {
   const meltCities = cities.filter(c => c.melt);
   if (!meltCities.length) {
     meltCard.style.display = 'none';
+    meltCard.innerHTML = '';
   } else {
     const finite = meltCities.filter(c => isFinite(c.melt.meltOutDays));
     const firstBare = finite.length ? finite.reduce((a, b) => a.melt.meltOutDays <= b.melt.meltOutDays ? a : b) : null;
@@ -4813,6 +4813,15 @@ const MOUND_MELT_FACTOR = 0.30;  // fraction of the open-ground melt rate
 const MELT_SIM_DAY_LIMIT = 1826;       // 5 years of daily steps
 const PERMANENT_YEARS = 10000;
 
+// Roads are cleared by plows, not by waiting for spring. A city's fleet clears
+// a certain depth per day; a snow-belt city with a big fleet does far better
+// than one that owns three trucks. Melt still wins if the snow goes first.
+const PLOW_BASE_RATE = 2;    // inches per day a minimally equipped city manages
+const PLOW_RATE_GAIN = 6;    // additional inches per day per point of resilience
+// Schools reopen once the roads are usable, plus the better part of a day for
+// buses, car parks and side streets.
+const SCHOOL_LAG_DAYS = 0.75;
+
 function windowTempFor(dayIndex, temps, date, city) {
   if (dayIndex <= 2) return temps.short;
   if (dayIndex <= 7) return temps.medium;
@@ -4855,7 +4864,12 @@ function simulateMelt(city, stormEnd, opts) {
   const curve = [{ day: 0, date: stormEnd, depth: peakDepth, swe }];
   let day = 0, meltOutDay = null;
 
-  while (swe > 0.001 && day < MELT_SIM_DAY_LIMIT) {
+  // A pack is gone when almost nothing is left — scaled to the pack itself, so
+  // a dusting is simulated properly instead of falling through to the
+  // five-year projection.
+  const gone = Math.min(0.001, swe * 0.01);
+
+  while (swe > gone && day < MELT_SIM_DAY_LIMIT) {
     day++;
     const date = addDays(stormEnd, day);
     const tmean = windowTempFor(day, temps, date, city);
@@ -4865,7 +4879,7 @@ function simulateMelt(city, stormEnd, opts) {
 
     const before = swe;
     swe = Math.max(0, swe - melt);
-    if (shouldSample(day) || swe <= 0.001) {
+    if (shouldSample(day) || swe <= gone) {
       curve.push({ day, date, depth: swe * packRatioAt(fresh, day), swe });
     }
     // Resolve melt-out to a fraction of the day rather than snapping to the
@@ -4873,7 +4887,7 @@ function simulateMelt(city, stormEnd, opts) {
     // day", and any effect smaller than one day's melt — rain-on-snow above
     // all, which is worth about 0.04" of SWE — would otherwise round away to
     // nothing. `melt` is always at least GROUND_FLUX, so it is never zero.
-    if (swe <= 0.001) meltOutDay = (day - 1) + Math.min(1, before / melt);
+    if (swe <= gone) meltOutDay = (day - 1) + Math.min(1, before / melt);
   }
 
   let permanent = false;
@@ -4890,7 +4904,7 @@ function simulateMelt(city, stormEnd, opts) {
   }
 
   return {
-    curve, peakDepth, temps, permanent,
+    curve, peakDepth, permanent,
     meltOutDays: permanent ? Infinity : meltOutDay,
     meltOutDate: permanent ? null : addDays(stormEnd, meltOutDay),
     stormEnd
@@ -4940,18 +4954,6 @@ function formatMeltMoment(date, day) {
   return (isFinite(day) && day >= 300) ? md + ', ' + date.getFullYear() : md;
 }
 
-// The impact tier already states how many snow days a storm causes. Schools
-// cannot reopen before that, however fast the snow goes.
-function schoolDaysFloor(imp) {
-  if (!imp || !imp.school) return 0;
-  // Extreme tiers write their closures with thousands separators
-  // ("730–3,650 snow days"). Digits alone stop at the comma and match the
-  // bare tail, which reads a longer closure as a shorter one.
-  const m = imp.school.match(/([\d,]+)(?:\s*[–-]\s*([\d,]+))?\s*snow day/);
-  if (!m) return 0;
-  return parseInt((m[2] || m[1]).replace(/,/g, ''), 10);
-}
-
 // First moment the pack falls to a given depth, interpolated within the day.
 // The curve is sampled daily, and on a fast-melting pack several thresholds
 // fall inside one 24-hour step — reporting them all at the same timestamp
@@ -4972,14 +4974,21 @@ function firstDayAtDepth(melt, threshold) {
 
 // Five recovery milestones, sorted into the order a city actually experiences
 // them. Plow capability moves roads and schools only — it does not speed up
-// nature. Schools is the lone policy milestone and nothing depends on it.
+// nature. Nothing here reads the impact tier's flavour text.
 function meltMilestones(melt, city, imp) {
   if (!melt) return [];
   const peak = melt.peakDepth;
   const plow = Math.min(2.5, getResilienceFactor(city.annualSnow, city.lat));
 
-  // Physical chain — snow depth and plowing only, never policy.
-  const roadsDay = firstDayAtDepth(melt, Math.max(2, peak * 0.15) * plow);
+  // Roads: plowing work, capped by melt — if the snow vanishes first, the
+  // roads are clear regardless of how many trucks the city owns.
+  const plowRate = PLOW_BASE_RATE + PLOW_RATE_GAIN * plow;
+  const plowDays = peak / plowRate;
+  const roadsDay = Math.max(0.25, Math.min(plowDays, isFinite(melt.meltOutDays) ? melt.meltOutDays : plowDays));
+  // Schools follow the roads. The impact tier's own snow-day count is flavour
+  // text on a scale that runs to "3,650,000,000 snow days" — it must not drive
+  // a date.
+  const schoolDay = roadsDay + SCHOOL_LAG_DAYS;
   const walkDay = Math.max(roadsDay, firstDayAtDepth(melt, 0.5));
   // The north-facing remnant of the natural pack outlives the open ground.
   const patchDay = isFinite(melt.meltOutDays) ? melt.meltOutDays * 1.35 : Infinity;
@@ -4989,25 +4998,15 @@ function meltMilestones(melt, city, imp) {
   const moundDay = (mound && isFinite(mound.meltOutDays))
     ? Math.max(walkDay, mound.meltOutDays) : Infinity;
 
-  // Policy milestone. Schools cannot reopen before the roads are passable or
-  // before the impact tier's own closure runs out, whichever is later. Nothing
-  // else depends on this — a two-year closure must not imply two-year-old snow.
-  const schoolDay = Math.max(
-    roadsDay,
-    schoolDaysFloor(imp),
-    firstDayAtDepth(melt, Math.max(3, peak * 0.20) * plow)
-  );
+  const mk = (key, icon, label, day) => {
+    const d = isFinite(day) ? addDays(melt.stormEnd, day) : null;
+    return { key, icon, label, day, date: (d && isFinite(d.getTime())) ? d : null };
+  };
 
-  const mk = (key, icon, label, day) => ({
-    key, icon, label, day,
-    date: isFinite(day) ? addDays(melt.stormEnd, day) : null
-  });
-
-  // Chronological, not narrative: a long enough closure legitimately puts
-  // schools after the last shaded patch, and the card should say so. Ties fall
-  // back to the canonical sequence so same-day milestones still read in order,
-  // and so do two permanent milestones — Infinity - Infinity is NaN, which is
-  // falsy and hands the comparison to ORDER.
+  // Chronological, not narrative. Ties fall back to the canonical sequence so
+  // same-day milestones still read in order, and so do two permanent
+  // milestones — Infinity - Infinity is NaN, which is falsy and hands the
+  // comparison to ORDER.
   const ORDER = ['roads', 'school', 'walks', 'patch', 'mounds'];
   return [
     mk('roads',  '\u{1F697}', 'Roads passable',    roadsDay),
@@ -7506,26 +7505,21 @@ window.__snowTests.push((t, approx) => {
   const unplowed = meltMilestones(melt, {...tulsa, annualSnow:2},  { school: '2 snow days.' });
   t('plows clear roads sooner', day(plowed, 'roads') <= day(unplowed, 'roads'));
 
-  // Schools cannot reopen before the impact tier says they are closed
-  const long = meltMilestones(melt, tulsa, { school: '3–5 snow days.' });
-  t('school floor respected', day(long, 'school') >= 5);
-
   // Both the piles and the north-facing remnant outlast the open ground
   t('mounds after sidewalks', day(m, 'mounds') >= day(m, 'walks'));
   t('patch after sidewalks', day(m, 'patch') >= day(m, 'walks'));
 
-  // Policy must not move physical milestones
+  // The impact tier's flavour text must not move any milestone at all —
+  // schools included, now that they are derived from the roads.
   const glacial = { school: '730–3,650 snow days; schools buried entirely.' };
   const gm = meltMilestones(melt, tulsa, glacial);
   const mild = meltMilestones(melt, tulsa, { school: '2 snow days.' });
   const g = k => gm.find(x => x.key === k).day;
   const w = k => mild.find(x => x.key === k).day;
-  t('policy does not move sidewalks', approx(g('walks'), w('walks')));
-  t('policy does not move mounds', approx(g('mounds'), w('mounds')));
-  t('policy does not move last patch', approx(g('patch'), w('patch')));
-  t('policy does move schools', g('school') > w('school'));
-  t('comma parse', schoolDaysFloor(glacial) === 3650);
-  t('school floor beats melt', g('school') >= 3650);
+  t('tier text does not move sidewalks', approx(g('walks'), w('walks')));
+  t('tier text does not move mounds', approx(g('mounds'), w('mounds')));
+  t('tier text does not move last patch', approx(g('patch'), w('patch')));
+  t('tier text does not move schools', approx(g('school'), w('school')));
   t('sorted chronologically', gm.every((x, i) => i === 0 || x.day >= gm[i-1].day));
   // The physical milestones must never outlive the snow by an absurd margin
   t('patch is within reason of melt-out', g('patch') <= melt.meltOutDays * 4);
@@ -7580,45 +7574,35 @@ window.__snowTests.push((t, approx) => {
     fm.find(x => x.key === 'roads').day < fm.find(x => x.key === 'walks').day);
   t('fractional milestone days', fm.some(x => x.day % 1 !== 0));
 
-  t('school day parser', schoolDaysFloor({ school: '3–5 snow days.' }) === 5);
-  t('school single day', schoolDaysFloor({ school: '1 snow day.' }) === 1);
-  t('school none', schoolDaysFloor({ school: '0-minute delay; normal schedule.' }) === 0);
-  t('school missing', schoolDaysFloor(null) === 0);
-  // Thousands separators in either position, and the exotic tiers that have no
-  // parseable number at all must degrade to zero rather than throw.
-  t('school comma upper bound',
-    schoolDaysFloor({ school: '3,650\u201336,500 snow days; no reopening foreseen.' }) === 36500);
-  t('school comma both sides',
-    schoolDaysFloor({ school: '36,500\u2013365,000 snow days; education globally disrupted.' }) === 365000);
-  t('school delay plus range',
-    schoolDaysFloor({ school: '2-hour delays standard; 0\u20131 snow days.' }) === 1);
-  t('school superscript survives',
-    schoolDaysFloor({ school: '10\u00b2\u2070\u207a snow days; no observers remain.' }) === 0);
-  t('school infinity survives',
-    schoolDaysFloor({ school: '\u221e snow days; end of all narrative.' }) === 0);
-  t('school multi-comma range',
-    schoolDaysFloor({ school: '3,650,000\u201336,500,000 snow days; humanity shelters underground.' }) === 36500000);
-  // A "+" between the number and the noun is not a range, so there is nothing
-  // to floor on. Those tiers are permanent anyway, so zero costs nothing.
-  t('school open-ended tier',
-    schoolDaysFloor({ school: '3,650,000,000+ snow days; permanent winter.' }) === 0);
-  // Every shape the impact tiers actually write, swept in one go: none may
-  // throw and none may come back NaN.
-  t('no school format yields NaN', [
-    '0-minute delay; normal schedule.',
-    '2-hour delays likely across the region.',
-    '2-hour delays standard; 0\u20131 snow days.',
-    '1 snow day.',
-    '1\u20132 snow days; all schools closed.',
-    '7\u201310 snow days; some buildings condemned.',
-    '365\u2013730 snow days; buildings condemned.',
-    '730\u20133,650 snow days; schools buried entirely.',
-    '365,000,000\u20133,650,000,000 snow days; only oral histories remain.',
-    '3,650,000,000+ snow days; permanent winter.',
-    '10\u00b9\u2070\u207a snow days; society no longer exists.',
-    '\u221e snow days; end of all narrative.',
-    '2\u20133 flood days.'
-  ].every(s => Number.isFinite(schoolDaysFloor({ school: s }))));
+  // Roads are plowed, not melted: a well-equipped city beats a naive one on
+  // the same snow, and neither waits for spring.
+  const chi = { lat:41.88, lon:-87.63, annualSnow:38, hasStormTemp:true, stormTemp:20,
+                phases:[{type:'snowball', amount:8}] };
+  const chiMelt = simulateMelt(chi, dec);
+  const chiMs = meltMilestones(chiMelt, chi, {});
+  const chiRoads = chiMs.find(m => m.key === 'roads').day;
+  t('8in clears in about a day in Chicago', chiRoads < 2);
+  t('schools follow roads closely',
+    chiMs.find(m => m.key === 'school').day - chiRoads < 1.5);
+
+  const naive = meltMilestones(simulateMelt({...chi, annualSnow:0.5, lat:32.78, lon:-96.8}, dec),
+    {...chi, annualSnow:0.5, lat:32.78, lon:-96.8}, {});
+  t('a snow-naive city is slower to clear', naive.find(m => m.key === 'roads').day > chiRoads);
+
+  // Roads can never lag the melt — if it all melts, the roads are clear
+  t('roads never outlast the snow', chiRoads <= chiMelt.meltOutDays + 1e-9);
+
+  // No milestone may produce an out-of-range date
+  const huge = meltMilestones(chiMelt, chi, { school: '3,650,000,000+ snow days; permanent winter.' });
+  t('no invalid dates', huge.every(m => m.date === null || isFinite(m.date.getTime())));
+  t('schools ignore tier flavour text',
+    approx(huge.find(m => m.key === 'school').day, chiMs.find(m => m.key === 'school').day));
+
+  // A dusting is not a five-year event
+  const dust = simulateMelt({...chi, phases:[{type:'snowball', amount:0.01}]}, dec);
+  t('a dusting goes in hours', dust.meltOutDays < 1);
+  const speck = simulateMelt({...chi, phases:[{type:'powder', amount:0.0000000616}]}, dec);
+  t('a speck is not geological', speck === null || speck.meltOutDays < 1);
 });
 
 window.__snowTests.push((t, approx) => {
