@@ -4615,14 +4615,23 @@ function addDays(d, n) {
 // 1 = deep interior (huge swing). Pacific coast is the mildest winter
 // anomaly in North America; the Atlantic seaboard sits in between.
 function continentality(lon, lat) {
+  const la = (lat === null || lat === undefined) ? 40 : lat;
   // North of ~55N longitude stops being informative: Anchorage and Fairbanks
   // sit 2 degrees apart in longitude and 25F apart in January. Coastal south
   // Alaska is maritime, the interior beyond the Alaska Range is as continental
   // as anywhere on the continent, and latitude separates them cleanly.
-  if (lat !== null && lat !== undefined && lat > 55) {
-    return Math.min(1.0, Math.max(0.2, (lat - 58) / 6));
+  if (la > 55) {
+    return Math.min(1.0, Math.max(0.2, (la - 58) / 6));
   }
   if (lon === null || lon === undefined) return 0.8;
+  // The buckets below are North American: they were fitted against the Pacific
+  // coast, the continental interior and the Atlantic seaboard, and they mean
+  // nothing in South America, Africa, Europe, Asia or Australia. Outside that
+  // window -- and south of the Isthmus, where the same longitudes cross a
+  // different continent -- the app has no basis for a claim, so it takes the
+  // middle of the 0.2-1.0 range rather than asserting a coastline that may not
+  // be there.
+  if (lon < -170 || lon > -50 || la < 5) return 0.6;
   if (lon <= -120) return 0.2;   // Pacific coast
   if (lon <= -82)  return 1.0;   // interior
   return 0.6;                    // Atlantic seaboard and the Great Lakes shore
@@ -4639,11 +4648,20 @@ function seasonalNormalTemp(lat, lon, annualSnow, date) {
   const raw = (annualSnow === null || annualSnow === undefined) ? 20 : annualSnow;
   const as = Math.min(raw, SNOW_COLD_SAT);
   const C  = continentality(lon, la);
-  const annualMean = 78 - 0.872 * (la - 25) - 0.161 * C * as - 5.33 * C;
+  // The fit is in distance from the equator, not in signed latitude. Without
+  // the abs, everything below the equator reads as tropical and then some:
+  // Cape Town used to compute a 180F January.
+  const eq = Math.abs(la);
+  const annualMean = 78 - 0.872 * (eq - 25) - 0.161 * C * as - 5.33 * C;
   // Amplitude is latitude and continentality only. Snow used to feed this too,
-  // which is what made very snowy places swing absurdly.
-  const amplitude  = Math.min(27.3, (3 + 0.680 * (la - 25)) * (0.35 + 1.836 * C));
-  const seasonal   = Math.cos(2 * Math.PI * (dayOfYear(date) - 196) / 365);
+  // which is what made very snowy places swing absurdly. The lower clamp is a
+  // tropical guard: inside about 20 degrees of the equator the linear term goes
+  // negative, which would run the seasons backwards and put January at 115F.
+  const amplitude  = Math.max(0,
+    Math.min(27.3, (3 + 0.680 * (eq - 25)) * (0.35 + 1.836 * C)));
+  // Half a year of phase shift below the equator, where July is midwinter.
+  const doy = dayOfYear(date) + (la < 0 ? 182.6 : 0);
+  const seasonal   = Math.cos(2 * Math.PI * (doy - 196) / 365);
   return annualMean + amplitude * seasonal;
 }
 
@@ -4772,10 +4790,15 @@ function hasWarmingPicks(city) {
 // which is what makes a March pack behave nothing like a December one at the
 // same temperature.
 function ddf(date, lat) {
-  const seasonal = Math.cos(2 * Math.PI * (dayOfYear(date) - 196) / 365); // -1 Jan, +1 Jul
-  const base = 0.0775 + 0.0325 * seasonal;      // 0.045 in January, 0.110 in July
   const la = (lat === null || lat === undefined) ? 40 : lat;
-  return Math.max(0.02, base * (1 - 0.004 * (la - 40)));
+  // Same two hemisphere faults as seasonalNormalTemp, in the melt engine
+  // itself: the sun peaks in January below the equator, and the latitude term
+  // means distance from the equator. Both are gated on the sign of the
+  // latitude and on abs(), so northern results are bit-for-bit unchanged.
+  const doy = dayOfYear(date) + (la < 0 ? 182.6 : 0);
+  const seasonal = Math.cos(2 * Math.PI * (doy - 196) / 365); // -1 midwinter, +1 midsummer
+  const base = 0.0775 + 0.0325 * seasonal;      // 0.045 in midwinter, 0.110 in midsummer
+  return Math.max(0.02, base * (1 - 0.004 * (Math.abs(la) - 40)));
 }
 
 // Melt starts below freezing, because a daily *mean* of 30°F still contains a
@@ -7312,6 +7335,28 @@ window.__snowTests.push((t, approx) => {
     ['Syracuse',      43.05,  -76.15, 120, 24.0, 71.6,  6],
     ['Copper Harbor', 47.47,  -87.89, 270, 18.0, 64.0,  7]
   ];
+  // Southern hemisphere, same seven columns. January is southern SUMMER and
+  // July is southern WINTER, so the two temperature columns invert.
+  //
+  // These are honest published normals and the model MISSES most of them, so
+  // they are reported rather than asserted. Scanning continentality across its
+  // whole 0.2-1.0 range shows Santiago (best 10.7F), Ushuaia (10.2F) and
+  // Wellington (8.2F) sit outside their tolerance at EVERY value -- there is no
+  // setting of the six coefficients that reaches them, and the only way to move
+  // them is to refit terms the northern twelve depend on. The miss is not a
+  // hemisphere bug: it is the fit running warm and over-amplitude for maritime
+  // low-snow places generally, which it also does in the north (San Francisco
+  // computes a 65.8F annual mean against a real 57.5F, and Los Angeles is 13.8F
+  // out in January). Printing the delta on every run keeps that visible instead
+  // of burying it under a tolerance wide enough to swallow it.
+  const SOUTHERN = [
+    ['Cape Town',    -33.92,  18.42,  0, 70.0, 55.0,  7],
+    ['Santiago',     -33.45, -70.67,  0, 68.0, 47.0,  8],
+    ['Buenos Aires', -34.60, -58.38,  0, 76.0, 51.0,  7],
+    ['Ushuaia',      -54.80, -68.30, 24, 50.0, 34.0,  8],
+    ['Melbourne',    -37.81, 145.00,  0, 68.0, 50.0,  7],
+    ['Wellington',   -41.29, 174.78,  0, 63.0, 47.0,  7]
+  ];
   CITIES.forEach(([n, lat, lon, snow, janT, julT, tol]) => {
     const gotJan = seasonalNormalTemp(lat, lon, snow, jan);
     const gotJul = seasonalNormalTemp(lat, lon, snow, jul);
@@ -7325,6 +7370,53 @@ window.__snowTests.push((t, approx) => {
     seasonalNormalTemp(47.47, -87.89, 120, jan),
     seasonalNormalTemp(47.47, -87.89, 270, jan)));
   t('null lat safe', isFinite(seasonalNormalTemp(null, null, null, jan)));
+
+  // Southern hemisphere: report the delta against every published normal, then
+  // assert only what the model can actually be held to -- that summer is
+  // warmer than winter and that nothing computes an absurd number.
+  SOUTHERN.forEach(([n, lat, lon, snow, janT, julT, tol]) => {
+    const gotJan = seasonalNormalTemp(lat, lon, snow, jan);
+    const gotJul = seasonalNormalTemp(lat, lon, snow, jul);
+    const dJan = gotJan - janT, dJul = gotJul - julT;
+    console.log('CALIB-SOUTH ' + n.padEnd(13) +
+      ' jan ' + gotJan.toFixed(1).padStart(6) + ' want ' + janT.toFixed(1).padStart(5) +
+      ' delta ' + (dJan >= 0 ? '+' : '') + dJan.toFixed(1).padStart(5) +
+      ' | jul ' + gotJul.toFixed(1).padStart(6) + ' want ' + julT.toFixed(1).padStart(5) +
+      ' delta ' + (dJul >= 0 ? '+' : '') + dJul.toFixed(1).padStart(5) +
+      ' | tol ' + tol +
+      (Math.max(Math.abs(dJan), Math.abs(dJul)) <= tol ? '  in tol' : '  OUT OF TOL'));
+    t('southern summer beats winter ' + n, gotJan > gotJul);
+    t('southern normals sane ' + n,
+      isFinite(gotJan) && isFinite(gotJul) &&
+      gotJan > -90 && gotJan < 110 && gotJul > -90 && gotJul < 110);
+  });
+
+  // Southern winter is in July, northern winter in January
+  t('southern seasons are flipped',
+    seasonalNormalTemp(-33.92, 18.42, 0, jul) < seasonalNormalTemp(-33.92, 18.42, 0, jan));
+  t('northern seasons are not flipped',
+    seasonalNormalTemp(41.88, -87.63, 38, jul) > seasonalNormalTemp(41.88, -87.63, 38, jan));
+  // The four absurdities that shipped with the North-America-only fit: Cape
+  // Town read 180F in January, Johannesburg 166F, Durban 172F, and Ushuaia 67F
+  // in the depth of southern winter.
+  t('cape town january is summer, not lava', seasonalNormalTemp(-33.92, 18.42, 0, jan) < 95);
+  t('johannesburg january is summer, not lava', seasonalNormalTemp(-26.20, 28.05, 0, jan) < 95);
+  t('durban january is summer, not lava', seasonalNormalTemp(-29.86, 31.02, 0, jan) < 95);
+  t('ushuaia july is below freezing-ish', seasonalNormalTemp(-54.80, -68.30, 24, jul) < 40);
+  // Nothing anywhere on Earth may compute an absurd normal
+  for (let la = -80; la <= 80; la += 10) {
+    for (let lo = -180; lo <= 180; lo += 30) {
+      const v = seasonalNormalTemp(la, lo, 20, jan);
+      t('sane normal at ' + la + ',' + lo, isFinite(v) && v > -90 && v < 110);
+    }
+  }
+  // The melt engine carries the same seasonal phase. Its degree-day factor must
+  // peak in the local summer, and must be identical in the north to what it was
+  // before the hemisphere gate went in.
+  t('ddf peaks in northern july', ddf(jul, 41.88) > ddf(jan, 41.88));
+  t('ddf peaks in southern january', ddf(jan, -33.92) > ddf(jul, -33.92));
+  t('ddf tulsa january unchanged', approx(ddf(jan, 36.15), 0.045704, 0.000001));
+  t('ddf tulsa july unchanged', approx(ddf(jul, 36.15), 0.111694, 0.000001));
 });
 
 window.__snowTests.push((t, approx) => {
