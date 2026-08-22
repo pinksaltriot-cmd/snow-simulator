@@ -4557,6 +4557,77 @@ function packRatioAt(freshRatio, daysSince) {
   return freshRatio + (SETTLED_RATIO - freshRatio) * k;
 }
 
+// The Warming Outlook picks. 'auto' means "use climatology", which is what
+// every city does until the user says otherwise.
+const WARMING_PICKS = [
+  { v: 'auto',   label: 'Auto (climatology)' },
+  { v: 'locked', label: 'Locked-In Cold' },
+  { v: 'slow',   label: 'Slow Moderation' },
+  { v: 'steady', label: 'Steady Warmup' },
+  { v: 'rapid',  label: 'Rapid Thaw' },
+  { v: 'torch',  label: 'Torch' }
+];
+
+// A pick governs at most this long. A user's read on "days 8+" is a forecast,
+// not a climate — past two months the season takes back over.
+const PICK_HORIZON_DAYS = 60;
+
+// What fell tells you something about the air it fell through. Used only when
+// no Storm Temp was entered.
+const PHASE_TEMP_BIAS = {
+  powder: -8, snowgrains: -6, thundersnow: -2, snowball: -2,
+  ice: 0, sleet: 3, slush: 5, rain: 8
+};
+
+function phaseTempBias(phases) {
+  if (!phases || !phases.length) return 0;
+  let num = 0, den = 0;
+  phases.forEach(p => {
+    const b = PHASE_TEMP_BIAS[p.type];
+    if (b === undefined) return;
+    const w = Math.max(p.amount || 0, 0.05);
+    num += b * w; den += w;
+  });
+  return den ? num / den : 0;
+}
+
+function windowMeanTemp(pick, stormTemp, normal, autoValue) {
+  switch (pick) {
+    case 'locked': return Math.min(stormTemp + 4, 26);
+    case 'slow':   return Math.min((stormTemp + 30) / 2, 31);
+    case 'steady': return Math.max(36, normal);
+    case 'rapid':  return 46;
+    case 'torch':  return 58;
+    default:       return autoValue;
+  }
+}
+
+// Resolve a city's three post-storm windows to mean temperatures.
+// Short = days 1-2, medium = days 3-7, long = days 8+.
+function resolveWindowTemps(city, stormDate) {
+  const normal = seasonalNormalTemp(city.lat, city.lon, city.annualSnow, stormDate);
+  const stormTemp = (city.hasStormTemp && city.stormTemp !== null && city.stormTemp !== undefined)
+    ? city.stormTemp
+    : normal + phaseTempBias(city.phases);
+  const w = city.warming || {};
+  return {
+    normal,
+    stormTemp,
+    short:  windowMeanTemp(w.short  || 'auto', stormTemp, normal, 0.65 * stormTemp + 0.35 * normal),
+    medium: windowMeanTemp(w.medium || 'auto', stormTemp, normal, 0.30 * stormTemp + 0.70 * normal),
+    long:   windowMeanTemp(w.long   || 'auto', stormTemp, normal,
+              seasonalNormalTemp(city.lat, city.lon, city.annualSnow, addDays(stormDate, 21))),
+    picks: { short: w.short || 'auto', medium: w.medium || 'auto', long: w.long || 'auto' }
+  };
+}
+
+// Has the user overridden anything at all? Drives the persistence multiplier's
+// exact-1.0 guarantee in a later task.
+function hasWarmingPicks(city) {
+  const w = city.warming;
+  return !!w && ['short','medium','long'].some(k => w[k] && w[k] !== 'auto');
+}
+
 function computeAllTimelines() {
   // Seed the PRNG so the timeline is a deterministic function of the inputs.
   const nativeRandom = Math.random;
@@ -6842,6 +6913,49 @@ window.__snowTests.push((t, approx) => {
   t('day 7 is halfway', approx(packRatioAt(15, 7), 9));
   t('day 14 is settled', approx(packRatioAt(15, 14), 3));
   t('day 90 stays settled', approx(packRatioAt(15, 90), 3));
+});
+
+window.__snowTests.push((t, approx) => {
+  const jan = new Date(2027, 0, 15);
+  const tulsa = { lat: 36.15, lon: -95.99, annualSnow: 9, hasStormTemp: true, stormTemp: 20,
+                  phases: [{type:'snowball', amount:10}] };
+
+  // Auto everywhere: short window leans on the storm's own air mass,
+  // long window forgets it entirely.
+  const auto = resolveWindowTemps(tulsa, jan);
+  const normal = seasonalNormalTemp(36.15, -95.99, 9, jan);
+  t('auto short leans storm', approx(auto.short, 0.65 * 20 + 0.35 * normal, 0.01));
+  t('auto medium leans normal', approx(auto.medium, 0.30 * 20 + 0.70 * normal, 0.01));
+  t('auto long ignores storm', auto.long > auto.short);
+
+  // Picks anchor on storm temp where the spec says they do
+  const locked = resolveWindowTemps({...tulsa, warming:{short:'locked'}}, jan);
+  t('locked is storm+4', approx(locked.short, 24));
+  const lockedCold = resolveWindowTemps({...tulsa, stormTemp:-20, warming:{short:'locked'}}, jan);
+  t('locked tracks a cold storm', approx(lockedCold.short, -16));
+  const lockedMild = resolveWindowTemps({...tulsa, stormTemp:30, warming:{short:'locked'}}, jan);
+  t('locked caps at 26', approx(lockedMild.short, 26));
+
+  const slow = resolveWindowTemps({...tulsa, warming:{medium:'slow'}}, jan);
+  t('slow splits toward 30', approx(slow.medium, 25));
+  const rapid = resolveWindowTemps({...tulsa, warming:{long:'rapid'}}, jan);
+  t('rapid is 46', approx(rapid.long, 46));
+  const torch = resolveWindowTemps({...tulsa, warming:{long:'torch'}}, jan);
+  t('torch is 58', approx(torch.long, 58));
+
+  // No storm temp at all: infer from what fell
+  const powder = resolveWindowTemps({lat:36.15, lon:-95.99, annualSnow:9,
+    phases:[{type:'powder', amount:10}]}, jan);
+  const slush = resolveWindowTemps({lat:36.15, lon:-95.99, annualSnow:9,
+    phases:[{type:'slush', amount:10}]}, jan);
+  t('powder reads colder than slush', powder.stormTemp < slush.stormTemp);
+  t('powder is 8 below normal', approx(powder.stormTemp, normal - 8, 0.01));
+
+  // hasWarmingPicks drives an exactness guarantee in a later task
+  t('no warming object', hasWarmingPicks(tulsa) === false);
+  t('empty warming object', hasWarmingPicks({...tulsa, warming:{}}) === false);
+  t('all auto', hasWarmingPicks({...tulsa, warming:{short:'auto',medium:'auto',long:'auto'}}) === false);
+  t('one real pick', hasWarmingPicks({...tulsa, warming:{medium:'rapid'}}) === true);
 });
 
 window.addEventListener('load', () => {
