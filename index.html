@@ -4760,6 +4760,68 @@ function formatMeltDuration(days) {
   return 'Permanent';
 }
 
+// The impact tier already states how many snow days a storm causes. Schools
+// cannot reopen before that, however fast the snow goes.
+function schoolDaysFloor(imp) {
+  if (!imp || !imp.school) return 0;
+  const m = imp.school.match(/(\d+)(?:[–-](\d+))?\s*snow day/);
+  if (!m) return 0;
+  return parseInt(m[2] || m[1], 10);
+}
+
+// Depth remaining on a given day, read off the simulated curve.
+function depthOnDay(melt, day) {
+  const c = melt.curve;
+  for (let i = c.length - 1; i >= 0; i--) if (c[i].day <= day) return c[i].depth;
+  return melt.peakDepth;
+}
+
+// First day the curve satisfies a predicate. Falls back to the melt-out day
+// when the predicate never holds on a sampled point.
+function firstDayWhere(melt, fn) {
+  for (const pt of melt.curve) if (fn(pt.depth, pt.day)) return pt.day;
+  return isFinite(melt.meltOutDays) ? melt.meltOutDays : Infinity;
+}
+
+// Five recovery milestones, in the order a city actually experiences them.
+// Plow capability moves roads and schools only — it does not speed up nature.
+function meltMilestones(melt, city, imp) {
+  if (!melt) return [];
+  const peak = melt.peakDepth;
+  const plow = Math.min(2.5, getResilienceFactor(city.annualSnow, city.lat));
+
+  const roadsDay = firstDayWhere(melt, d => d <= Math.max(2, peak * 0.15) * plow);
+  const schoolDay = Math.max(
+    roadsDay,
+    schoolDaysFloor(imp),
+    firstDayWhere(melt, d => d <= Math.max(3, peak * 0.20) * plow)
+  );
+  const walkDay = Math.max(schoolDay, firstDayWhere(melt, d => d <= 0.5));
+
+  // Piles start at 3.2x the depth and lose mass at 45% of the open-ground
+  // rate, but a pile is not a glacier — 2.5x the open-ground melt-out caps it.
+  const moundDay = Math.max(walkDay, isFinite(melt.meltOutDays)
+    ? Math.min(melt.meltOutDays * (3.2 / 0.45), melt.meltOutDays * 2.5)
+    : Infinity);
+  // The north-facing remnant outlives even the piles.
+  const patchDay = isFinite(melt.meltOutDays)
+    ? Math.max(moundDay * 1.15, melt.meltOutDays * 1.35)
+    : Infinity;
+
+  const mk = (key, icon, label, day) => ({
+    key, icon, label, day,
+    date: isFinite(day) ? addDays(melt.stormEnd, day) : null
+  });
+
+  return [
+    mk('roads',  '\u{1F697}', 'Roads passable',    roadsDay),
+    mk('school', '\u{1F3EB}', 'Schools reopen',    schoolDay),
+    mk('walks',  '\u{1F6B6}', 'Sidewalks clear',   walkDay),
+    mk('mounds', '\u{1F3D4}️', 'Plow mounds gone', moundDay),
+    mk('patch',  '\u{1FA79}', 'Last shaded patch', patchDay)
+  ];
+}
+
 function computeAllTimelines() {
   // Seed the PRNG so the timeline is a deterministic function of the inputs.
   const nativeRandom = Math.random;
@@ -7159,6 +7221,50 @@ window.__snowTests.push((t, approx) => {
   t('years', formatMeltDuration(1200) === '3.3 years');
   t('centuries', formatMeltDuration(400000) === '11 centuries');
   t('permanent', formatMeltDuration(Infinity) === 'Permanent');
+});
+
+window.__snowTests.push((t, approx) => {
+  const dec = new Date(2026, 11, 15, 18, 0);
+  const tulsa = { lat:36.15, lon:-95.99, annualSnow:9, hasStormTemp:true, stormTemp:26,
+                  phases:[{type:'snowball', amount:18}] };
+  const melt = simulateMelt(tulsa, dec);
+
+  const m = meltMilestones(melt, tulsa, { school: '2 snow days.' });
+  const keys = m.map(x => x.key);
+  t('all five milestones', keys.length === 5);
+  t('ordered roads first', keys[0] === 'roads');
+  t('ordered patch last', keys[4] === 'patch');
+  t('each has a date', m.every(x => x.date instanceof Date));
+  t('monotonic', m.every((x, i) => i === 0 || x.day >= m[i-1].day));
+
+  // Plow capability clears roads sooner. Hold the melt curve fixed and vary
+  // only the resilience input, so this tests plows and not climate.
+  const plowed   = meltMilestones(melt, {...tulsa, annualSnow:95}, { school: '2 snow days.' });
+  const unplowed = meltMilestones(melt, {...tulsa, annualSnow:2},  { school: '2 snow days.' });
+  t('plows clear roads sooner', plowed[0].day <= unplowed[0].day);
+
+  // Schools cannot reopen before the impact tier says they are closed
+  const long = meltMilestones(melt, tulsa, { school: '3–5 snow days.' });
+  t('school floor respected', long[1].day >= 5);
+
+  // Mounds outlast open ground; the shaded patch outlasts everything
+  t('mounds after sidewalks', m[3].day >= m[2].day);
+  t('patch is last', m[4].day >= m[3].day);
+
+  // A permanent pack must not produce Invalid Date milestones
+  const perm = { curve:[{day:0,date:dec,depth:500,swe:50}], peakDepth:500,
+                 permanent:true, meltOutDays:Infinity, meltOutDate:null, stormEnd:dec };
+  const pm = meltMilestones(perm, tulsa, { school: '2 snow days.' });
+  t('permanent milestones are null-dated', pm.every(x => x.date === null || x.date instanceof Date));
+  t('permanent has no NaN days', pm.every(x => !isNaN(x.day)));
+
+  // No pack at all
+  t('null melt yields no milestones', meltMilestones(null, tulsa, {}).length === 0);
+
+  t('school day parser', schoolDaysFloor({ school: '3–5 snow days.' }) === 5);
+  t('school single day', schoolDaysFloor({ school: '1 snow day.' }) === 1);
+  t('school none', schoolDaysFloor({ school: '0-minute delay; normal schedule.' }) === 0);
+  t('school missing', schoolDaysFloor(null) === 0);
 });
 
 window.addEventListener('load', () => {
