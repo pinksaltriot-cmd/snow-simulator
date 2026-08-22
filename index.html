@@ -6596,6 +6596,33 @@ phaseBuilder.addEventListener('keydown', e => { if (e.key==='Enter' && e.target.
     el.style.opacity=0.1+Math.random()*0.3; c.appendChild(el);
   }
 })();
+
+/* ======================================================================
+   SELFTEST HARNESS
+   Browser-run tests. Load index.html?selftest=1 and read the console.
+   Tests are functions (t, approx) => {...} pushed onto window.__snowTests.
+   ====================================================================== */
+window.__snowTests = [];
+
+window.__snowTests.push((t, approx) => {
+  t('harness runs', true);
+  t('approx works', approx(0.1 + 0.2, 0.3));
+});
+
+window.addEventListener('load', () => {
+  if (!/(\?|&)selftest\b/.test(location.search)) return;
+  let pass = 0, fail = 0;
+  const approx = (a, b, tol) => Math.abs(a - b) <= (tol === undefined ? 1e-6 : tol);
+  window.__snowTests.forEach((fn, i) => {
+    const t = (name, cond) => {
+      if (cond) pass++;
+      else { fail++; console.error('FAIL [' + i + '] ' + name); }
+    };
+    try { fn(t, approx); }
+    catch (e) { fail++; console.error('THREW [' + i + '] ' + e.message); }
+  });
+  console.log('SELFTEST ' + pass + '/' + (pass + fail) + ' ' + (fail ? 'FAIL' : 'PASS'));
+});
 </script>
 </body>
 </html>
