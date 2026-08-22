@@ -4517,6 +4517,46 @@ function seasonalNormalTemp(lat, lon, annualSnow, date) {
   return annualMean + amplitude * seasonal;
 }
 
+// Inches of snow depth per inch of water, by precip type. This is a physical
+// ratio and deliberately not PRECIP_MULTIPLIERS, which weights impact, or
+// PACKABILITY, which weights snowball construction. A type absent here
+// contributes no pack at all: rain runs off, a tornado's amount is a wind
+// speed, hail and fog leave nothing behind.
+const SWE_RATIO = {
+  powder: 15, snowgrains: 12, snowball: 10, thundersnow: 8,
+  slush: 5, sleet: 3, ice: 1.5
+};
+
+// Depth settles toward this ratio as the pack compacts under its own weight.
+const SETTLED_RATIO = 3;
+const SETTLE_DAYS = 14;
+
+function packSWE(phases) {
+  if (!phases || !phases.length) return 0;
+  return phases.reduce((s, p) => {
+    const r = SWE_RATIO[p.type];
+    return r ? s + Math.max(0, p.amount || 0) / r : s;
+  }, 0);
+}
+
+function packDepthInches(phases) {
+  if (!phases || !phases.length) return 0;
+  return phases.reduce((s, p) =>
+    SWE_RATIO[p.type] ? s + Math.max(0, p.amount || 0) : s, 0);
+}
+
+function freshDensityRatio(phases) {
+  const swe = packSWE(phases);
+  if (swe <= 0) return 10;
+  return packDepthInches(phases) / swe;
+}
+
+// The pack loses depth even in locked-in cold, because compaction is not melt.
+function packRatioAt(freshRatio, daysSince) {
+  const k = Math.min(1, Math.max(0, daysSince / SETTLE_DAYS));
+  return freshRatio + (SETTLED_RATIO - freshRatio) * k;
+}
+
 function computeAllTimelines() {
   // Seed the PRNG so the timeline is a deterministic function of the inputs.
   const nativeRandom = Math.random;
@@ -6782,6 +6822,26 @@ window.__snowTests.push((t, approx) => {
   const frac = addDays(new Date(2027, 0, 15), 30.44);
   t('fractional addDays spans 30.44d',
     approx((frac - new Date(2027, 0, 15)) / 86400000, 30.44, 0.001));
+});
+
+window.__snowTests.push((t, approx) => {
+  t('powder is dry', approx(packSWE([{type:'powder', amount:30}]), 2.0));
+  t('sleet is dense', approx(packSWE([{type:'sleet', amount:30}]), 10.0));
+  t('snowball 10 to 1', approx(packSWE([{type:'snowball', amount:30}]), 3.0));
+  t('rain adds no pack', approx(packSWE([{type:'rain', amount:2}]), 0));
+  t('tornado adds no pack', approx(packSWE([{type:'tornado', amount:140}]), 0));
+  t('mixed sums', approx(packSWE([{type:'powder', amount:15}, {type:'sleet', amount:3}]), 2.0));
+  t('empty is zero', packSWE([]) === 0);
+  t('null is zero', packSWE(null) === 0);
+
+  t('fresh powder ratio', approx(freshDensityRatio([{type:'powder', amount:30}]), 15));
+  t('fresh mixed ratio', approx(freshDensityRatio([{type:'powder', amount:15}, {type:'sleet', amount:3}]), 9, 0.01));
+  t('no pack falls back', approx(freshDensityRatio([{type:'rain', amount:2}]), 10));
+
+  t('day 0 is fresh', approx(packRatioAt(15, 0), 15));
+  t('day 7 is halfway', approx(packRatioAt(15, 7), 9));
+  t('day 14 is settled', approx(packRatioAt(15, 14), 3));
+  t('day 90 stays settled', approx(packRatioAt(15, 90), 3));
 });
 
 window.addEventListener('load', () => {
