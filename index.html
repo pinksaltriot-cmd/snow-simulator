@@ -163,6 +163,16 @@
   .rsi-breakdown { margin-top: 12px; font-size: 0.82rem; line-height: 1.6; }
   .rsi-breakdown .region-line { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
 
+  .melt-block { border-top: 1px solid rgba(255,255,255,0.08); padding: 12px 0; }
+  .melt-head { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 0.85rem; margin-bottom: 6px; }
+  .melt-head span { opacity: 0.6; }
+  .melt-spark { display: block; width: 100%; max-width: 100%; height: auto; margin: 4px 0 8px; }
+  .melt-summary { font-size: 0.82rem; opacity: 0.6; line-height: 1.55; margin-bottom: 12px; }
+  .melt-ms-when { white-space: nowrap; text-align: right; margin-left: auto; }
+  .melt-ms-list { display: grid; gap: 3px; }
+  .melt-ms { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 10px; font-size: 0.78rem; opacity: 0.75; }
+  .melt-ms > span:first-child { white-space: nowrap; }
+
   /* The table is wide enough on narrow viewports to push the page sideways.
      Keep the scrolling inside this box so the body never scrolls horizontally. */
   .impact-table-wrap { overflow-x: auto; }
@@ -1015,6 +1025,7 @@
 
   <div id="profile">
     <div class="card" id="profileCard"></div>
+    <div class="card" id="meltCard" style="display:none"></div>
     <div class="card" id="rsiCard"></div>
     <div class="card" id="gapFillCard">
       <h2>Fill In The Gaps</h2>
@@ -3009,6 +3020,7 @@ const clearBtn = document.getElementById('clearBtn');
 const cityListEl = document.getElementById('cityList');
 const profileEl = document.getElementById('profile');
 const profileCard = document.getElementById('profileCard');
+const meltCard = document.getElementById('meltCard');
 const rsiCard = document.getElementById('rsiCard');
 const inputError = document.getElementById('inputError');
 const acList = document.getElementById('acList');
@@ -3356,7 +3368,7 @@ function renderCityList() {
   }).join('');
 }
 
-function clearAll() { cities.length=0; clearPhaseBuilder(); windInput.value=''; gustInput.value=''; pressureInput.value=''; warmShort.value='auto'; warmMedium.value='auto'; warmLong.value='auto'; renderCityList(); profileEl.classList.remove('visible'); resetGapFillState(); }
+function clearAll() { cities.length=0; meltCard.style.display='none'; meltCard.innerHTML=''; clearPhaseBuilder(); windInput.value=''; gustInput.value=''; pressureInput.value=''; warmShort.value='auto'; warmMedium.value='auto'; warmLong.value='auto'; renderCityList(); profileEl.classList.remove('visible'); resetGapFillState(); }
 
 function resetGapFillState() {
   if (typeof gapFillEntries !== 'undefined') {
@@ -3763,7 +3775,7 @@ function generateProfile(rsiOverride) {
     // Melt-out cell
     let meltCell = '<td class="timeline-cell" style="opacity:0.4">—</td>';
     if (c.melt) {
-      const when = c.melt.permanent ? 'Permanent' : formatTimeline(c.melt.meltOutDate);
+      const when = c.melt.permanent ? 'Permanent' : formatMeltMoment(c.melt.meltOutDate, c.melt.meltOutDays);
       const how = formatMeltDuration(c.melt.meltOutDays);
       meltCell = `<td class="timeline-cell"><div class="tl-melt">\u{1F4A7} ${when}</div><div style="opacity:0.6">${how}</div></td>`;
     }
@@ -3937,6 +3949,52 @@ function generateProfile(rsiOverride) {
     <div class="rsi-breakdown"><h3 style="font-size:0.8rem;text-transform:uppercase;letter-spacing:1px;opacity:0.5;margin:14px 0 8px">Breakdown by Region</h3>${regRows||'<p style="opacity:0.4">No cities matched to RSI regions.</p>'}</div>
     ${noData}
   `;
+
+  // Melt & Recovery card
+  const meltCities = cities.filter(c => c.melt);
+  if (!meltCities.length) {
+    meltCard.style.display = 'none';
+  } else {
+    const finite = meltCities.filter(c => isFinite(c.melt.meltOutDays));
+    const firstBare = finite.length ? finite.reduce((a, b) => a.melt.meltOutDays <= b.melt.meltOutDays ? a : b) : null;
+    const lastBare  = finite.length ? finite.reduce((a, b) => a.melt.meltOutDays >= b.melt.meltOutDays ? a : b) : null;
+    const permanentCount = meltCities.length - finite.length;
+
+    // Longest-lasting pack first. Infinity - Infinity is NaN, which makes the
+    // comparator incoherent once two cities are permanent, so rank on a finite
+    // stand-in instead.
+    const rank = c => isFinite(c.melt.meltOutDays) ? c.melt.meltOutDays : Number.MAX_VALUE;
+    const blocks = meltCities.slice().sort((a, b) => rank(b) - rank(a)).map(c => {
+      const impForSchool = isRainOnly(c.phases) ? { school: '' }
+        : getImpact(c.snow, c.annualSnow, c.hasStormTemp, c.stormTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure, c.persistenceMult);
+      const ms = meltMilestones(c.melt, { ...c, lat: c.meltLat, annualSnow: c.meltSnow }, impForSchool);
+      // A milestone with no date never arrives. "Never" says that on its own —
+      // pairing it with the duration reads as "Never Permanent".
+      const rows = ms.map(m => {
+        const when = m.date
+          ? `${formatMeltMoment(m.date, m.day)} <span style="opacity:0.5">${formatMeltDuration(m.day)}</span>`
+          : 'Never';
+        return `<div class="melt-ms"><span>${m.icon} ${m.label}</span><span class="melt-ms-when">${when}</span></div>`;
+      }).join('');
+      const head = c.melt.permanent
+        ? 'Permanent \u2014 does not melt'
+        : `${formatMeltMoment(c.melt.meltOutDate, c.melt.meltOutDays)} \u00b7 ${formatMeltDuration(c.melt.meltOutDays)}`;
+      return `<div class="melt-block">
+        <div class="melt-head"><strong>${esc(c.name)}</strong><span>${formatSnow(c.melt.peakDepth)} peak \u2192 ${head}</span></div>
+        ${meltSparkline(c.melt, ms)}
+        <div class="melt-ms-list">${rows}</div>
+      </div>`;
+    }).join('');
+
+    const header = finite.length
+      ? `<div class="melt-summary">\u{1F4A7} ${permanentCount ? `All but ${permanentCount} clear` : 'Region clear'} by <strong>${formatMeltMoment(lastBare.melt.meltOutDate, lastBare.melt.meltOutDays)}</strong> \u00b7 first bare: ${esc(firstBare.name)} (${formatMeltDuration(firstBare.melt.meltOutDays)}) \u00b7 last: ${esc(lastBare.name)} (${formatMeltDuration(lastBare.melt.meltOutDays)})${permanentCount ? ` \u00b7 ${permanentCount} never ${permanentCount === 1 ? 'melts' : 'melt'}` : ''}</div>`
+      : `<div class="melt-summary">\u{1F9CA} No city melts out. The pack is permanent.</div>`;
+
+    meltCard.innerHTML = `<h2>Melt &amp; Recovery</h2>
+      <p style="font-size:0.82rem;opacity:0.5;margin-bottom:12px">Degree-day melt from each city's Storm Temp and Warming Outlook. The first days drop fastest because the pack compacts under its own weight \u2014 that is settling, not melting.</p>
+      ${header}${blocks}`;
+    meltCard.style.display = '';
+  }
 
   profileEl.classList.add('visible');
   profileEl.scrollIntoView({ behavior:'smooth', block:'start' });
@@ -4843,6 +4901,20 @@ function formatMeltDuration(days) {
   return 'Permanent';
 }
 
+const MONTH_ABBR = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// formatTimeline gives a weekday and a clock time. That reads correctly inside
+// a storm, but not months out \u2014 "Thu 8:24 PM" could be any Thursday, and a
+// melt-out eight weeks away has no business claiming a minute anyway. Past a
+// week the calendar date is the only unambiguous label; past a year, so is the
+// year.
+function formatMeltMoment(date, day) {
+  if (!date) return 'Never';
+  if (isFinite(day) && day < 6) return formatTimeline(date);
+  const md = DAYS[date.getDay()] + ' ' + MONTH_ABBR[date.getMonth()] + ' ' + date.getDate();
+  return (isFinite(day) && day >= 300) ? md + ', ' + date.getFullYear() : md;
+}
+
 // The impact tier already states how many snow days a storm causes. Schools
 // cannot reopen before that, however fast the snow goes.
 function schoolDaysFloor(imp) {
@@ -4914,6 +4986,45 @@ function meltMilestones(melt, city, imp) {
     mk('mounds', '\u{1F3D4}️', 'Plow mounds gone', moundDay),
     mk('patch',  '\u{1FA79}', 'Last shaded patch', patchDay)
   ];
+}
+
+// A depth-over-time sparkline with a dot per milestone. Pure string building —
+// no DOM, so it is testable outside the render path.
+function meltSparkline(melt, milestones) {
+  const W = 640, H = 96, PAD = 6;
+  if (!melt || !melt.curve || !melt.curve.length) return '';
+  const maxDay = Math.max(1, melt.curve[melt.curve.length - 1].day);
+  const maxDepth = Math.max(0.01, melt.peakDepth);
+  const x = d => PAD + (d / maxDay) * (W - 2 * PAD);
+  const y = v => H - PAD - (v / maxDepth) * (H - 2 * PAD);
+  const pts = melt.curve.map(p => x(p.day).toFixed(1) + ',' + y(p.depth).toFixed(1)).join(' ');
+  // depthOnDay is a step lookup — it reports the last *sampled* depth. A pack
+  // that clears in under a day has only two curve points, so a dot placed that
+  // way floats at peak depth well above the line it is meant to annotate.
+  // Interpolate between the bracketing samples instead so every dot rides the
+  // curve it belongs to.
+  const depthAt = d => {
+    const c = melt.curve;
+    if (d <= c[0].day) return c[0].depth;
+    for (let i = 1; i < c.length; i++) {
+      if (c[i].day >= d) {
+        const a = c[i - 1], b = c[i], span = b.day - a.day;
+        return span > 0 ? a.depth + (b.depth - a.depth) * ((d - a.day) / span) : b.depth;
+      }
+    }
+    return c[c.length - 1].depth;
+  };
+  // Close the polyline back along the baseline so the pack reads as a mass,
+  // not a line. The fill is what makes a 90-day tail legible at this height.
+  const area = `${x(0).toFixed(1)},${y(0).toFixed(1)} ` + pts + ` ${x(maxDay).toFixed(1)},${y(0).toFixed(1)}`;
+  const dots = (milestones || [])
+    .filter(m => isFinite(m.day) && m.day <= maxDay)
+    .map(m => `<circle cx="${x(m.day).toFixed(1)}" cy="${y(depthAt(m.day)).toFixed(1)}" r="4" fill="#fdba74" stroke="#0f172a" stroke-width="1.5"><title>${esc(m.label)}</title></circle>`)
+    .join('');
+  return `<svg class="melt-spark" viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Snow depth over time">`
+    + `<line x1="${x(0).toFixed(1)}" y1="${y(0).toFixed(1)}" x2="${x(maxDay).toFixed(1)}" y2="${y(0).toFixed(1)}" stroke="rgba(255,255,255,0.12)" stroke-width="1"/>`
+    + `<polygon fill="rgba(125,211,252,0.3)" points="${area}"/>`
+    + `<polyline fill="none" stroke="#7dd3fc" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="${pts}"/>${dots}</svg>`;
 }
 
 // How far the pack's life deviates from what Storm Temp alone predicted.
@@ -7419,6 +7530,47 @@ window.__snowTests.push((t, approx) => {
   t('persistence raises impact', heavier.effective > lighter.effective);
   t('persistence surfaced', heavier.persistenceMult === 1.35);
   t('null param is neutral', getImpact(18, 9, true, 26, 18, 0, 0, 36.15, null, null).persistenceMult === 1.0);
+});
+
+window.__snowTests.push((t, approx) => {
+  const dec = new Date(2026, 11, 15, 18, 0);
+  const city = { name:'Tulsa, OK', lat:36.15, lon:-95.99, annualSnow:9,
+                 hasStormTemp:true, stormTemp:26, phases:[{type:'snowball', amount:18}] };
+  const melt = simulateMelt(city, dec);
+  const svg = meltSparkline(melt, meltMilestones(melt, city, { school:'2 snow days.' }));
+  t('is an svg', svg.indexOf('<svg') === 0);
+  t('has a polyline', svg.includes('<polyline'));
+  t('has milestone dots', (svg.match(/<circle/g) || []).length >= 1);
+  t('no NaN in output', !svg.includes('NaN'));
+  t('no undefined in output', !svg.includes('undefined'));
+  // A permanent pack must still draw without exploding
+  const perm = { curve:[{day:0,date:dec,depth:500,swe:50},{day:60,date:dec,depth:480,swe:48}],
+                 peakDepth:500, permanent:true, meltOutDays:Infinity, meltOutDate:null, stormEnd:dec };
+  const psvg = meltSparkline(perm, meltMilestones(perm, city, {}));
+  t('permanent sparkline is clean', psvg.indexOf('<svg') === 0 && !psvg.includes('NaN'));
+  // No pack at all
+  t('null melt draws nothing', meltSparkline(null, []) === '');
+  // A dot must ride the curve, not the last sample. With only two curve points
+  // a step lookup parks a half-day milestone at peak depth, floating above the
+  // line it annotates.
+  const sparse = { curve:[{day:0,date:dec,depth:10,swe:1},{day:1,date:dec,depth:0,swe:0}],
+                   peakDepth:10, permanent:false, meltOutDays:0.5, meltOutDate:dec, stormEnd:dec };
+  const ssvg = meltSparkline(sparse, [{ key:'x', icon:'x', label:'Half way', day:0.5, date:dec }]);
+  const cy = parseFloat(ssvg.match(/cy="([\d.]+)"/)[1]);
+  const y0 = parseFloat(ssvg.match(/<polyline[^>]*points="[\d.]+,([\d.]+)/)[1]);
+  const y1 = parseFloat(ssvg.match(/<polyline[^>]*points="[\d.]+,[\d.]+ [\d.]+,([\d.]+)/)[1]);
+  t('a half-day dot lands halfway down the curve', approx(cy, (y0 + y1) / 2, 0.6));
+  t('a half-day dot is not at the peak', cy > y0 + 1);
+});
+
+window.__snowTests.push((t, approx) => {
+  const d = new Date(2027, 1, 11, 20, 24);   // Thu Feb 11 2027, 8:24 PM
+  t('inside the week keeps the clock', formatMeltMoment(d, 2) === formatTimeline(d));
+  t('past a week names the date', formatMeltMoment(d, 60) === 'Thu Feb 11');
+  t('past a week drops the clock', !formatMeltMoment(d, 60).includes('PM'));
+  t('past a year names the year', formatMeltMoment(d, 400) === 'Thu Feb 11, 2027');
+  t('no date is never', formatMeltMoment(null, Infinity) === 'Never');
+  t('permanent with a date still dates', formatMeltMoment(d, Infinity) === 'Thu Feb 11');
 });
 
 window.addEventListener('load', () => {
