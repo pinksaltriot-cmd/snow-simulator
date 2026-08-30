@@ -188,7 +188,7 @@
   .impact-pill { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
   .res-pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.68rem; font-weight: 600; white-space: nowrap; }
 
-  /* Snow war activity (148 tiers, banded into 16 colors) */
+  /* Snow war activity (149 tiers, banded into 16 colors) */
   .war-pill { display: inline-block; padding: 3px 9px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
   .war-desc { display: block; margin-top: 4px; opacity: 0.62; font-size: 0.72rem; line-height: 1.35; }
   .war-w0 { background: #0f172a; color: #334155; }
@@ -829,7 +829,7 @@
 
 <div class="container">
   <h1>Snow Event Profile Maker 3.1.4</h1>
-  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">7849 lines of code</p>
+  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">7851 lines of code</p>
   <p class="subtitle">Powered by real NOAA RSI methodology with location-based impact scaling</p>
 
   <div class="card">
@@ -2329,7 +2329,7 @@ const SNOW_WAR_TIERS = [
   { maxP: 5.5,     css:'w4', icon:'⏰', label:'Watch Rotation',
     desc:'Positions are manned continuously for the first time, in two-hour shifts across four people per fort. Coverage runs from first light to full dark, roughly nine hours, with a loaded sling kept at every notch throughout. Two night attempts are made in a week by parties of three, both detected within forty feet of the wall against a hundred by daylight, and both driven off inside ninety seconds.' },
   { maxP: 6.0,     css:'w4', icon:'🎪', label:'Multi-Fort Campaign',
-    desc:'Three or more strongholds hold the block across four hundred feet of frontage and thirty participants. Alliances form along lines of stockpile size and shift as supply is spent and rebuilt, averaging two realignments an afternoon. No single fort can hold against the other two together.' },
+    desc:'Three or more strongholds hold the block across four hundred feet of frontage and thirty participants. Alliances form along lines of stockpile size and harden as soon as the first shared trench is dug, holding an average of nine days apiece. No single fort can hold against the other two together.' },
   { maxP: 6.5,     css:'w4', icon:'🪓', label:'Fieldworks',
     desc:'Construction moves beyond the forts into the ground between them: firing steps, banked approaches, and cut lanes totalling three hundred feet of prepared position, two of them laid out for a bungee sling worked by two people at eighty-five feet. Eleven people work it for a full day. Every approach to every fort now crosses at least one built obstacle.' },
   { maxP: 7.0,     css:'w4', icon:'🕳️', label:'Trenches',
@@ -2345,9 +2345,9 @@ const SNOW_WAR_TIERS = [
   { maxP: 8.85,    css:'w5', icon:'🔨', label:'Undermining',
     desc:'A tunnel is driven under the opposing wall — twenty-two feet, four hours, two diggers working in shifts. The collapse takes out eight feet of frontage in a second and a half. Both sides begin listening at the base of their own walls each morning, which becomes standard practice.' },
   { maxP: 9.5,     css:'w5', icon:'🏯', label:'The Keep',
-    desc:'A central stronghold with a genuine interior chamber, seven feet long by six wide and four feet at the ceiling, inside two-foot walls that put the outer footprint at eleven by ten. It is cold, dark, dripping at about a drop a second, and large enough to hold four people seated. Interior temperature holds near twenty-eight degrees regardless of the outside reading.' },
+    desc:'A central stronghold with a genuine interior chamber, seven feet long by six wide and four feet at the ceiling, inside two-foot walls that put the outer footprint at eleven by ten. There is one to an alliance rather than one to a fort, both allied walls facing outward from it, and it is cold, dark, dripping at about a drop a second, and large enough to hold four people seated. Interior temperature holds near twenty-eight degrees regardless of the outside reading.' },
   { maxP: 10.2,    css:'w5', icon:'🚪', label:'Inner Bailey',
-    desc:'A second wall is raised inside the first, enclosing the keep and the main store — sixty feet of circuit at five feet high and thirty inches thick. Taking the outer wall no longer ends anything. Two full assaults reach the outer circuit in a week and neither penetrates the inner.' },
+    desc:'A second wall is raised behind both allied fronts, enclosing the shared keep and the main store — sixty feet of circuit at five feet high and thirty inches thick. Taking either outer wall no longer ends anything. Two full assaults reach an outer circuit in a week and neither penetrates the inner.' },
   { maxP: 11,      css:'w5', icon:'🧊', label:'Ice-Armored Walls',
     desc:'Water is deliberately poured over the ramparts, five to eight gallons per side, and left overnight to glaze at about an eighth of an inch. Rounds now shatter on impact rather than pack in — slung rounds worst of all, arriving fast enough to burst on the glaze — cutting effective damage by roughly two thirds, and both sides begin glazing within a day. Wall service life triples.' },
   { maxP: 12,      css:'w5', icon:'💧', label:'Glazing Crews',
@@ -2371,7 +2371,7 @@ const SNOW_WAR_TIERS = [
   { maxP: 16.8,    css:'w6', icon:'📍', label:'Ranging Stakes',
     desc:'Fire stops being guesswork: stakes are driven at twenty-five-foot intervals out to two hundred feet, and every engine is walked onto its target with three ranging shots. Hit rate at maximum range rises from one in eleven to one in four. A ranging book is kept per engine and copied whenever crews rotate.' },
   { maxP: 17.5,    css:'w6', icon:'🗺️', label:'Front Lines',
-    desc:'The conflict has outgrown a single block and runs across four, roughly two thousand feet of contested frontage with a third of it walled to six feet high and three feet thick. Territory is mapped on notebook paper, held by one person per side, and revised after every change of position — about nine times a day. Combined participation passes sixty and engine density settles at one per four hundred feet of frontage.' },
+    desc:'The conflict has outgrown a single block and runs across four, roughly two thousand feet of contested frontage with six hundred and seventy feet of it walled to six feet high and three feet thick. Territory is mapped on notebook paper, held by one person per side, and revised after every change of position — about nine times a day. Combined participation passes sixty and engine density settles at one per four hundred feet of frontage.' },
   { maxP: 18.7,    css:'w6', icon:'📐', label:'Salients',
     desc:'The line stops being straight. Three bulges push into opposing territory at depths of sixty to a hundred feet, each defended on three sides across a hundred and eighty feet of wall and each requiring about forty percent more people per foot of frontage. Each is held by two engines firing on divergent arcs, and two of the three are given up voluntarily within a week.' },
   { maxP: 19.4,    css:'w6', icon:'🧨', label:'Bombardment',
@@ -2382,8 +2382,10 @@ const SNOW_WAR_TIERS = [
     desc:'Forward stores are established behind each sector, six of them holding fifteen hundred rounds apiece. Time from request to delivery at the line drops from twenty-five minutes to four. Two depots sit inside trebuchet range of the opposing works and are moved after the first one is hit, at a loss of eleven hundred rounds.' },
   { maxP: 22.2,    css:'w6', icon:'🛞', label:'Mobile Batteries',
     desc:'Engines are mounted on sled runners and moved nightly, four to a battery, so that no firing position is used twice. Displacement takes twenty minutes and cuts counter-battery losses by three quarters. The cost is accuracy: the first shot from a new position lands sixty feet wide on average.' },
+  { maxP: 22.6,    css:'w6', icon:'🚧', label:'Forward Works',
+    desc:'Everything in front of the bailey is rebuilt to the new scale: four outworks a side at sixteen feet long, four feet high and twenty inches thick, pushed sixty feet out, and a redoubt fourteen feet across, six and a half feet high and forty inches thick holding eight hundred rounds. The fieldworks are recut with them at nine hundred feet of prepared position against the original three hundred, worked by thirty-one people over three days, with the sling lanes widened to take engines. Defended depth from the outermost stake to the bailey wall reaches two hundred and forty feet, which is just inside the range of the heaviest engine that can reach it.' },
   { maxP: 23,      css:'w6', icon:'🏛️', label:'Snow Citadel',
-    desc:'A multi-chamber fortress with a roof that holds: five rooms across a footprint averaging thirty-four feet by twenty-two, forty feet on its longest axis, six feet of interior height at the center, walls three feet thick. It is given a name, marked at the entrance, and used as the reference point for every position on the map. Construction consumed sixty person-hours.' },
+    desc:'A multi-chamber fortress with a roof that holds: five rooms across a footprint averaging thirty-four feet by twenty-two, forty feet on its longest axis, six feet of interior height at the center, walls three feet thick. It is given a name, marked at the entrance, and used as the reference point for every position on the map. Construction consumed sixty person-hours. The inner bailey is enlarged rather than abandoned: a hundred and sixty feet of circuit at seven feet high and thirty-six inches thick, enclosing sixteen hundred square feet of citadel and ammunition store for a further ninety person-hours. Garrison runs twenty-eight to the complex against eighty-eight in the war overall.' },
   { maxP: 24.7,    css:'w6', icon:'📋', label:'Conscription',
     desc:'Participation stops being voluntary. Every household across four blocks is assessed at one body per two children, producing a roll of a hundred and forty. Exemptions are granted for injury, for anyone with a working stove, and for the eleven crews already serving engines. Compliance runs about seventy percent.' },
   { maxP: 25.6,    css:'w6', icon:'🪜', label:'Heavy Trebuchets',
