@@ -188,7 +188,7 @@
   .impact-pill { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
   .res-pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.68rem; font-weight: 600; white-space: nowrap; }
 
-  /* Snow war activity (149 tiers, banded into 16 colors) */
+  /* Snow war activity (159 tiers, banded into 16 colors) */
   .war-pill { display: inline-block; padding: 3px 9px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
   .war-desc { display: block; margin-top: 4px; opacity: 0.62; font-size: 0.72rem; line-height: 1.35; }
   .war-w0 { background: #0f172a; color: #334155; }
@@ -851,7 +851,7 @@
 
   <div class="card" id="snowWarCard" style="display:none">
     <h2>Snow War Tiers</h2>
-    <p class="paragraph-hint">All <span id="snowWarCount">&mdash;</span> snow war activity tiers, ordered by the packable snow depth that reaches them &mdash; from a single disputed flake up past 10,000&Prime;. Every city in a storm lands on exactly one of these, based on how much of its precipitation packs.</p>
+    <p class="paragraph-hint">All <span id="snowWarCount">&mdash;</span> snow war activity tiers, ordered by the packable snow depth that reaches them &mdash; from a single disputed flake up past 30,000&Prime;. Every city in a storm lands on exactly one of these, based on how much of its precipitation packs.</p>
     <div class="historic-list" id="snowWarList"></div>
   </div>
 
@@ -2219,8 +2219,8 @@ function snowWarScore(phases) {
   return roundPrecip(6 * p * p);
 }
 
-// 121 tiers, keyed by the upper bound of packable inches that reaches them.
-// Runs from a single disputed flake to 10,000" and beyond, matching the reach
+// 159 tiers, keyed by the upper bound of packable inches that reaches them.
+// Runs from a single disputed flake to 30,000" and beyond, matching the reach
 // of the snow impact ladder. css picks a color band; the ladder darkens from
 // grey through blue and amber into magenta, then violet into the white void.
 const SNOW_WAR_TIERS = [
@@ -2520,8 +2520,28 @@ const SNOW_WAR_TIERS = [
     desc:'Engagements run at distances where the target has moved before the round arrives, and both sides fire at where the other is calculated to be. Transit time runs four months. Confirmation of a hit takes as long again, and the ledger is kept on projections rather than on observation.' },
   { maxP: 10000,   css:'w14', icon:'🌠', label:'The Final Front',
     desc:'The last contested boundary in the reachable universe, held by two formations whose composition, batteries included, has not changed in four thousand years. Neither has gained ground. Every other question — supply, succession, doctrine, the archive itself — was settled long enough ago to survive only in the deep record.' },
+  { maxP: 11000,   css:'w14', icon:'🤖', label:'Automatic War',
+    desc:'Command lapses entirely and nothing about the fighting changes. Batteries load, fire, and repair themselves on standing orders issued four thousand years before the last officer to read them died, and nine relay stations pass firing solutions between positions holding no living crew at all. The most recent inspection of record found ninety-six percent of emplacements operating to their original specification.' },
+  { maxP: 12000,   css:'w14', icon:'🕸️', label:'The Inherited Grievance',
+    desc:'Nobody on the line can state what the war is about. The cause survives as a single citation in the deep record — volume nine, article four hundred and twelve — and the volume it cites was lost an estimated six thousand years ago. Four reconstructions have been attempted and no two agree on which side was wronged.' },
+  { maxP: 13500,   css:'w14', icon:'🌟', label:'Stellar Batteries',
+    desc:'Fire is drawn directly off a star. Nine collectors, each forty miles across, charge the launchers from stellar output and throw at a hundredth of light speed, exceeding every counterweight engine ever built by a factor in the billions. A single battery charges in eleven days and the star is projected to hold that schedule for another four billion years.' },
+  { maxP: 15000,   css:'w14', icon:'📯', label:'Light-Delay Command',
+    desc:'Orders take longer to arrive than the situations that prompted them last. A directive leaving the center reaches the nearest garrison in nine years and the farthest in four hundred, by which time the position it addresses has changed hands twice or ceased to exist. Eleven emplacements are recorded as still executing instructions countermanded three centuries before they were read.' },
+  { maxP: 17000,   css:'w14', icon:'🧿', label:'The Unconfirmed Enemy',
+    desc:'No formation on either side has observed an opposing formation in eleven hundred years. Fire is maintained against coordinates rather than against anything seen at them, and sixty-one standing positions report against an adversary whose present existence cannot be established from any record held. Two commissions have examined the question and both concluded that the fire should continue regardless.' },
+  { maxP: 19000,   css:'w14', icon:'🌒', label:'The Frozen Systems',
+    desc:'Every body within reach carries a sheet — four planets, ninety-one moons, and an uncounted field of lesser rock, at depths from nine feet to two miles. Ammunition is no longer quarried where it is thrown but shipped from wherever the pack runs thickest, on schedules laid six years out. The planet the war began on is now the sixth largest source of snow in it.' },
+  { maxP: 21500,   css:'w14', icon:'👣', label:'The Inheritors',
+    desc:'Those holding the line are no longer descended from anyone who started it. Three peoples occupy the positions, none continuous with the founders and two arrived from outside the original system, and all three cite the same charter, which none can read in the original. Their claim to the ground rests on ninety years of occupation apiece and on nothing older than that.' },
+  { maxP: 24000,   css:'w14', icon:'⚫', label:'Singularity Batteries',
+    desc:'Rounds are swung around collapsed mass and released on the far side at ninety-six percent of light speed. Each launcher is a fixed installation eleven thousand miles across of which the working part is smaller than a snowball, and four are in service, none moved or serviced since emplacement. A round fired today arrives in a century whose commanders have not been born.' },
+  { maxP: 27000,   css:'w14', icon:'🏟️', label:'The Axis Keep',
+    desc:'One structure sits at the origin of every coordinate in every order either side gives: a keep of packed ice nine hundred miles across the base and forty thousand feet to the crown, raised over eleven centuries and added to since. It holds the deep archive, the master census, and the standing definition of the foot. Neither side has ever fired on it, because every position they hold is defined by measurement from it.' },
+  { maxP: 30000,   css:'w14', icon:'🌅', label:'The Unmoving Line',
+    desc:'The boundary is no longer contested; it is surveyed. Both formations know it to the inch, neither has crossed it in a million years, and neither retains any means of doing so — the last unit capable of an advance was disbanded, by both sides’ records, in the same decade. It is kept the way a coastline is kept: watched, charted, reported on quarterly, and not expected to move.' },
   { maxP: Infinity,css:'w15', icon:'♾️', label:'Beyond Reckoning',
-    desc:'The scale runs out of names at ten thousand inches and the measured depth continues past it. Whatever is taking place stopped matching the definition of a snowball fight an estimated forty thousand years ago. Participation, expenditure, and frontage are all reported as unbounded.' }
+    desc:'The scale runs out of names at thirty thousand inches and the measured depth continues past it. Whatever is taking place stopped matching the definition of a snowball fight an estimated forty thousand years ago. Participation, expenditure, and frontage are all reported as unbounded.' }
 ];
 
 // Resolve a city's phases to its snow war tier. The first tier is reserved for
