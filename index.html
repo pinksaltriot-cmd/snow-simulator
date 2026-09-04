@@ -188,7 +188,7 @@
   .impact-pill { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
   .res-pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.68rem; font-weight: 600; white-space: nowrap; }
 
-  /* Snow war activity (159 tiers, banded into 16 colors) */
+  /* Snow war activity (170 tiers, banded into 16 colors) */
   .war-pill { display: inline-block; padding: 3px 9px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
   .war-desc { display: block; margin-top: 4px; opacity: 0.62; font-size: 0.72rem; line-height: 1.35; }
   .war-w0 { background: #0f172a; color: #334155; }
@@ -2219,7 +2219,7 @@ function snowWarScore(phases) {
   return roundPrecip(6 * p * p);
 }
 
-// 159 tiers, keyed by the upper bound of packable inches that reaches them.
+// 170 tiers, keyed by the upper bound of packable inches that reaches them.
 // Runs from a single disputed flake to 30,000" and beyond, matching the reach
 // of the snow impact ladder. css picks a color band; the ladder darkens from
 // grey through blue and amber into magenta, then violet into the white void.
@@ -2250,6 +2250,8 @@ const SNOW_WAR_TIERS = [
     desc:'Seven hundredths of an inch, which is a thimble’s worth off ten square feet of clean surface. A packed round reaches three quarters of an inch and holds together for about six feet of flight. Three or four exist at once if every car, railing, and step on the property is stripped — about forty surfaces over twenty minutes.' },
   { maxP: 0.1,     css:'w1', icon:'🥄', label:'Scrapings',
     desc:'Harvest the whole hood of a car, roughly fifteen square feet, and you get one crumbly lump with no structural core. It survives about two feet of flight before reverting to loose crystals. A determined pair working the entire block, thirty-one car hoods across twenty-five minutes, can produce five or six, none of which arrive intact.' },
+  { maxP: 0.11,    css:'w1', icon:'🌰', label:'Acorn-Loaded',
+    desc:'Someone arrives with a backpack spreader and no snow to put in it, so the hopper is loaded with acorns off the ground — the same test material the machine was proven on in September. The gate is opened to its widest detent and eleven acorns are laid in a flawless even line across four feet of bare pavement. Everyone present agrees this is not ammunition. It is entered in the record anyway, because the machine worked perfectly and someone should say so.' },
   { maxP: 0.125,   css:'w1', icon:'🧹', label:'Sweepings',
     desc:'An eighth of an inch, gathered by sweeping rather than scooping. Yield runs about one round per thirty square feet, at an inch and a quarter across and mostly grit by volume. Ten to twelve can be assembled in twenty minutes and roughly two in three fail on release.' },
   { maxP: 0.15,    css:'w1', icon:'🧂', label:'A Dusting’s Worth',
@@ -2258,6 +2260,8 @@ const SNOW_WAR_TIERS = [
     desc:'Just short of the material for one complete round. What can be packed reaches an inch and three quarters, holds its shape in the hand, and comes apart at the seam on release about half the time. Yard-wide supply supports one usable throw and one that will be argued about.' },
   { maxP: 0.22,    css:'w1', icon:'⚪', label:'One Bad Snowball',
     desc:'A single round about two inches across, poorly made, composed largely of grass and driveway grit. It is thrown once at a range of maybe twenty feet, it misses, and no material remains for a second attempt. Total engagement duration is under ten seconds with one participant per side.' },
+  { maxP: 0.235,   css:'w1', icon:'🪛', label:'Jammed Spreader',
+    desc:'The block’s one spreader takes a pebble into the screw and the slip clutch does exactly what it was built to do: the wheels keep turning, nothing snaps, and no snow comes out the back. Clearing it runs forty seconds with a gloved hand and the finger grille lifted. During those forty seconds the operator is defenceless, is hit twice, and files the season’s first formal complaint about equipment reliability.' },
   { maxP: 0.26,    css:'w1', icon:'🥌', label:'One Good Snowball',
     desc:'Enough clean material for one properly packed round: two and a quarter inches, uniform density, no debris. It carries thirty-five feet and arrives intact. There is exactly one on the property, both sides know where it is, it changes hands twice before anyone throws it, and the engagement consists of a single throw.' },
   { maxP: 0.3,     css:'w1', icon:'🎯', label:'Two Snowballs',
@@ -2266,6 +2270,8 @@ const SNOW_WAR_TIERS = [
     desc:'A stockpile of six to eight fits inside one mitten. Ammunition is rationed at the outset at two throws a minute and fully expended within ninety seconds of the opening exchange. Two to four participants, no fixed positions, and no resupply available anywhere on the property.' },
   { maxP: 0.44,    css:'w2', icon:'🫳', label:'Mitten Sling',
     desc:'The first attempt at a device: a round dropped into a loose mitten, swung twice overhead, and released on feel alone. It carries forty-five feet against a hand throw’s twenty-five, and about one in nine arrives within ten feet of anything aimed at. Two mittens are lost to the roof in the first hour.' },
+  { maxP: 0.455,   css:'w2', icon:'🧪', label:'Hand-Crank Prototype',
+    desc:'An older sibling produces the rejected crank-auger design, the one that asks the operator to turn a handle and steer at the same time. It throws snow in a respectable arc for about thirty seconds, at which point the operator’s arm gives out. Two exist on the block and neither survives the afternoon intact. The backpack roller is agreed, once again and for the record, to have been the correct design.' },
   { maxP: 0.47,    css:'w2', icon:'🧥', label:'Pocketful',
     desc:'Ten to twelve rounds, carried in coat pockets because there is nowhere else to put them. Effective range reaches twenty-five feet and hit rate runs about one in five. Both sides open at full supply and the engagement is decided within two minutes by whoever throws slower.' },
   { maxP: 0.55,    css:'w2', icon:'🥎', label:'Skirmish',
@@ -2302,6 +2308,8 @@ const SNOW_WAR_TIERS = [
     desc:'Positions are scraped out rather than built up: a shallow trough eight inches deep, twenty inches wide and twenty feet long, with the spoil banked in front to ten inches high and fourteen across at the base. It stops a low throw and nothing else, and no sling can be swung from inside it. Two such lines face each other at fifty feet and neither is abandoned for the rest of the afternoon.' },
   { maxP: 2.1,     css:'w3', icon:'🧱', label:'First Wall',
     desc:'The first built structure of the season: knee-high at eighteen to twenty-four inches, packed by hand over about forty minutes. It runs eight to twelve feet long and eight inches thick, enough to stop a direct throw from fifteen feet out, though not a round scooped over the top of it. One wall, one side, and no equivalent facing it yet.' },
+  { maxP: 2.15,    css:'w3', icon:'🎒', label:'Backpack Spreader',
+    desc:'Standard personal issue arrives: a one-and-a-half-kilogram roller that fills most of a school backpack and lays a five-millimetre band twenty-eight inches wide at a walking pace. It makes no snow; it moves it, gathering the trampled remnant of a fought-over yard into a workable ridge behind the fort line. One operator resurfaces sixty feet of stripped ground in the time a packer builds four rounds. Every wall crew puts in for one.' },
   { maxP: 2.2,     css:'w3', icon:'🏏', label:'Bat and Racquet',
     desc:'Rounds start being hit rather than thrown, with a plastic bat and a warped tennis racquet taken from a garage, neither of them returned before spring. A clean connection carries sixty-five feet, nearly double a hand throw, but three rounds in five come apart on the face of the swing. Packing density is raised specifically to survive contact.' },
   { maxP: 2.3,     css:'w3', icon:'⚒️', label:'Wall and Ditch',
@@ -2354,6 +2362,8 @@ const SNOW_WAR_TIERS = [
     desc:'Glazing becomes a standing assignment: three people per fort, forty gallons a night, hauled from a basement tap in relays over sixty feet, eleven trips a night. Coverage extends from the front face to the full circuit, about two hundred square feet at a third of an inch a night. Untreated sections are marked on the map and become the standard target.' },
   { maxP: 12.5,    css:'w5', icon:'🧵', label:'Sling Corps',
     desc:'Slingers stop working alone and are grouped into two ranks of fifteen, throwing on a called count. A massed release puts thirty rounds into a twenty-foot square inside two seconds, which no individual accuracy has ever managed. Training to a usable standard takes nine sessions and about a third never reach it.' },
+  { maxP: 12.7,    css:'w5', icon:'🌨️', label:'Spreader Corps',
+    desc:'Redistribution becomes a trade with its own crews: nine operators in a rolling line, wings deployed, feeding continuously off the plough berm at the yard’s edge. They lay an unbroken forty-foot front of fresh cover per pass and turn a bare, contested lawn back into a supplied position in under four minutes. Packers now draw from ground the spreaders resurfaced rather than from the sky, and the weather stops being the only supplier.' },
   { maxP: 13,      css:'w5', icon:'🎣', label:'Siege Engines',
     desc:'The first catapult, assembled from a sled, a fence post, and four bungee cords taken without permission and missed within a day. It launches a four-inch round a measured hundred and ten feet, roughly triple hand-throw range, then comes apart on the second attempt. Assembly took two hours and five people.' },
   { maxP: 13.5,    css:'w5', icon:'📌', label:'Ballista',
@@ -2364,6 +2374,8 @@ const SNOW_WAR_TIERS = [
     desc:'A counterweight engine with a pivoting arm and a bucket of packed snow for mass, throwing two hundred and sixty feet against the hundred and forty of anything else in service. Construction takes nine hours and a pit dug to seat the frame. It outranges every counter-battery engine on the block, which ends the counter-battery advantage in a day.' },
   { maxP: 15,      css:'w5', icon:'🏭', label:'Ammunition Factory',
     desc:'A dedicated production line with a foreman and six workers. Output runs sixty to ninety rounds an hour, standing inventory passes two thousand, and every round is checked for a three-inch diameter, consistent density, and a fit in the engine cups before stacking. Rejection rate settles around one in eight.' },
+  { maxP: 15.3,    css:'w5', icon:'🛠️', label:'Resurfacing Line',
+    desc:'The ammunition factory gains a matched spreader line running the opposite direction: one crew packs snow into rounds, the other lays snow back onto stripped ground so the packers never run dry. Throughput settles near three hundred metres of resurfaced front an hour against nineteen hundred rounds packed. The two lines are timed against each other on a board by the door, and for the first week the spreaders are winning.' },
   { maxP: 15.6,    css:'w5', icon:'🔧', label:'Engine Shops',
     desc:'Engines stop being built where they are used: two shops are set up behind the line holding frames, arms, and cut tubing. Build time falls from nine hours to three, and a wrecked engine is rebuilt rather than written off. Standing spares run to four complete frames and sixty feet of tubing.' },
   { maxP: 16.2,    css:'w6', icon:'⚙️', label:'Quarry Works',
@@ -2378,6 +2390,8 @@ const SNOW_WAR_TIERS = [
     desc:'Indirect fire becomes continuous rather than occasional, at a sustained forty rounds an hour per engine across nine engines. Nothing is aimed at a person; the target is the wall itself, and glazed frontage that once lasted a week now lasts two days. Both sides begin repairing under fire as a standing task.' },
   { maxP: 20,      css:'w6', icon:'🚚', label:'Supply Lines',
     desc:'Ammunition must be moved to where it is needed over hauls of five hundred feet or more. Sleds are requisitioned at two per side from four households that are not asked, one of them reserved for counterweight stock, routes are fixed, and delivery rate — about four hundred rounds an hour — sets the pace of the entire war. Forward positions hold ninety minutes of supply.' },
+  { maxP: 20.5,    css:'w6', icon:'🚜', label:'Spreader Convoys',
+    desc:'Resupply goes mobile. Spreaders are wheeled forward on the supply lines themselves, loaded from rear depots and run up to resurface positions under fire. A convoy of six covers two miles of trampled approach in a morning. Each machine carries its own four-litre reserve for the stretches where no snow lies beside the track, and doctrine reclassifies the spreader as a supply engine rather than a weapon.' },
   { maxP: 21.5,    css:'w6', icon:'📦', label:'Depots',
     desc:'Forward stores are established behind each sector, six of them holding fifteen hundred rounds apiece. Time from request to delivery at the line drops from twenty-five minutes to four. Two depots sit inside trebuchet range of the opposing works and are moved after the first one is hit, at a loss of eleven hundred rounds.' },
   { maxP: 22.2,    css:'w6', icon:'🛞', label:'Mobile Batteries',
@@ -2420,6 +2434,8 @@ const SNOW_WAR_TIERS = [
     desc:'Technique is formally taught to newcomers across a six-session curriculum. There is a correct way to pack — four compressions, three seconds — a correct way to throw, a four-person drill for laying and loading an engine, and a documented sequence for withdrawing under fire. Roughly forty students an intake, graduating at eighty percent.' },
   { maxP: 54.5,    css:'w7', icon:'🗾', label:'Provinces',
     desc:'Territory is divided into eleven administrative units, each with its own quarry, depot, engine park, and roll of about two hundred. Orders from the center reach the furthest in a day and a half. Three provinces produce more than they consume and are taxed at a fifth of output, about nine hundred rounds a week apiece.' },
+  { maxP: 56,      css:'w7', icon:'🌀', label:'Continental Spreader Works',
+    desc:'The empire industrialises redistribution. Forty spreader works across the provinces turn out roller after roller on a single pattern, moulded in cold-tough copolymer so the screws do not shatter at depth, and field a standing park of eleven hundred machines. Whole fronts are resurfaced overnight, and the phrase “out of ammunition” quietly leaves the language. The works are guarded more heavily than the batteries they supply.' },
   { maxP: 58,      css:'w7', icon:'🗿', label:'Snow Empire',
     desc:'Fortifications visible from an upstairs window and from the air, spanning two and a half miles of continuous works at eight feet high and five feet thick. Outlying forts pay tribute at two thousand packed rounds a week and receive garrison support in return. Twenty-two settlements are enrolled, two are in arrears and keep their garrison support regardless, and four more are under negotiation.' },
   { maxP: 62,      css:'w8', icon:'🎭', label:'Court Politics',
@@ -2504,6 +2520,8 @@ const SNOW_WAR_TIERS = [
     desc:'Governance unifies across every remaining landmass under a single charter of nine hundred articles. Population stands at ninety million, ninety-six percent of it subsurface, and the standing force at four million. The last independent fort accedes in year 214 A.S. after a seven-year negotiation.' },
   { maxP: 4100,    css:'w13', icon:'📡', label:'The Long Winter Compact',
     desc:'An agreement is signed to end the war permanently, running to eleven thousand articles, nine hundred of them on the decommissioning of engines, and ratified by every polity on the sheet. It holds thirty-one years — the longest peace on record — before the first violation, which involves four participants and nine rounds. Hostilities resume within a month.' },
+  { maxP: 4300,    css:'w13', icon:'🚀', label:'Orbital Spreaders',
+    desc:'Redistribution leaves the ground. Spreader platforms are lifted to low orbit and lay measured bands of snow across a hemisphere on a fixed timetable, screws four hundred metres across turning once a minute. Coverage holds even to the same tolerance the original backpack model was tested at, scaled up by a factor of a hundred thousand. Time from a resurfacing order to snow on the target is nineteen minutes, and the operators are never seen.' },
   { maxP: 4500,    css:'w13', icon:'🛫', label:'Ballistic Arcs',
     desc:'Rounds leave the atmosphere and return, at ranges of nine hundred miles and flight times of eleven minutes. Launch sites are fixed, hardened, and known to both sides, which makes destroying them the only worthwhile target. Four hundred are in service and none has been moved in a decade.' },
   { maxP: 4900,    css:'w13', icon:'🌑', label:'Hemispheric Dominion',
@@ -2512,6 +2530,8 @@ const SNOW_WAR_TIERS = [
     desc:'The conflict reaches every point on the surface simultaneously with no rear area anywhere. Four hundred million are enrolled on one side or the other and the neutral population stands at zero. Daily expenditure passes nine billion rounds, nearly all of it through compressed-air batteries running without pause, against a supply no longer meaningfully finite.' },
   { maxP: 6400,    css:'w14', icon:'💨', label:'Pressure Artillery',
     desc:'Mechanical arms are retired for compressed air: batteries driven off pressure vessels charged by the ice sheet’s own weight, throwing at eleven hundred feet per second. One battery matches the daily output of nine hundred trebuchets. The last counterweight engine is decommissioned in the same year and moved to the archive.' },
+  { maxP: 6800,    css:'w14', icon:'🌎', label:'Planetary Resurfacing',
+    desc:'The machine’s purpose reaches its limit: an entire planet’s surface is stripped and re-laid on a schedule, snow gathered at the poles and spread evenly to the equator by works too tall to see the top of. The gate settings survive intact from the original design — closed, four millimetres, twelve, and thirty-five — now metering continents instead of sidewalks. What began as a way to fake one snow day is the only thing standing between the world and a bare one.' },
   { maxP: 7000,    css:'w14', icon:'🪐', label:'Snowball Earth Conflict',
     desc:'The planet is fully encased at an average depth of five hundred and eighty feet and the war is the sole organizing activity of the species. Surface albedo reaches point nine, locking the climate in place. The engagement has run nine hundred years with no recorded month of ceasefire and no hour in which some battery is not firing.' },
   { maxP: 8400,    css:'w14', icon:'🛰️', label:'Post-Terrestrial Campaign',
@@ -2520,6 +2540,8 @@ const SNOW_WAR_TIERS = [
     desc:'Engagements run at distances where the target has moved before the round arrives, and both sides fire at where the other is calculated to be. Transit time runs four months. Confirmation of a hit takes as long again, and the ledger is kept on projections rather than on observation.' },
   { maxP: 10000,   css:'w14', icon:'🌠', label:'The Outer Front',
     desc:'The furthest boundary anyone holds, nine hundred million miles past the last charted supply post and manned by two formations whose composition, batteries included, has not changed in four thousand years. Ground changes hands at eleven inches a century in either direction, which leaves the line within a mile of where it was first drawn. Supply, succession, and doctrine all remain open questions, argued in front of the archive at a rate of ninety-six cases a year.' },
+  { maxP: 10500,   css:'w14', icon:'♻️', label:'Self-Replicating Spreaders',
+    desc:'The spreaders build spreaders. Loaded with raw copolymer instead of snow, one works lays out the parts for a second works, which lays out a third, and the count doubles every eleven days with no further order given. No operator authorised the current run and none can locate the machine that would stop it. The screws turn, the wings deploy, and the snow goes down evenly across everything, whether or not anyone still wants a snow day.' },
   { maxP: 11000,   css:'w14', icon:'🤖', label:'Automatic War',
     desc:'Command lapses entirely and nothing about the fighting changes. Batteries load, fire, and repair themselves on standing orders issued four thousand years before the last officer to read them died, and nine relay stations pass firing solutions between positions holding no living crew at all. The most recent inspection of record found ninety-six percent of emplacements operating to their original specification.' },
   { maxP: 12000,   css:'w14', icon:'🕸️', label:'The Inherited Grievance',
