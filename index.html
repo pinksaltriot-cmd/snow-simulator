@@ -4918,11 +4918,11 @@ const GROUND_FLUX = 0.004;             // inches SWE per day
 // COLD_FLUX_FLOOR is not decorative. simulateMelt() resolves melt-out to a
 // fraction of a day with `before / melt`, and leans on `melt` never being zero.
 // The floor keeps that invariant no matter how absurd the temperature gets.
-const COLD_FLUX_K = 35;        // °F per e-folding of the flux
+const COLD_FLUX_EFOLD_F = 35;  // °F per e-folding of the flux
 const COLD_FLUX_FLOOR = 0.02;  // never below 2% of the nominal flux
-function coldFluxFactor(t) {
-  if (t >= MELT_THRESHOLD_F) return 1;
-  return Math.min(1, Math.max(COLD_FLUX_FLOOR, Math.exp((t - MELT_THRESHOLD_F) / COLD_FLUX_K)));
+function coldFluxFactor(tempF) {
+  if (tempF >= MELT_THRESHOLD_F) return 1;
+  return Math.max(COLD_FLUX_FLOOR, Math.exp((tempF - MELT_THRESHOLD_F) / COLD_FLUX_EFOLD_F));
 }
 
 // A plow mound is not a deeper snowpack, it is a different object. Clearing a
@@ -5021,7 +5021,8 @@ function simulateMelt(city, stormEnd, opts) {
     // integer step. A 0.05" dusting and a 3" pack must not both "last one
     // day", and any effect smaller than one day's melt — rain-on-snow above
     // all, which is worth about 0.04" of SWE — would otherwise round away to
-    // nothing. `melt` is always at least GROUND_FLUX, so it is never zero.
+    // nothing. `melt` is at least GROUND_FLUX * COLD_FLUX_FLOOR * rateFactor,
+    // so it is never zero.
     if (swe <= gone) meltOutDay = (day - 1) + Math.min(1, before / melt);
   }
 
@@ -5054,7 +5055,7 @@ function projectAnnualLoss(city, fromDate) {
     const d = addDays(fromDate, m * 30.44);
     const tmean = seasonalNormalTemp(city.lat, city.lon, city.annualSnow, d);
     const daily = ddf(d, city.lat) * Math.max(0, tmean - MELT_THRESHOLD_F)
-                + GROUND_FLUX * coldFluxFactor(tmean);
+                  + GROUND_FLUX * coldFluxFactor(tmean);
     total += daily * 30.44;
   }
   return total;
@@ -7625,7 +7626,8 @@ window.__snowTests.push((t, approx) => {
   t('flux factor is exactly 1 at threshold', coldFluxFactor(MELT_THRESHOLD_F) === 1);
   t('flux factor is exactly 1 above threshold', coldFluxFactor(58) === 1);
   t('flux factor is exactly 1 well above', coldFluxFactor(105) === 1);
-  // Exponential decay below it, with e-folding every COLD_FLUX_K degrees.
+  t('flux factor is continuous at the threshold', approx(coldFluxFactor(29.999), 1, 1e-4));
+  // Exponential decay below it, with e-folding every COLD_FLUX_EFOLD_F degrees.
   t('flux factor decays below threshold', approx(coldFluxFactor(-5), 0.367879, 1e-5));
   t('flux factor at -40F', approx(coldFluxFactor(-40), 0.135335, 1e-5));
   // The floor is load-bearing: simulateMelt divides by `melt`, so it must never be 0.
@@ -7641,8 +7643,27 @@ window.__snowTests.push((t, approx) => {
                      hasStormTemp: true, stormTemp: -20 };
   const fluxDate = new Date(2027, 1, 10, 18, 0);
   const held = simulateMelt({...fluxCity, warming:{short:'locked',medium:'locked',long:'locked'}}, fluxDate);
+  // This band is coupled to ddf(), packSWE(), seasonalNormalTemp() and
+  // PICK_HORIZON_DAYS. If one of those is retuned, re-measure the band rather
+  // than assuming the flux factor broke.
   t('cold flux lengthens a frozen pack', held.meltOutDays > 79.4);
   t('cold flux effect stays small for shipped picks', held.meltOutDays < 80.0);
+
+  // projectAnnualLoss() spends the same flux the daily engine does. Nothing else
+  // in the suite calls it directly, so assert the cold-side effect here.
+  const polarLoss = projectAnnualLoss({lat:-90, lon:0, annualSnow:3}, new Date(2027, 0, 15, 12, 0));
+  const mildLoss  = projectAnnualLoss({lat:36.15, lon:-95.99, annualSnow:9}, new Date(2027, 0, 15, 12, 0));
+  t('annual projection spends suppressed flux where it is cold', polarLoss < mildLoss);
+  t('annual projection stays positive', polarLoss > 0);
+
+  // The floor exists so simulateMelt's `before / melt` never divides by zero.
+  // Assert that at the level where it matters, not just on the factor.
+  const absurd = simulateMelt({lat:64.84, lon:-147.72, annualSnow:65,
+                               phases:[{type:'powder', amount:34}],
+                               hasStormTemp:true, stormTemp:-500,
+                               warming:{short:'locked',medium:'locked',long:'locked'}},
+                              new Date(2027, 1, 10, 18, 0));
+  t('absurd cold still resolves a finite melt-out', isFinite(absurd.meltOutDays) && !isNaN(absurd.meltOutDays));
 });
 
 window.__snowTests.push((t, approx) => {
