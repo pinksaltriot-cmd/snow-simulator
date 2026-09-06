@@ -4910,6 +4910,21 @@ const MELT_THRESHOLD_F = 30;
 // pack does not sublimate a thousand times faster than a 1-inch one.
 const GROUND_FLUX = 0.004;             // inches SWE per day
 
+// Ground flux is not temperature-blind. The three processes it lumps together all
+// weaken as the air gets colder — above all sublimation, whose driving vapour
+// pressure over ice collapses as temperature falls. A pack at -40°F gives up a
+// small fraction of what the same pack loses at 30°F.
+//
+// COLD_FLUX_FLOOR is not decorative. simulateMelt() resolves melt-out to a
+// fraction of a day with `before / melt`, and leans on `melt` never being zero.
+// The floor keeps that invariant no matter how absurd the temperature gets.
+const COLD_FLUX_K = 35;        // °F per e-folding of the flux
+const COLD_FLUX_FLOOR = 0.02;  // never below 2% of the nominal flux
+function coldFluxFactor(t) {
+  if (t >= MELT_THRESHOLD_F) return 1;
+  return Math.min(1, Math.max(COLD_FLUX_FLOOR, Math.exp((t - MELT_THRESHOLD_F) / COLD_FLUX_K)));
+}
+
 // A plow mound is not a deeper snowpack, it is a different object. Clearing a
 // lot or a street network sweeps snow off a wide area and stacks it into a few
 // piles, so the water content underfoot is a large multiple of what fell -- six
@@ -4993,7 +5008,8 @@ function simulateMelt(city, stormEnd, opts) {
     const date = addDays(stormEnd, day);
     const tmean = windowTempFor(day, temps, date, city);
 
-    let melt = (ddf(date, city.lat) * Math.max(0, tmean - MELT_THRESHOLD_F) + GROUND_FLUX) * rateFactor;
+    let melt = (ddf(date, city.lat) * Math.max(0, tmean - MELT_THRESHOLD_F)
+                + GROUND_FLUX * coldFluxFactor(tmean)) * rateFactor;
     if (day === 1 && rainInches > 0) melt += 0.007 * rainInches * (rainTemp - 32) * rateFactor;
 
     const before = swe;
@@ -5037,7 +5053,8 @@ function projectAnnualLoss(city, fromDate) {
   for (let m = 0; m < 12; m++) {
     const d = addDays(fromDate, m * 30.44);
     const tmean = seasonalNormalTemp(city.lat, city.lon, city.annualSnow, d);
-    const daily = ddf(d, city.lat) * Math.max(0, tmean - MELT_THRESHOLD_F) + GROUND_FLUX;
+    const daily = ddf(d, city.lat) * Math.max(0, tmean - MELT_THRESHOLD_F)
+                + GROUND_FLUX * coldFluxFactor(tmean);
     total += daily * 30.44;
   }
   return total;
@@ -7600,6 +7617,32 @@ window.__snowTests.push((t, approx) => {
   t('empty warming object', hasWarmingPicks({...tulsa, warming:{}}) === false);
   t('all auto', hasWarmingPicks({...tulsa, warming:{short:'auto',medium:'auto',long:'auto'}}) === false);
   t('one real pick', hasWarmingPicks({...tulsa, warming:{medium:'rapid'}}) === true);
+});
+
+window.__snowTests.push((t, approx) => {
+  // At and above the melt threshold the factor is exactly 1, so every warm pick
+  // is bit-for-bit unaffected by this change.
+  t('flux factor is exactly 1 at threshold', coldFluxFactor(MELT_THRESHOLD_F) === 1);
+  t('flux factor is exactly 1 above threshold', coldFluxFactor(58) === 1);
+  t('flux factor is exactly 1 well above', coldFluxFactor(105) === 1);
+  // Exponential decay below it, with e-folding every COLD_FLUX_K degrees.
+  t('flux factor decays below threshold', approx(coldFluxFactor(-5), 0.367879, 1e-5));
+  t('flux factor at -40F', approx(coldFluxFactor(-40), 0.135335, 1e-5));
+  // The floor is load-bearing: simulateMelt divides by `melt`, so it must never be 0.
+  t('flux factor floors', coldFluxFactor(-500) === 0.02);
+  t('flux factor never negative or zero', coldFluxFactor(-100000) > 0);
+  // Monotonic: colder never removes more.
+  let mono = true;
+  for (let x = -200; x < 60; x += 1) if (coldFluxFactor(x) > coldFluxFactor(x + 1) + 1e-12) mono = false;
+  t('flux factor monotonic in temperature', mono);
+  // A pack held below freezing lasts longer once flux responds to temperature.
+  const fluxCity = { lat: 64.84, lon: -147.72, annualSnow: 65,
+                     phases: [{type:'powder', amount:34}],
+                     hasStormTemp: true, stormTemp: -20 };
+  const fluxDate = new Date(2027, 1, 10, 18, 0);
+  const held = simulateMelt({...fluxCity, warming:{short:'locked',medium:'locked',long:'locked'}}, fluxDate);
+  t('cold flux lengthens a frozen pack', held.meltOutDays > 79.4);
+  t('cold flux effect stays small for shipped picks', held.meltOutDays < 80.0);
 });
 
 window.__snowTests.push((t, approx) => {
