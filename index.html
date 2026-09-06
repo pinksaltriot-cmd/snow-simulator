@@ -4806,12 +4806,22 @@ function packRatioAt(freshRatio, daysSince) {
 // The Warming Outlook picks. 'auto' means "use climatology", which is what
 // every city does until the user says otherwise.
 const WARMING_PICKS = [
-  { v: 'auto',   label: 'Auto (climatology)' },
-  { v: 'locked', label: 'Locked-In Cold' },
-  { v: 'slow',   label: 'Slow Moderation' },
-  { v: 'steady', label: 'Steady Warmup' },
-  { v: 'rapid',  label: 'Rapid Thaw' },
-  { v: 'torch',  label: 'Torch' }
+  { v: 'auto',       label: 'Auto (climatology)' },
+  { v: 'cryolock',   label: 'Cryogenic Lock' },
+  { v: 'polarlock',  label: 'Polar Lock' },
+  { v: 'deepfreeze', label: 'Deep Freeze' },
+  { v: 'entrenched', label: 'Entrenched Cold' },
+  { v: 'locked',     label: 'Locked-In Cold' },
+  { v: 'slow',       label: 'Slow Moderation' },
+  { v: 'creeping',   label: 'Creeping Thaw' },
+  { v: 'steady',     label: 'Steady Warmup' },
+  { v: 'brisk',      label: 'Brisk Thaw' },
+  { v: 'rapid',      label: 'Rapid Thaw' },
+  { v: 'hard',       label: 'Hard Thaw' },
+  { v: 'torch',      label: 'Torch' },
+  { v: 'heatdome',   label: 'Heat Dome' },
+  { v: 'furnace',    label: 'Furnace' },
+  { v: 'blowtorch',  label: 'Blowtorch' }
 ];
 
 // Populated here (not up near the other form-element consts) because
@@ -4846,14 +4856,33 @@ function phaseTempBias(phases) {
   return den ? num / den : 0;
 }
 
+// Cold picks are defined relative to Storm Temp, warm picks absolutely. Locking
+// cold in behind a -30°F storm is a different proposition from locking it in
+// behind a 20°F one, but a Torch is a Torch.
+//
+// Creeping Thaw is 33°F rather than a storm-relative blend on purpose: anything
+// at or below MELT_THRESHOLD_F contributes no degree-day melt at all, so a
+// storm-relative Creeping Thaw would be Slow Moderation under another name.
+// Brisk Thaw is 42°F rather than 41°F so it clears Steady Warmup, which resolves
+// near 41°F in a mid-latitude December.
 function windowMeanTemp(pick, stormTemp, normal, autoValue) {
   switch (pick) {
-    case 'locked': return Math.min(stormTemp + 4, 26);
-    case 'slow':   return Math.min((stormTemp + 30) / 2, 31);
-    case 'steady': return Math.max(36, normal);
-    case 'rapid':  return 46;
-    case 'torch':  return 58;
-    default:       return autoValue;
+    case 'cryolock':   return Math.min(stormTemp - 25, -30);
+    case 'polarlock':  return Math.min(stormTemp - 15, -8);
+    case 'deepfreeze': return Math.min(stormTemp - 8, 8);
+    case 'entrenched': return Math.min(stormTemp - 2, 18);
+    case 'locked':     return Math.min(stormTemp + 4, 26);
+    case 'slow':       return Math.min((stormTemp + 30) / 2, 31);
+    case 'creeping':   return 33;
+    case 'steady':     return Math.max(36, normal);
+    case 'brisk':      return 42;
+    case 'rapid':      return 46;
+    case 'hard':       return 52;
+    case 'torch':      return 58;
+    case 'heatdome':   return 70;
+    case 'furnace':    return 85;
+    case 'blowtorch':  return 105;
+    default:           return autoValue;
   }
 }
 
@@ -7620,6 +7649,49 @@ window.__snowTests.push((t, approx) => {
   t('empty warming object', hasWarmingPicks({...tulsa, warming:{}}) === false);
   t('all auto', hasWarmingPicks({...tulsa, warming:{short:'auto',medium:'auto',long:'auto'}}) === false);
   t('one real pick', hasWarmingPicks({...tulsa, warming:{medium:'rapid'}}) === true);
+});
+
+window.__snowTests.push((t, approx) => {
+  const tulsa = { lat: 36.15, lon: -95.99, annualSnow: 9,
+                  phases: [{type:'snowball', amount:34}],
+                  hasStormTemp: true, stormTemp: 20 };
+  const dec = new Date(2026, 11, 15, 18, 0);
+  const at = pick => resolveWindowTemps({...tulsa, warming:{long:pick}}, dec).long;
+
+  t('fifteen picks plus auto', WARMING_PICKS.length === 16);
+  t('auto is still first', WARMING_PICKS[0].v === 'auto');
+  t('every pick has a label', WARMING_PICKS.every(p => p.v && p.label));
+  t('pick keys are unique', new Set(WARMING_PICKS.map(p => p.v)).size === 16);
+
+  // The four new deep-cold tiers, storm-relative like the two they sit under.
+  t('cryogenic lock', approx(at('cryolock'), -30));
+  t('polar lock', approx(at('polarlock'), -8));
+  t('deep freeze', approx(at('deepfreeze'), 8));
+  t('entrenched cold', approx(at('entrenched'), 18));
+  // The six new warm tiers, absolute like the three they sit among.
+  t('creeping thaw', approx(at('creeping'), 33));
+  t('brisk thaw', approx(at('brisk'), 42));
+  t('hard thaw', approx(at('hard'), 52));
+  t('heat dome', approx(at('heatdome'), 70));
+  t('furnace', approx(at('furnace'), 85));
+  t('blowtorch', approx(at('blowtorch'), 105));
+
+  // Creeping Thaw must clear the melt threshold or it is Slow Moderation twice.
+  t('creeping thaw clears the melt threshold', at('creeping') > MELT_THRESHOLD_F);
+  // Brisk Thaw must not collide with Steady Warmup's usual value.
+  t('brisk thaw clears steady warmup', at('brisk') > at('steady'));
+
+  // The shipped five are untouched.
+  t('locked still storm+4', approx(at('locked'), 24));
+  t('slow still splits to 30', approx(at('slow'), 25));
+  t('rapid still 46', approx(at('rapid'), 46));
+  t('torch still 58', approx(at('torch'), 58));
+
+  // The ladder is ordered coldest-first, monotonically.
+  const order = WARMING_PICKS.slice(1).map(p => at(p.v));
+  let ordered = true;
+  for (let i = 1; i < order.length; i++) if (order[i] < order[i - 1]) ordered = false;
+  t('ladder is monotonic in temperature', ordered);
 });
 
 window.__snowTests.push((t, approx) => {
