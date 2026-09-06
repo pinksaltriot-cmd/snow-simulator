@@ -4915,9 +4915,10 @@ const GROUND_FLUX = 0.004;             // inches SWE per day
 // pressure over ice collapses as temperature falls. A pack at -40°F gives up a
 // small fraction of what the same pack loses at 30°F.
 //
-// COLD_FLUX_FLOOR is not decorative. simulateMelt() resolves melt-out to a
-// fraction of a day with `before / melt`, and leans on `melt` never being zero.
-// The floor keeps that invariant no matter how absurd the temperature gets.
+// COLD_FLUX_FLOOR stops the factor underflowing to zero, so the always-on term
+// stays genuinely always-on however absurd the temperature gets. It is a bound
+// on how long cold alone can stall a pack, not a guard on any division: the
+// melt-out fraction below is reached only when the pack has actually shrunk.
 const COLD_FLUX_EFOLD_F = 35;  // °F per e-folding of the flux
 const COLD_FLUX_FLOOR = 0.02;  // never below 2% of the nominal flux
 function coldFluxFactor(tempF) {
@@ -5022,7 +5023,8 @@ function simulateMelt(city, stormEnd, opts) {
     // day", and any effect smaller than one day's melt — rain-on-snow above
     // all, which is worth about 0.04" of SWE — would otherwise round away to
     // nothing. `melt` is at least GROUND_FLUX * COLD_FLUX_FLOOR * rateFactor,
-    // so it is never zero.
+    // and this line is only reached once the pack has shrunk past `gone`, so
+    // the ratio is always both finite and meaningful.
     if (swe <= gone) meltOutDay = (day - 1) + Math.min(1, before / melt);
   }
 
@@ -7649,21 +7651,27 @@ window.__snowTests.push((t, approx) => {
   t('cold flux lengthens a frozen pack', held.meltOutDays > 79.4);
   t('cold flux effect stays small for shipped picks', held.meltOutDays < 80.0);
 
-  // projectAnnualLoss() spends the same flux the daily engine does. Nothing else
-  // in the suite calls it directly, so assert the cold-side effect here.
-  const polarLoss = projectAnnualLoss({lat:-90, lon:0, annualSnow:3}, new Date(2027, 0, 15, 12, 0));
-  const mildLoss  = projectAnnualLoss({lat:36.15, lon:-95.99, annualSnow:9}, new Date(2027, 0, 15, 12, 0));
-  t('annual projection spends suppressed flux where it is cold', polarLoss < mildLoss);
-  t('annual projection stays positive', polarLoss > 0);
+  // projectAnnualLoss() spends the same flux the daily engine does, and nothing
+  // else in the suite calls it directly. At lat 90 with this much annual snow
+  // every one of the twelve monthly normals it samples sits below
+  // MELT_THRESHOLD_F, so the degree-day term is exactly zero and the whole
+  // annual loss is flux. That makes the comparison against unsuppressed flux
+  // discriminating rather than a restatement of "poles are colder".
+  const frozenCity = {lat: 90, lon: 0, annualSnow: 120};
+  const frozenFrom = new Date(2027, 0, 15, 12, 0);
+  const frozenLoss = projectAnnualLoss(frozenCity, frozenFrom);
+  const nominalLoss = 12 * 30.44 * GROUND_FLUX;   // what factor = 1 would spend
+  t('annual projection suppresses flux in a permanently frozen climate', frozenLoss < nominalLoss);
+  t('annual projection still spends some flux', frozenLoss > 0);
 
-  // The floor exists so simulateMelt's `before / melt` never divides by zero.
-  // Assert that at the level where it matters, not just on the factor.
+  // The floor's job is that a pack keeps losing something at any temperature.
+  // Assert the engine still resolves a finite melt-out at an absurd one.
   const absurd = simulateMelt({lat:64.84, lon:-147.72, annualSnow:65,
                                phases:[{type:'powder', amount:34}],
                                hasStormTemp:true, stormTemp:-500,
                                warming:{short:'locked',medium:'locked',long:'locked'}},
                               new Date(2027, 1, 10, 18, 0));
-  t('absurd cold still resolves a finite melt-out', isFinite(absurd.meltOutDays) && !isNaN(absurd.meltOutDays));
+  t('absurd cold still resolves a finite melt-out', isFinite(absurd.meltOutDays));
 });
 
 window.__snowTests.push((t, approx) => {
