@@ -4837,6 +4837,18 @@ const WARMING_PICKS = [
 // not a climate — past two months the season takes back over.
 const PICK_HORIZON_DAYS = 60;
 
+// Four tiers are exceptions to the 60-day rule. A two-month read on the weather
+// is a forecast, but a cryogenic lock is not a forecast — it is a claim about the
+// regime, and a regime outlasts a forecast. Without this the deep tiers are only
+// labels: suppressed flux alone moves the reference pack from 65.1 to 65.4 days,
+// because climatology takes the pack over at day 61 either way.
+const TIER_HORIZON = {
+  cryolock:   900,
+  polarlock:  540,
+  deepfreeze: 300,
+  entrenched: 150
+};
+
 // What fell tells you something about the air it fell through. Used only when
 // no Storm Temp was entered.
 const PHASE_TEMP_BIAS = {
@@ -4995,9 +5007,13 @@ const SCHOOL_LAG_DAYS = 0.75;
 function windowTempFor(dayIndex, temps, date, city) {
   if (dayIndex <= 2) return temps.short;
   if (dayIndex <= 7) return temps.medium;
-  if (dayIndex <= PICK_HORIZON_DAYS) return temps.long;
+  // The horizon belongs to the long window, since that is the pick still standing
+  // when the others have expired. A deep short-window pick extends nothing.
+  const horizon = TIER_HORIZON[temps.picks.long] || PICK_HORIZON_DAYS;
+  if (dayIndex <= horizon) return temps.long;
   // Past the horizon a pick stops governing; climatology takes over. A user's
-  // read on "days 8+" is a forecast, not a climate.
+  // read on "days 8+" is a forecast, not a climate — except for the four deep
+  // tiers in TIER_HORIZON, which assert a regime rather than a forecast.
   return seasonalNormalTemp(city.lat, city.lon, city.annualSnow, date);
 }
 
@@ -7721,6 +7737,36 @@ window.__snowTests.push((t, approx) => {
   });
   t('ladder is strictly ordered across storm temperatures', ordered);
   t('no two fixed tiers collide', tiedAt === null);
+});
+
+window.__snowTests.push((t, approx) => {
+  const tulsa = { lat: 36.15, lon: -95.99, annualSnow: 9,
+                  phases: [{type:'snowball', amount:34}],
+                  hasStormTemp: true, stormTemp: 20 };
+  const dec = new Date(2026, 11, 15, 18, 0);
+  const days = pick => simulateMelt({...tulsa, warming:{short:pick,medium:pick,long:pick}}, dec).meltOutDays;
+
+  // Each deep tier holds the pack markedly longer than the one above it.
+  t('entrenched outlasts locked', days('entrenched') > days('locked') * 2);
+  t('deep freeze outlasts entrenched', days('deepfreeze') > days('entrenched') * 1.5);
+  t('polar lock outlasts deep freeze', days('polarlock') > days('deepfreeze') * 1.5);
+  t('cryogenic lock outlasts polar lock', days('cryolock') > days('polarlock') * 1.5);
+  t('cryogenic lock holds for years', days('cryolock') > 800);
+
+  // The shipped picks keep the standard horizon, so they do not move.
+  t('locked keeps the 60-day horizon', days('locked') < 70);
+  t('slow keeps the 60-day horizon', days('slow') < 70);
+
+  // The horizon keys on the long window only. A deep short-window pick with an
+  // Auto long window must not extend anything.
+  const shortOnly = simulateMelt({...tulsa, warming:{short:'cryolock'}}, dec).meltOutDays;
+  t('horizon keys on the long window', shortOnly < 70);
+
+  // Melt-out is monotonic across the whole ladder: colder never melts sooner.
+  const ladder = WARMING_PICKS.slice(1).map(p => days(p.v));
+  let mono = true;
+  for (let i = 1; i < ladder.length; i++) if (ladder[i] > ladder[i - 1] + 1e-9) mono = false;
+  t('ladder monotonic in melt-out', mono);
 });
 
 window.__snowTests.push((t, approx) => {
