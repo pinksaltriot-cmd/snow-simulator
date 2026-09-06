@@ -7632,7 +7632,8 @@ window.__snowTests.push((t, approx) => {
   // Exponential decay below it, with e-folding every COLD_FLUX_EFOLD_F degrees.
   t('flux factor decays below threshold', approx(coldFluxFactor(-5), 0.367879, 1e-5));
   t('flux factor at -40F', approx(coldFluxFactor(-40), 0.135335, 1e-5));
-  // The floor is load-bearing: simulateMelt divides by `melt`, so it must never be 0.
+  // The floor bounds how far the factor can fall, so the always-on term never
+  // underflows to zero however absurd the temperature gets.
   t('flux factor floors', coldFluxFactor(-500) === 0.02);
   t('flux factor never negative or zero', coldFluxFactor(-100000) > 0);
   // Monotonic: colder never removes more.
