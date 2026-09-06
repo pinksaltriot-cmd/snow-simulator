@@ -7653,11 +7653,16 @@ window.__snowTests.push((t, approx) => {
   t('cold flux effect stays small for shipped picks', held.meltOutDays < 80.0);
 
   // projectAnnualLoss() spends the same flux the daily engine does, and nothing
-  // else in the suite calls it directly. At lat 90 with this much annual snow
-  // every one of the twelve monthly normals it samples sits below
-  // MELT_THRESHOLD_F, so the degree-day term is exactly zero and the whole
-  // annual loss is flux. That makes the comparison against unsuppressed flux
-  // discriminating rather than a restatement of "poles are colder".
+  // else in the suite calls it directly. At lat 90, with annualSnow at or above
+  // the SNOW_COLD_SAT clamp, every one of the twelve monthly normals it samples
+  // sits below MELT_THRESHOLD_F, so the degree-day term is exactly zero and the
+  // whole annual loss is flux. That makes the comparison against unsuppressed
+  // flux discriminating rather than a restatement of "poles are colder".
+  //
+  // This leans on seasonalNormalTemp: the warmest of those twelve months is
+  // 29.11°F, only 0.89°F clear of the threshold. If that model is retuned,
+  // re-derive the city rather than assuming the flux factor broke. The failure
+  // is loud, not silent — one degree over adds ~2.7 to a 1.46 nominal.
   const frozenCity = {lat: 90, lon: 0, annualSnow: 120};
   const frozenFrom = new Date(2027, 0, 15, 12, 0);
   const frozenLoss = projectAnnualLoss(frozenCity, frozenFrom);
@@ -7665,8 +7670,8 @@ window.__snowTests.push((t, approx) => {
   t('annual projection suppresses flux in a permanently frozen climate', frozenLoss < nominalLoss);
   t('annual projection still spends some flux', frozenLoss > 0);
 
-  // The floor's job is that a pack keeps losing something at any temperature.
-  // Assert the engine still resolves a finite melt-out at an absurd one.
+  // The floor itself is covered by 'flux factor floors' above. This only checks
+  // that the engine still resolves a finite melt-out at an absurd temperature.
   const absurd = simulateMelt({lat:64.84, lon:-147.72, annualSnow:65,
                                phases:[{type:'powder', amount:34}],
                                hasStormTemp:true, stormTemp:-500,
