@@ -4863,8 +4863,14 @@ function phaseTempBias(phases) {
 // Creeping Thaw is 33°F rather than a storm-relative blend on purpose: anything
 // at or below MELT_THRESHOLD_F contributes no degree-day melt at all, so a
 // storm-relative Creeping Thaw would be Slow Moderation under another name.
-// Brisk Thaw is 42°F rather than 41°F so it clears Steady Warmup, which resolves
-// near 41°F in a mid-latitude December.
+// Brisk Thaw is 42°F rather than 41°F to clear Steady Warmup in the mid-latitude
+// midwinter case the ladder is ordered for. Note that Steady Warmup is the only
+// climatology-driven pick, so it is the one tier that does NOT hold its place in
+// the ladder: it resolves above 42°F in about half of realistic city-and-date
+// combinations, and above Torch's 58°F on the Gulf Coast in November. Nothing
+// downstream requires the ladder to be ordered, so this is a labelling quirk
+// rather than a bug — but do not "fix" it by nudging a constant, because no
+// constant clears a value that reaches 80°F in Honolulu.
 function windowMeanTemp(pick, stormTemp, normal, autoValue) {
   switch (pick) {
     case 'cryolock':   return Math.min(stormTemp - 25, -30);
@@ -7653,7 +7659,6 @@ window.__snowTests.push((t, approx) => {
 
 window.__snowTests.push((t, approx) => {
   const tulsa = { lat: 36.15, lon: -95.99, annualSnow: 9,
-                  phases: [{type:'snowball', amount:34}],
                   hasStormTemp: true, stormTemp: 20 };
   const dec = new Date(2026, 11, 15, 18, 0);
   const at = pick => resolveWindowTemps({...tulsa, warming:{long:pick}}, dec).long;
@@ -7683,15 +7688,39 @@ window.__snowTests.push((t, approx) => {
 
   // The shipped five are untouched.
   t('locked still storm+4', approx(at('locked'), 24));
-  t('slow still splits to 30', approx(at('slow'), 25));
+  t('slow still splits toward 30', approx(at('slow'), 25));
   t('rapid still 46', approx(at('rapid'), 46));
   t('torch still 58', approx(at('torch'), 58));
 
-  // The ladder is ordered coldest-first, monotonically.
-  const order = WARMING_PICKS.slice(1).map(p => at(p.v));
-  let ordered = true;
-  for (let i = 1; i < order.length; i++) if (order[i] < order[i - 1]) ordered = false;
-  t('ladder is monotonic in temperature', ordered);
+  // At stormTemp 20 every new cold tier resolves through its cap, so the
+  // storm-relative half of each formula is untested there. A cold storm puts all
+  // four below their caps and exercises the relative term instead — the whole
+  // reason these tiers are storm-relative rather than absolute.
+  const coldStorm = {...tulsa, stormTemp: -20};
+  const atCold = pick => resolveWindowTemps({...coldStorm, warming:{long:pick}}, dec).long;
+  t('cryogenic lock tracks a cold storm', approx(atCold('cryolock'), -45));
+  t('polar lock tracks a cold storm', approx(atCold('polarlock'), -35));
+  t('deep freeze tracks a cold storm', approx(atCold('deepfreeze'), -28));
+  t('entrenched cold tracks a cold storm', approx(atCold('entrenched'), -22));
+  t('locked still tracks a cold storm', approx(atCold('locked'), -16));
+
+  // Steady Warmup is climatology-driven and routinely lands out of ladder order
+  // (see the note above windowMeanTemp), so the ordering claim is about the
+  // fourteen fixed-position tiers. Strict, because a tie would mean two tiers
+  // that cannot be told apart. Swept across storm temperatures, because the six
+  // cold tiers move with Storm Temp and one date proves nothing about the rest.
+  let ordered = true, tiedAt = null;
+  [-40, -20, 0, 20, 35].forEach(st => {
+    const city = {...tulsa, stormTemp: st};
+    const seq = WARMING_PICKS.slice(1).filter(p => p.v !== 'steady')
+      .map(p => resolveWindowTemps({...city, warming:{long:p.v}}, dec).long);
+    for (let i = 1; i < seq.length; i++) {
+      if (seq[i] < seq[i - 1]) ordered = false;
+      if (seq[i] === seq[i - 1]) tiedAt = st;
+    }
+  });
+  t('ladder is strictly ordered across storm temperatures', ordered);
+  t('no two fixed tiers collide', tiedAt === null);
 });
 
 window.__snowTests.push((t, approx) => {
