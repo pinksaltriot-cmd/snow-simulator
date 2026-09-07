@@ -7842,28 +7842,35 @@ window.__snowTests.push((t, approx) => {
   ];
   const DATES = [new Date(2026, 11, 15, 18, 0), new Date(2027, 1, 10, 18, 0)];
 
-  let warmExact = true, horizonViolation = false;
+  let warmNeverAmplifies = true, horizonViolation = false;
+  const horizonBound = PICK_HORIZON_DAYS * 3;
   CITIES.forEach(c => DATES.forEach(d => {
     const base = { lat: c.lat, lon: c.lon, annualSnow: c.annualSnow,
                    phases: [{type: c.type, amount: c.amount}],
                    hasStormTemp: true, stormTemp: c.stormTemp };
-    // A window above the threshold spends full flux, so the factor is a no-op.
+    // A warm pick forces temperatures at or above the seasonal norm, so it can
+    // only melt the pack sooner, never later — its persistence stays on the warm
+    // side of 1.0. This would break if the cold branch's clamp ever leaked into
+    // warm handling. (That coldFluxFactor is a no-op above the threshold is a
+    // separate property, pinned in the cold-flux block rather than re-asserted
+    // here, where it would only restate the function's own first line.)
     ['steady','rapid','torch'].forEach(p => {
-      const temps = resolveWindowTemps({...base, warming:{short:p,medium:p,long:p}}, d);
-      if (temps.long > MELT_THRESHOLD_F && coldFluxFactor(temps.long) !== 1) warmExact = false;
+      if (persistenceMultiplier({...base, warming:{short:p,medium:p,long:p}}, d) > 1.0) warmNeverAmplifies = false;
     });
-    // The two sub-freezing shipped picks may drift, but only slightly.
+    // The two sub-freezing shipped picks may drift, but they must stay finite and
+    // inside three times the standard 60-day horizon — never run away and never
+    // freeze permanently.
     ['locked','slow'].forEach(p => {
       const r = simulateMelt({...base, warming:{short:p,medium:p,long:p}}, d);
-      const horizonBound = PICK_HORIZON_DAYS * 3;
-      if (isFinite(r.meltOutDays) && r.meltOutDays > horizonBound) horizonViolation = true;
+      if (!isFinite(r.meltOutDays) || r.meltOutDays > horizonBound) horizonViolation = true;
     });
   }));
-  t('warm picks spend full flux everywhere', warmExact);
-  t('shipped cold picks stay inside the standard horizon', horizonViolation === false);
+  t('warm picks never amplify the pack', warmNeverAmplifies);
+  t('shipped cold picks stay finite and within 3x the standard horizon', horizonViolation === false);
 
-  // A rain-only city still has no pack to persist.
-  t('no pack is still neutral',
+  // A rain-only city has no pack, so persistenceMultiplier short-circuits to 1.0
+  // before the cold path — a crash-guard on the no-pack case.
+  t('a rain-only city has no pack to persist',
     persistenceMultiplier({ lat:36.15, lon:-95.99, annualSnow:9,
       phases:[{type:'rain', amount:2}], hasStormTemp:true, stormTemp:20,
       warming:{short:'cryolock'} }, new Date(2026, 11, 15, 18, 0)) === 1.0);
@@ -7897,15 +7904,17 @@ window.__snowTests.push((t, approx) => {
   t('Locked-In Cold reads 1.350 only at the reference city', approx(pm(tulsa, 'locked'), 1.350, 0.005));
   t('Locked-In Cold reads ~1.00 in a cold-normal city', approx(pm(mpls, 'locked'), 1.000, 0.01));
   t('the drift is real and directional', pm(tulsa, 'locked') - pm(mpls, 'locked') > 0.3);
-  // ...but shipped cold picks never run away: across cities and dates they stay
-  // in a narrow band around 1.0.
+  // ...but shipped cold picks never run away. Across these cities and dates they
+  // span 1.000 (a cold-normal city, no surprise) to 1.772 (a warm-normal city
+  // where Locked-In Cold is a large surprise); the band is pinned just outside
+  // that so a retune that widened it would trip.
   const CITIES = [tulsa, mpls, cityAt(64.84,-147.72,65,'powder',34,-20), cityAt(33.75,-84.39,2,'slush',4,28)];
   const DATES = [dec, new Date(2027, 1, 10, 18, 0)];
   let lo = Infinity, hi = -Infinity;
   CITIES.forEach(c => DATES.forEach(d => ['locked','slow'].forEach(p => {
     const v = pm(c, p, d); lo = Math.min(lo, v); hi = Math.max(hi, v);
   })));
-  t('shipped cold picks stay in a bounded band', lo >= 0.99 && hi <= 1.80);
+  t('shipped cold picks stay in a bounded band', lo >= 0.99 && hi <= 1.78);
 
   // Decision 2 — the cold ceiling is 2.50, and the coldest finite tier sits
   // below it, so the persistence curve (not the clamp) is what separates the
