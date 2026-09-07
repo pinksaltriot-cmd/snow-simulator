@@ -4991,6 +4991,7 @@ function coldFluxFactor(tempF) {
 // simulation gets that right, so the pile is run through the same engine.
 const MOUND_PILE_FACTOR = 6.0;   // pile water content relative to open ground
 const MOUND_MELT_FACTOR = 0.30;  // fraction of the open-ground melt rate
+const PATCH_EXTRA_MAX_DAYS = 45; // a shaded remnant outlives open ground by at most this
 
 const MELT_SIM_DAY_LIMIT = 1826;       // 5 years of daily steps
 const PERMANENT_YEARS = 10000;
@@ -5007,14 +5008,22 @@ const SCHOOL_LAG_DAYS = 0.75;
 function windowTempFor(dayIndex, temps, date, city) {
   if (dayIndex <= 2) return temps.short;
   if (dayIndex <= 7) return temps.medium;
-  // The horizon belongs to the long window, since that is the pick still standing
-  // when the others have expired. A deep short-window pick extends nothing.
+  // Inside the standard horizon the long-window pick governs outright.
+  if (dayIndex <= PICK_HORIZON_DAYS) return temps.long;
+  // The four deep tiers extend that horizon (the long window is the pick still
+  // standing when the others have expired; a deep short-window pick extends
+  // nothing). But a regime claim can only *hold cold* — it must never melt a
+  // pack faster than the local climate would on its own. At high latitudes the
+  // pick can be warmer than climatology, so past the standard horizon the deep
+  // tier governs with the colder of the two; otherwise a colder tier could melt
+  // out sooner than a warmer one and invert the ladder.
   const horizon = TIER_HORIZON[temps.picks.long] || PICK_HORIZON_DAYS;
-  if (dayIndex <= horizon) return temps.long;
+  const normal = seasonalNormalTemp(city.lat, city.lon, city.annualSnow, date);
+  if (dayIndex <= horizon) return Math.min(temps.long, normal);
   // Past the horizon a pick stops governing; climatology takes over. A user's
   // read on "days 8+" is a forecast, not a climate — except for the four deep
   // tiers in TIER_HORIZON, which assert a regime rather than a forecast.
-  return seasonalNormalTemp(city.lat, city.lon, city.annualSnow, date);
+  return normal;
 }
 
 // Keep the plotted curve under a fixed budget: daily for the first month,
@@ -5188,8 +5197,13 @@ function meltMilestones(melt, city) {
   // a date.
   const schoolDay = roadsDay + SCHOOL_LAG_DAYS;
   const walkDay = Math.max(roadsDay, firstDayAtDepth(melt, 0.5));
-  // The north-facing remnant of the natural pack outlives the open ground.
-  const patchDay = isFinite(melt.meltOutDays) ? melt.meltOutDays * 1.35 : Infinity;
+  // The north-facing remnant of the natural pack outlives the open ground, but
+  // only by so much. The old flat x1.35 put a shaded patch on a 900-day
+  // deep-cold pack three years out, past the plow mounds; cap the bonus so the
+  // patch stays a remnant and never overtakes the pile.
+  const patchDay = isFinite(melt.meltOutDays)
+    ? melt.meltOutDays + Math.min(PATCH_EXTRA_MAX_DAYS, 0.35 * melt.meltOutDays)
+    : Infinity;
   // The pile is its own little glacier — simulate it rather than scaling.
   const mound = simulateMelt(city, melt.stormEnd,
     { sweMult: MOUND_PILE_FACTOR, rateFactor: MOUND_MELT_FACTOR });
@@ -5254,6 +5268,12 @@ function meltSparkline(melt, milestones) {
     + `<polyline fill="none" stroke="#7dd3fc" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="${pts}"/>${dots}</svg>`;
 }
 
+// The cold branch's clamp ceiling. Raised well above the old 1.35 so the deep
+// tiers spread apart instead of all pinning together, and set to 2.50 rather
+// than 2.00 so Polar Lock and Cryogenic Lock separate in more cities. A pack
+// that never melts reads exactly this, as the extreme of "longer".
+const COLD_PERSIST_CAP = 2.50;
+
 // How far the pack's life deviates from what Storm Temp alone predicted.
 // This is the guard against double-counting: Storm Temp already pushes impact
 // down for a warm storm, so this measures only the surprise. With every window
@@ -5264,18 +5284,19 @@ function persistenceMultiplier(city, stormEnd) {
   const expected = simulateMelt({ ...city, warming: null }, stormEnd);
   if (!actual || !expected) return 1.0;
   if (!isFinite(expected.meltOutDays) || expected.meltOutDays <= 0) return 1.0;
-  const actualDays = isFinite(actual.meltOutDays)
-    ? actual.meltOutDays
-    : expected.meltOutDays * 10;   // permanent is the extreme of "longer"
-  const ratio = actualDays / expected.meltOutDays;
+  // A pack that never melts is the extreme of "longer", so it takes the ceiling
+  // directly rather than pushing a sentinel ratio through the curve.
+  if (!isFinite(actual.meltOutDays)) return COLD_PERSIST_CAP;
+  const ratio = actual.meltOutDays / expected.meltOutDays;
   // Asymmetric on purpose. The warm branch keeps its original exponent and floor,
   // so every thaw pick returns exactly what it returned before. The cold branch
-  // gets a gentler exponent and a higher cap, because under the old symmetric
+  // gets a gentler exponent and a higher ceiling, because under the old symmetric
   // clamp every cold pick saturated at 1.35 and the deep tiers would have been
-  // invisible to the impact scale. 0.18 is chosen so Locked-In Cold still lands
-  // on 1.350 to three decimals.
+  // invisible to the impact scale. Exponent 0.18 is chosen so Locked-In Cold
+  // lands on 1.350 to three decimals at the reference city (Tulsa, 20°F storm);
+  // other cities drift a little either side of that, which is expected.
   return ratio >= 1
-    ? Math.min(2.00, Math.pow(ratio, 0.18))
+    ? Math.min(COLD_PERSIST_CAP, Math.pow(ratio, 0.18))
     : Math.max(0.75, Math.pow(ratio, 0.35));
 }
 
@@ -7790,7 +7811,7 @@ window.__snowTests.push((t, approx) => {
   t('entrenched above locked', approx(pm('entrenched'), 1.570, 0.005));
   t('deep freeze above entrenched', approx(pm('deepfreeze'), 1.779, 0.005));
   t('polar lock above deep freeze', approx(pm('polarlock'), 1.976, 0.005));
-  t('cryogenic lock caps at 2.00', pm('cryolock') === 2.00);
+  t('cryogenic lock reads 2.166 under the 2.50 ceiling', approx(pm('cryolock'), 2.166, 0.005));
   let rising = true;
   const cold = ['locked','entrenched','deepfreeze','polarlock','cryolock'].map(pm);
   for (let i = 1; i < cold.length; i++) if (cold[i] < cold[i - 1]) rising = false;
@@ -8078,7 +8099,7 @@ window.__snowTests.push((t, approx) => {
   const thaw   = persistenceMultiplier({...base, warming:{short:'rapid',medium:'rapid',long:'rapid'}}, dec);
   t('locked cold amplifies', locked > 1.0);
   t('thaw reduces', thaw < 1.0);
-  t('clamped high', locked <= 2.00);
+  t('clamped high', locked <= 2.50);
   t('clamped low', thaw >= 0.75);
 
   // A rain-only city has no pack, so there is nothing to persist
