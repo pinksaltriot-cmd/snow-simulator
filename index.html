@@ -5197,18 +5197,20 @@ function meltMilestones(melt, city) {
   // a date.
   const schoolDay = roadsDay + SCHOOL_LAG_DAYS;
   const walkDay = Math.max(roadsDay, firstDayAtDepth(melt, 0.5));
-  // The north-facing remnant of the natural pack outlives the open ground, but
-  // only by so much. The old flat x1.35 put a shaded patch on a 900-day
-  // deep-cold pack three years out, past the plow mounds; cap the bonus so the
-  // patch stays a remnant and never overtakes the pile.
-  const patchDay = isFinite(melt.meltOutDays)
-    ? melt.meltOutDays + Math.min(PATCH_EXTRA_MAX_DAYS, 0.35 * melt.meltOutDays)
-    : Infinity;
   // The pile is its own little glacier — simulate it rather than scaling.
   const mound = simulateMelt(city, melt.stormEnd,
     { sweMult: MOUND_PILE_FACTOR, rateFactor: MOUND_MELT_FACTOR });
   const moundDay = (mound && isFinite(mound.meltOutDays))
     ? Math.max(walkDay, mound.meltOutDays) : Infinity;
+  // The north-facing remnant of the natural pack outlives the open ground, but
+  // it is thinner than a plow mound and must never outlast the pile. Keep the
+  // flat x1.35 estimate, cap the bonus in absolute days, and clamp it to the
+  // mound. Without this a 900-day deep-cold pack — where open ground, patch and
+  // mound all melt in one narrow window once the regime breaks — put the shaded
+  // patch three years out and, worse, past the mounds.
+  const patchDay = isFinite(melt.meltOutDays)
+    ? Math.min(melt.meltOutDays + Math.min(PATCH_EXTRA_MAX_DAYS, 0.35 * melt.meltOutDays), moundDay)
+    : Infinity;
 
   const mk = (key, icon, label, day) => {
     const d = isFinite(day) ? addDays(melt.stormEnd, day) : null;
@@ -7826,6 +7828,117 @@ window.__snowTests.push((t, approx) => {
   t('auto is exactly 1.0 still', persistenceMultiplier(tulsa, dec) === 1.0);
   t('all-auto is exactly 1.0 still',
     persistenceMultiplier({...tulsa, warming:{short:'auto',medium:'auto',long:'auto'}}, dec) === 1.0);
+});
+
+// Task 5: pin the regression surface. Characterization over work already done,
+// so this block passes on the first run — a failure here is a real defect in
+// the cold-end work, not a test to be adjusted.
+window.__snowTests.push((t, approx) => {
+  const CITIES = [
+    { lat: 36.15, lon: -95.99, annualSnow: 9,  stormTemp: 20, type: 'snowball', amount: 34 },
+    { lat: 44.98, lon: -93.27, annualSnow: 51, stormTemp: 10, type: 'powder',   amount: 18 },
+    { lat: 64.84, lon:-147.72, annualSnow: 65, stormTemp:-20, type: 'powder',   amount: 34 },
+    { lat: 33.75, lon: -84.39, annualSnow: 2,  stormTemp: 28, type: 'slush',    amount: 4  }
+  ];
+  const DATES = [new Date(2026, 11, 15, 18, 0), new Date(2027, 1, 10, 18, 0)];
+
+  let warmExact = true, horizonViolation = false;
+  CITIES.forEach(c => DATES.forEach(d => {
+    const base = { lat: c.lat, lon: c.lon, annualSnow: c.annualSnow,
+                   phases: [{type: c.type, amount: c.amount}],
+                   hasStormTemp: true, stormTemp: c.stormTemp };
+    // A window above the threshold spends full flux, so the factor is a no-op.
+    ['steady','rapid','torch'].forEach(p => {
+      const temps = resolveWindowTemps({...base, warming:{short:p,medium:p,long:p}}, d);
+      if (temps.long > MELT_THRESHOLD_F && coldFluxFactor(temps.long) !== 1) warmExact = false;
+    });
+    // The two sub-freezing shipped picks may drift, but only slightly.
+    ['locked','slow'].forEach(p => {
+      const r = simulateMelt({...base, warming:{short:p,medium:p,long:p}}, d);
+      const horizonBound = PICK_HORIZON_DAYS * 3;
+      if (isFinite(r.meltOutDays) && r.meltOutDays > horizonBound) horizonViolation = true;
+    });
+  }));
+  t('warm picks spend full flux everywhere', warmExact);
+  t('shipped cold picks stay inside the standard horizon', horizonViolation === false);
+
+  // A rain-only city still has no pack to persist.
+  t('no pack is still neutral',
+    persistenceMultiplier({ lat:36.15, lon:-95.99, annualSnow:9,
+      phases:[{type:'rain', amount:2}], hasStormTemp:true, stormTemp:20,
+      warming:{short:'cryolock'} }, new Date(2026, 11, 15, 18, 0)) === 1.0);
+
+  // Determinism across the new tiers.
+  const detCity = { lat:44.98, lon:-93.27, annualSnow:51,
+                    phases:[{type:'powder', amount:18}], hasStormTemp:true, stormTemp:10,
+                    warming:{short:'cryolock',medium:'cryolock',long:'cryolock'} };
+  const detDate = new Date(2026, 11, 15, 18, 0);
+  const a = simulateMelt(detCity, detDate), b = simulateMelt(detCity, detDate);
+  t('deep tiers are deterministic', a.meltOutDays === b.meltOutDays && a.curve.length === b.curve.length);
+});
+
+// Task 5 (cont.): pin the four Task-4 review decisions so a future retune
+// cannot silently undo them. Every number here was measured against the engine.
+window.__snowTests.push((t, approx) => {
+  const dec = new Date(2026, 11, 15, 18, 0);
+  const cityAt = (lat, lon, snow, type, amount, stormTemp) => ({
+    lat, lon, annualSnow: snow, phases: [{type, amount}], hasStormTemp: true, stormTemp });
+  const pm = (base, pick, d) =>
+    persistenceMultiplier({...base, warming:{short:pick,medium:pick,long:pick}}, d || dec);
+  const days = (base, pick, d) =>
+    simulateMelt({...base, warming:{short:pick,medium:pick,long:pick}}, d).meltOutDays;
+
+  const tulsa = cityAt(36.15, -95.99, 9, 'snowball', 34, 20);
+  const mpls  = cityAt(44.98, -93.27, 51, 'powder', 18, 10);
+
+  // Decision 1 — the shipped-pick drift is accepted, but bounded and documented.
+  // Locked-In Cold's 1.350 is a *reference-city* value: in a cold-normal
+  // December the same pick is barely a surprise, so it reads near 1.0.
+  t('Locked-In Cold reads 1.350 only at the reference city', approx(pm(tulsa, 'locked'), 1.350, 0.005));
+  t('Locked-In Cold reads ~1.00 in a cold-normal city', approx(pm(mpls, 'locked'), 1.000, 0.01));
+  t('the drift is real and directional', pm(tulsa, 'locked') - pm(mpls, 'locked') > 0.3);
+  // ...but shipped cold picks never run away: across cities and dates they stay
+  // in a narrow band around 1.0.
+  const CITIES = [tulsa, mpls, cityAt(64.84,-147.72,65,'powder',34,-20), cityAt(33.75,-84.39,2,'slush',4,28)];
+  const DATES = [dec, new Date(2027, 1, 10, 18, 0)];
+  let lo = Infinity, hi = -Infinity;
+  CITIES.forEach(c => DATES.forEach(d => ['locked','slow'].forEach(p => {
+    const v = pm(c, p, d); lo = Math.min(lo, v); hi = Math.max(hi, v);
+  })));
+  t('shipped cold picks stay in a bounded band', lo >= 0.99 && hi <= 1.80);
+
+  // Decision 2 — the cold ceiling is 2.50, and the coldest finite tier sits
+  // below it, so the persistence curve (not the clamp) is what separates the
+  // deep tiers. A never-melting pack would take the ceiling directly.
+  t('cold persistence ceiling is 2.50', COLD_PERSIST_CAP === 2.50);
+  t('Cryogenic Lock reads 2.166, below the ceiling', approx(pm(tulsa, 'cryolock'), 2.166, 0.005));
+
+  // Decision 3 — extending a deep tier's horizon governs with the colder of pick
+  // and climatology, so the melt-out ladder never inverts, even at a high-latitude
+  // autumn storm where the pick is warmer than the local climate.
+  const fbxSep = cityAt(64.84, -147.72, 65, 'powder', 34, 20);
+  const sep = new Date(2027, 8, 15, 18, 0);
+  const ladder = ['locked','entrenched','deepfreeze','polarlock','cryolock'].map(p => days(fbxSep, p, sep));
+  let monotonic = true;
+  for (let i = 1; i < ladder.length; i++) if (ladder[i] < ladder[i - 1] - 1e-9) monotonic = false;
+  t('the ladder does not invert at high latitude', monotonic);
+
+  // Decision 4 — the shaded patch stays a remnant: capped in absolute days and
+  // never outlasting the plow mound, so it no longer lands years out or after
+  // the mounds on a deep-cold pack. A normal pack is untouched (exactly x1.35).
+  const key = (ms, k) => ms.find(m => m.key === k);
+  const idx = (ms, k) => ms.findIndex(m => m.key === k);
+  const deep = {...tulsa, warming:{short:'cryolock',medium:'cryolock',long:'cryolock'}};
+  const deepMelt = simulateMelt(deep, dec);
+  const deepMs = meltMilestones(deepMelt, deep);
+  t('shaded patch never outlasts the mound', key(deepMs, 'patch').day <= key(deepMs, 'mounds').day + 1e-9);
+  t('shaded patch is a bounded bonus, not years',
+    key(deepMs, 'patch').day <= deepMelt.meltOutDays + PATCH_EXTRA_MAX_DAYS + 1e-9);
+  t('patch still precedes mounds in the ordering', idx(deepMs, 'patch') < idx(deepMs, 'mounds'));
+  const normal = {...tulsa, warming: null};
+  const normalMelt = simulateMelt(normal, dec);
+  const normalMs = meltMilestones(normalMelt, normal);
+  t('a normal pack keeps the exact x1.35 patch', approx(key(normalMs, 'patch').day, normalMelt.meltOutDays * 1.35, 1e-9));
 });
 
 window.__snowTests.push((t, approx) => {
