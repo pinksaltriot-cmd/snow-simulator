@@ -5268,7 +5268,15 @@ function persistenceMultiplier(city, stormEnd) {
     ? actual.meltOutDays
     : expected.meltOutDays * 10;   // permanent is the extreme of "longer"
   const ratio = actualDays / expected.meltOutDays;
-  return Math.min(1.35, Math.max(0.75, Math.pow(ratio, 0.35)));
+  // Asymmetric on purpose. The warm branch keeps its original exponent and floor,
+  // so every thaw pick returns exactly what it returned before. The cold branch
+  // gets a gentler exponent and a higher cap, because under the old symmetric
+  // clamp every cold pick saturated at 1.35 and the deep tiers would have been
+  // invisible to the impact scale. 0.18 is chosen so Locked-In Cold still lands
+  // on 1.350 to three decimals.
+  return ratio >= 1
+    ? Math.min(2.00, Math.pow(ratio, 0.18))
+    : Math.max(0.75, Math.pow(ratio, 0.35));
 }
 
 function computeAllTimelines() {
@@ -7770,6 +7778,36 @@ window.__snowTests.push((t, approx) => {
 });
 
 window.__snowTests.push((t, approx) => {
+  const tulsa = { lat: 36.15, lon: -95.99, annualSnow: 9,
+                  phases: [{type:'snowball', amount:34}],
+                  hasStormTemp: true, stormTemp: 20 };
+  const dec = new Date(2026, 11, 15, 18, 0);
+  const pm = pick => persistenceMultiplier({...tulsa, warming:{short:pick,medium:pick,long:pick}}, dec);
+
+  // Locked-In Cold keeps the value it is pinned at today, to three decimals.
+  t('locked still reads 1.350', approx(pm('locked'), 1.350, 0.001));
+  // The four new tiers spread above it instead of all pinning.
+  t('entrenched above locked', approx(pm('entrenched'), 1.570, 0.005));
+  t('deep freeze above entrenched', approx(pm('deepfreeze'), 1.779, 0.005));
+  t('polar lock above deep freeze', approx(pm('polarlock'), 1.976, 0.005));
+  t('cryogenic lock caps at 2.00', pm('cryolock') === 2.00);
+  let rising = true;
+  const cold = ['locked','entrenched','deepfreeze','polarlock','cryolock'].map(pm);
+  for (let i = 1; i < cold.length; i++) if (cold[i] < cold[i - 1]) rising = false;
+  t('cold side rises monotonically', rising);
+
+  // The warm branch is untouched, so every thaw pick keeps its exact value.
+  t('steady unchanged', approx(pm('steady'), 0.783, 0.001));
+  t('rapid unchanged', pm('rapid') === 0.75);
+  t('torch unchanged', pm('torch') === 0.75);
+
+  // The exact-1.0 guarantee survives: both simulations get the same treatment.
+  t('auto is exactly 1.0 still', persistenceMultiplier(tulsa, dec) === 1.0);
+  t('all-auto is exactly 1.0 still',
+    persistenceMultiplier({...tulsa, warming:{short:'auto',medium:'auto',long:'auto'}}, dec) === 1.0);
+});
+
+window.__snowTests.push((t, approx) => {
   // At and above the melt threshold the factor is exactly 1, so every warm pick
   // is bit-for-bit unaffected by this change.
   t('flux factor is exactly 1 at threshold', coldFluxFactor(MELT_THRESHOLD_F) === 1);
@@ -8040,7 +8078,7 @@ window.__snowTests.push((t, approx) => {
   const thaw   = persistenceMultiplier({...base, warming:{short:'rapid',medium:'rapid',long:'rapid'}}, dec);
   t('locked cold amplifies', locked > 1.0);
   t('thaw reduces', thaw < 1.0);
-  t('clamped high', locked <= 1.35);
+  t('clamped high', locked <= 2.00);
   t('clamped low', thaw >= 0.75);
 
   // A rain-only city has no pack, so there is nothing to persist
