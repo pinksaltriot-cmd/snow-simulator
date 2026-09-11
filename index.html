@@ -188,7 +188,7 @@
   .impact-pill { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
   .res-pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.68rem; font-weight: 600; white-space: nowrap; }
 
-  /* Snow war activity (284 tiers, banded into 16 colors) */
+  /* Snow war activity (286 tiers, banded into 16 colors) */
   .war-pill { display: inline-block; padding: 3px 9px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
   .war-desc { display: block; margin-top: 4px; opacity: 0.62; font-size: 0.72rem; line-height: 1.35; }
   .war-w0 { background: #0f172a; color: #334155; }
@@ -2219,7 +2219,7 @@ function snowWarScore(phases) {
   return roundPrecip(6 * p * p);
 }
 
-// 284 tiers, keyed by the upper bound of packable inches that reaches them.
+// 286 tiers, keyed by the upper bound of packable inches that reaches them.
 // Runs from a single disputed flake to 30,000" and beyond, matching the reach
 // of the snow impact ladder. css picks a color band; the ladder darkens from
 // grey through blue and amber into magenta, then violet into the white void.
@@ -2572,8 +2572,12 @@ const SNOW_WAR_TIERS = [
     desc:'Territory is divided into eleven administrative units, each with its own quarry, depot, engine park, and roll of about two hundred. Orders from the center reach the furthest in a day and a half. Three provinces produce more than they consume and are taxed at a fifth of output, about nine hundred rounds a week apiece.' },
   { maxP: 56,      css:'w7', icon:'🌀', label:'Continental Spreader Works',
     desc:'The empire industrialises redistribution. Forty spreader works across the provinces turn out roller after roller on a single pattern, moulded in cold-tough copolymer so the screws do not shatter at depth, and field a standing park of eleven hundred machines. Whole fronts are resurfaced overnight, and the phrase “out of ammunition” quietly leaves the language. The works are guarded more heavily than the batteries they supply.' },
+  { maxP: 56.75,   css:'w7', icon:'📐', label:'Imperial Gauge',
+    desc:'A single dimension is decreed for every work in the empire, and it is set deliberately above the largest example already standing, so that no fort meets it and every fort must grow. Glacis: six hundred feet of cleared apron laid at five millimetres. Outworks: four to a side, twenty-four feet long, six feet high, thirty inches thick, pushed ninety feet forward. Trench: six feet deep and four feet across the floor. Tunnel: fourteen feet down and four feet wide, on thirty-one entrances of which eleven are concealed. Redoubt: twenty-two feet across, nine feet high, five feet thick, two thousand rounds in reserve. Main wall: fourteen feet high and eight feet thick, firing notches fourteen inches at the throat, six to a section, a tower eight feet above the parapet carrying the sightline to two hundred and twenty feet. Bailey: nine hundred feet of circuit at fourteen feet high and six feet thick, enclosing forty thousand square feet. Keep: two hundred feet by a hundred and fifty at twelve feet of interior height behind six-foot walls, ninety rooms. Surveyors go out ahead of the diggers with a marked pole and a bound book and report that not one work in the empire meets the new gauge, which is the point. The standard is fixed above the largest existing work rather than to it, on the stated reasoning that a standard already met changes nothing, and on the unstated one that the province that wrote the decree can afford to build to it first.' },
+  { maxP: 57.5,    css:'w7', icon:'🏗️', label:'The Great Recut',
+    desc:'Every fort in the empire is enlarged to the imperial gauge in one season — twenty-two settlements, an estimated eighteen miles of trench and nine of tunnel dug wider and deeper, every wall raised and thickened, every keep extended, by sixty thousand hands working from the same book. A round packed in one province now seats in any notch in any other, an engine built in the east rolls straight into an emplacement cut in the west, and a crew reposted anywhere in the empire finds the trench floor exactly where their feet expect it in the dark. Two forts refuse the enlargement and keep their inherited dimensions; both are abandoned inside the year, not by any order but because nothing else in the empire will fit them, and the word for a thing built to no standard becomes the word for those two forts.' },
   { maxP: 58,      css:'w7', icon:'🗿', label:'Snow Empire',
-    desc:'Fortifications visible from an upstairs window and from the air, spanning two and a half miles of continuous works at eight feet high and five feet thick. Outlying forts pay tribute at two thousand packed rounds a week and receive garrison support in return. Twenty-two settlements are enrolled, two are in arrears and keep their garrison support regardless, and four more are under negotiation.' },
+    desc:'Fortifications visible from an upstairs window and from the air, spanning two and a half miles of continuous works at fourteen feet high and eight feet thick. Outlying forts pay tribute at two thousand packed rounds a week and receive garrison support in return. Twenty-two settlements are enrolled, two are in arrears and keep their garrison support regardless, and four more are under negotiation.' },
   { maxP: 60,      css:'w7', icon:'🏢', label:'The Spreader Ministry',
     desc:'Redistribution becomes a department of state with a budget larger than the batteries’, four thousand staff, and authority over which ground in the empire may be covered and when. It answers to nobody who has ever pushed a machine. Its first published act is a schedule of resurfacing priorities in which fortifications rank below public roads, which causes a constitutional crisis and stands.' },
   { maxP: 62,      css:'w8', icon:'🎭', label:'Court Politics',
