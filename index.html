@@ -829,7 +829,7 @@
 
 <div class="container">
   <h1>Snow Event Profile Maker 3.1.4</h1>
-  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">8527 lines of code</p>
+  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">8607 lines of code</p>
   <p class="subtitle">Powered by real NOAA RSI methodology with location-based impact scaling</p>
 
   <div class="card">
@@ -5234,8 +5234,37 @@ const PERMANENT_YEARS = 10000;
 const PLOW_BASE_RATE = 2;    // inches per day a minimally equipped city manages
 const PLOW_RATE_GAIN = 6;    // additional inches per day per point of resilience
 // Schools reopen once the roads are usable, plus the better part of a day for
-// buses, car parks and side streets.
+// buses, car parks and side streets. That lag only applies to a storm that
+// actually shut schools: a flurry that is gone by mid-morning closed nothing,
+// so the lag ramps in over a depth band rather than landing as a flat full day
+// on top of every dusting.
 const SCHOOL_LAG_DAYS = 0.75;
+const SCHOOL_LAG_MIN_IN = 0.5;  // below this peak, no closure — no bus/lot lag
+const SCHOOL_LAG_FULL_IN = 2;   // at/above this peak, the full lag applies
+
+// Wind reblows loose snow across cleared lanes faster than a plow fleet can keep
+// them open, and a true ground blizzard stops plowing outright — crews are
+// pulled for whiteout, and every pass drifts shut behind them. Drifting needs
+// loose snow to move, so it is gated on depth (a dusting has nothing to drift)
+// and shut down for wet, warm snow that packs and sticks instead of blowing.
+// The factor multiplies the time roads take to clear; melt still caps it, so a
+// warm storm that simply melts out is never held open by wind.
+const DRIFT_WIND_MIN = 15;      // mph — below this, no meaningful drifting
+const DRIFT_PER_MPH = 0.07;     // clearing-time added per mph of sustained wind above the floor
+const DRIFT_FACTOR_MAX = 4.0;   // ground-blizzard ceiling: plowing is all but futile
+const DRIFT_DEPTH_MIN_IN = 1;   // no loose snow to drift below this peak
+const DRIFT_DEPTH_FULL_IN = 4;  // full drifting potential at/above this peak
+function windDriftFactor(city, peak) {
+  // Sustained wind drives steady drifting; gusts contribute at a discount.
+  const w = Math.max(city.windSpeed || 0, (city.gustSpeed || 0) * 0.7);
+  if (w <= DRIFT_WIND_MIN) return 1;
+  let driftable = Math.min(1, Math.max(0,
+    (peak - DRIFT_DEPTH_MIN_IN) / (DRIFT_DEPTH_FULL_IN - DRIFT_DEPTH_MIN_IN)));
+  // Wet snow (storm at/above freezing) clumps rather than blows — it barely drifts.
+  if (city.hasStormTemp && city.stormTemp >= 34) driftable *= 0.4;
+  if (driftable <= 0) return 1;
+  return Math.min(DRIFT_FACTOR_MAX, 1 + (w - DRIFT_WIND_MIN) * DRIFT_PER_MPH * driftable);
+}
 
 function windowTempFor(dayIndex, temps, date, city) {
   if (dayIndex <= 2) return temps.short;
@@ -5419,15 +5448,20 @@ function meltMilestones(melt, city) {
   const peak = melt.peakDepth;
   const plow = Math.min(2.5, getResilienceFactor(city.annualSnow, city.lat));
 
-  // Roads: plowing work, capped by melt — if the snow vanishes first, the
-  // roads are clear regardless of how many trucks the city owns.
+  // Roads: plowing work, slowed by wind-driven drifting, capped by melt — if
+  // the snow vanishes first, the roads are clear regardless of how many trucks
+  // the city owns or how hard the wind blows.
   const plowRate = PLOW_BASE_RATE + PLOW_RATE_GAIN * plow;
-  const plowDays = peak / plowRate;
+  const plowDays = (peak / plowRate) * windDriftFactor(city, peak);
   const roadsDay = Math.max(0.25, Math.min(plowDays, isFinite(melt.meltOutDays) ? melt.meltOutDays : plowDays));
-  // Schools follow the roads. The impact tier's own snow-day count is flavour
-  // text on a scale that runs to "3,650,000,000 snow days" — it must not drive
-  // a date.
-  const schoolDay = roadsDay + SCHOOL_LAG_DAYS;
+  // Schools follow the roads, plus a lag for buses, car parks and side streets —
+  // but only for a storm that actually closed them. The lag ramps in with depth
+  // so a flurry that melts by mid-morning no longer manufactures a day-long
+  // closure. The impact tier's own snow-day count is flavour text on a scale
+  // that runs to "3,650,000,000 snow days" — it must not drive a date.
+  const schoolLagFrac = Math.min(1, Math.max(0,
+    (peak - SCHOOL_LAG_MIN_IN) / (SCHOOL_LAG_FULL_IN - SCHOOL_LAG_MIN_IN)));
+  const schoolDay = roadsDay + SCHOOL_LAG_DAYS * schoolLagFrac;
   const walkDay = Math.max(roadsDay, firstDayAtDepth(melt, 0.5));
   // The pile is its own little glacier — simulate it rather than scaling.
   const mound = simulateMelt(city, melt.stormEnd,
@@ -8437,6 +8471,48 @@ window.__snowTests.push((t, approx) => {
   t('a dusting goes in hours', dust.meltOutDays < 1);
   const speck = simulateMelt({...chi, phases:[{type:'powder', amount:0.0000000616}]}, dec);
   t('a speck is not geological', speck === null || speck.meltOutDays < 1);
+});
+
+// Wind drifting and the school-closure lag. A foot of snow with a ground
+// blizzard keeps a snow-naive city shut for the better part of a week, while a
+// flurry that melts by mid-morning closes nothing — neither of which the old
+// flat model captured.
+window.__snowTests.push((t, approx) => {
+  const dec = new Date(2026, 11, 15, 18, 0);
+  // Tulsa: low resilience, cold enough for dry, driftable powder.
+  const tulsa = { lat:36.15, lon:-95.99, annualSnow:9, hasStormTemp:true, stormTemp:22,
+                  phases:[{type:'snowball', amount:12}] };
+  const calm = meltMilestones(simulateMelt(tulsa, dec), tulsa);
+  const windy = meltMilestones(simulateMelt(tulsa, dec),
+                  {...tulsa, windSpeed:50, gustSpeed:62});
+  const day = (list, k) => list.find(x => x.key === k).day;
+
+  t('wind drifts roads shut longer', day(windy, 'roads') > day(calm, 'roads') * 2);
+  t('a windblown foot shuts a naive city near a week', day(windy, 'school') >= 6);
+  t('a calm foot reopens far sooner', day(calm, 'school') < day(windy, 'school'));
+
+  // Wind has nothing to drift below the depth floor, and nothing to do once
+  // there is no wind at all.
+  t('no drift with no wind', approx(windDriftFactor({windSpeed:0}, 12), 1));
+  t('no drift below the depth floor', approx(windDriftFactor({windSpeed:50}, 0.5), 1));
+  t('no drift below the wind floor', approx(windDriftFactor({windSpeed:12}, 12), 1));
+  // Wet, warm snow packs instead of blowing, so it drifts far less.
+  const wet = windDriftFactor({windSpeed:50, hasStormTemp:true, stormTemp:36}, 12);
+  const dry = windDriftFactor({windSpeed:50, hasStormTemp:true, stormTemp:22}, 12);
+  t('wet snow drifts far less than dry', wet < dry);
+  t('drift is capped at the ceiling', windDriftFactor({windSpeed:120}, 24) <= DRIFT_FACTOR_MAX);
+
+  // The school-closure lag ramps in with depth: a flurry no longer manufactures
+  // a full day of closure on top of the minimum roads time.
+  const flurry = { lat:36.15, lon:-95.99, annualSnow:9, hasStormTemp:true, stormTemp:30,
+                   phases:[{type:'snowball', amount:0.3}] };
+  const fm = meltMilestones(simulateMelt(flurry, dec), flurry);
+  t('a flurry does not close school for a day', day(fm, 'school') < 0.5);
+  t('a flurry reopens roughly when roads clear',
+    approx(day(fm, 'school'), day(fm, 'roads')));
+  // A real accumulation still carries the full bus/lot lag.
+  t('a real storm keeps the full school lag',
+    approx(day(calm, 'school') - day(calm, 'roads'), SCHOOL_LAG_DAYS));
 });
 
 window.__snowTests.push((t, approx) => {
