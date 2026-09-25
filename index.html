@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Snow Event Profile Maker 3.1.4</title>
+<title>Snow Event Profile Maker 3.5.0</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -721,6 +721,28 @@
   .rhi3 { background: #dc2626; } .rhi4 { background: #b91c1c; } .rhi5 { background: #7f1d1d; }
   .rhi6 { background: #9d174d; } .rhi7 { background: #6b21a8; } .rhi8 { background: #4c1d95; }
   .rhi9 { background: #fef3c7; color: #7c2d12; }
+  /* Severe Storm mode */
+  #skyInput, #heatSky {
+    width: 100%; padding: 10px 14px; border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px; background: rgba(0,0,0,0.25); color: #fff; font-size: 0.95rem;
+  }
+  .impact-sev0  { background: #0f172a; color: #475569; }
+  .impact-sev1  { background: #1e293b; color: #94a3b8; }
+  .impact-sev2  { background: #1e3a5f; color: #93c5fd; }
+  .impact-sev3  { background: #3f3f10; color: #fde047; }
+  .impact-sev4  { background: #4a2a05; color: #fbbf24; }
+  .impact-sev5  { background: #4c1d05; color: #fb923c; }
+  .impact-sev6  { background: #4c0f0f; color: #f87171; }
+  .impact-sev7  { background: #3b0a2e; color: #f9a8d4; }
+  .impact-sev8  { background: #4a0633; color: #f472b6; }
+  .impact-sev9  { background: #581c87; color: #e9d5ff; }
+  .impact-sev10 { background: #7f1d1d; color: #fecaca; }
+  .impact-sev11 { background: #6b21a8; color: #f5d0fe; }
+  .impact-sev12 { background: #86198f; color: #fdf4ff; }
+  .impact-sev13 { background: #ffffff; color: #86198f; }
+  .impact-sev14 { background: #0c0a09; color: #fafaf9; box-shadow: inset 0 0 0 1px #fafaf9; }
+  .impact-sev15 { background: #1e1b4b; color: #c7d2fe; }
+  .impact-sev16 { background: #000; color: #a78bfa; }
 </style>
 </head>
 <body>
@@ -879,8 +901,8 @@
 </aside>
 
 <div class="container">
-  <h1>Snow Event Profile Maker 3.4.0</h1>
-  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">10315 lines of code</p>
+  <h1>Snow Event Profile Maker 3.5.0</h1>
+  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">11149 lines of code</p>
   <p class="subtitle">Powered by real NOAA RSI methodology with location-based impact scaling</p>
 
   <div class="card">
@@ -899,6 +921,7 @@
       <button type="button" class="mode-btn" data-mode="snowwar">Snow War Tiers</button>
       <button type="button" class="mode-btn" data-mode="heat">Heat Index</button>
       <button type="button" class="mode-btn" data-mode="waterwar">Water War Tiers</button>
+      <button type="button" class="mode-btn" data-mode="severe">Severe Storm</button>
     </div>
   </div>
 
@@ -984,6 +1007,40 @@
     <div class="error-msg" id="heatGapError"></div>
     <div id="heatGapResults" style="margin-top:10px"></div>
   </div>
+
+  <div class="card" id="severeCard" style="display:none">
+    <h2>Add Cities &mdash; Severe Storm</h2>
+    <div class="row">
+      <div class="city-field">
+        <label for="severeCityInput">City</label>
+        <input type="text" id="severeCityInput" placeholder="e.g. Tulsa, OK" autocomplete="off">
+        <div class="autocomplete-list" id="severeAcList"></div>
+      </div>
+      <div class="heat-num"><label for="severeTemp">Temp before (&deg;F)</label><input type="number" id="severeTemp" placeholder="92"></div>
+      <div class="heat-num"><label for="severeDew">Dewpoint <span class="heat-opt">optional</span></label><input type="number" id="severeDew" placeholder="auto"></div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <div class="heat-num"><label for="severeGust">Peak gust (mph)</label><input type="number" id="severeGust" placeholder="60"></div>
+      <div class="heat-num"><label for="severeHail">Hail (in)</label><input type="number" id="severeHail" placeholder="&mdash;" step="0.25"></div>
+      <div class="heat-num"><label for="severeRain">Rain (in)</label><input type="number" id="severeRain" placeholder="0.4" step="0.1"></div>
+      <div class="heat-num"><label for="severeRainMin">&hellip;over (min)</label><input type="number" id="severeRainMin" placeholder="20"></div>
+      <div class="heat-num"><label for="severeTornado">Tornado (mph)</label><input type="number" id="severeTornado" placeholder="&mdash;"></div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <div class="heat-num"><label for="severeStartMb">Pressure from (mb)</label><input type="number" id="severeStartMb" placeholder="1011" step="0.1"></div>
+      <div class="heat-num"><label for="severeLowMb">&hellip;down to (mb)</label><input type="number" id="severeLowMb" placeholder="995" step="0.1"></div>
+      <div class="heat-num"><label for="severeFallMin">&hellip;in (min)</label><input type="number" id="severeFallMin" placeholder="40"></div>
+      <button type="button" class="btn-add" id="severeAddBtn">Add City</button>
+    </div>
+    <div class="error-msg" id="severeError"></div>
+    <div class="heat-lakes">
+      <label for="severeStartTime">Storm arrives <span class="heat-opt">optional &mdash; puts clock times on the timeline</span></label>
+      <input type="datetime-local" id="severeStartTime" style="max-width:260px;color-scheme:dark">
+    </div>
+    <div id="severeCityList" style="margin-top:12px"></div>
+    <button class="btn-generate" id="severeGenerateBtn" disabled>Generate Severe Storm Profile</button>
+  </div>
+  <div class="card" id="severeProfileCard" style="display:none"></div>
 
   <div class="card" id="historicReplayCard" style="display:none">
     <h2>Replay Historic Storm</h2>
@@ -4595,7 +4652,7 @@ function generateProfile(rsiOverride) {
     ff.push('\u26AA <strong>The White Void:</strong> All matter in the affected region has been converted to snow. Light does not escape the snowpack. Time appears to be paused.');
   }
   if (peakEffective >= 10000) {
-    ff.push('\u2728 <strong>Omega Point Frost:</strong> The universe achieves maximal crystallinity. This is the final unified snow state. No further meteorological events are possible. Thank you for using the Snow Event Profile Maker 3.1.4.');
+    ff.push('\u2728 <strong>Omega Point Frost:</strong> The universe achieves maximal crystallinity. This is the final unified snow state. No further meteorological events are possible. Thank you for using the Snow Event Profile Maker.');
   }
 
   // Ice-specific fun facts
@@ -7422,6 +7479,9 @@ function setInputMode(mode) {
   const heatProfile = document.getElementById('heatProfileCard');
   heatProfile.style.display = (mode === 'heat' && heatProfile.innerHTML.trim()) ? '' : 'none';
   document.getElementById('waterWarCard').style.display = (mode === 'waterwar') ? '' : 'none';
+  document.getElementById('severeCard').style.display = (mode === 'severe') ? '' : 'none';
+  const sevProfile = document.getElementById('severeProfileCard');
+  sevProfile.style.display = (mode === 'severe' && sevProfile.innerHTML.trim()) ? '' : 'none';
   HEAT_EXTRA_CARDS.forEach(id => { document.getElementById(id).style.display = (mode === 'heat' && heatLastResults.length) ? '' : 'none'; });
 }
 document.querySelectorAll('.mode-btn').forEach(b => {
@@ -9502,6 +9562,273 @@ heatGapAc.addEventListener('click', e => {
 });
 document.addEventListener('click', e => { if (!e.target.closest('#heatGapCard .gap-fill-field')) heatGapAc.classList.remove('open'); });
 
+/* ---- Severe Storm Mode: engine ----
+   Summer convective storms on their own terms: warnings with NWS impact tags,
+   straight-line wind and hail damage, EF tornado damage, the pressure-fall
+   signature, rain rate and flood products, the temperature crash behind the
+   gust front, a minute-scale timeline, and power restoration. Realistic through
+   the strongest observed storms; fiction only beyond them. */
+
+// Pressure signature from the fall and how fast it came.
+function severePressureSignature(startMb, lowMb, minutes) {
+  if (startMb === null || lowMb === null || startMb === undefined || lowMb === undefined || isNaN(startMb) || isNaN(lowMb)) return null;
+  const fall = startMb - lowMb;
+  const mins = minutes > 0 ? minutes : 60;
+  const rate = fall / (mins / 60);
+  let label, note;
+  if (fall < 1) { label = 'Steady'; note = 'No meaningful pressure change.'; }
+  else if (fall >= 20 && mins <= 15) { label = 'Direct tornado hit'; note = 'A fall this large this fast happens only inside a tornado core (Manchester, SD, 2003: 100 mb).'; }
+  else if (fall >= 10 && mins <= 90) { label = 'Mesocyclone / tornado passage'; note = 'Wake lows rarely exceed about 10 mb; a fall this steep points to a rotating storm passing overhead or very close.'; }
+  else if (fall >= 2 && mins <= 180) { label = 'Wake low / mesolow'; note = 'Typical behind a squall line (2 to 6 mb), with gusty winds as the low passes.'; }
+  else { label = 'Gust-front dip'; note = 'A small dip as outflow arrives.'; }
+  return { fall, rate, minutes: mins, label, note };
+}
+
+function severeWindDamage(g) {
+  if (!g || g < 40) return 'Small branches and loose objects moved.';
+  if (g < 58) return 'Tree limbs down and lawn furniture blown around; isolated outages.';
+  if (g < 70) return 'Trees and large limbs down; scattered outages; shingle and siding damage.';
+  if (g < 80) return 'Widespread tree damage; numerous outages; roof damage.';
+  if (g < 100) return 'Destructive: trees uprooted, outbuildings and roofs damaged, widespread outages.';
+  if (g < 130) return 'Derecho-class: EF1 to EF2-equivalent damage across a wide swath.';
+  if (g < 200) return 'Beyond the strongest measured derecho winds (about 140 mph, Iowa 2020): EF3-equivalent straight-line damage.';
+  return 'Straight-line winds beyond anything observed: nothing exposed survives.';
+}
+function severeHailDamage(h) {
+  if (!h) return null;
+  if (h < 1) return 'Pea- to penny-size hail: shredded plants, little damage.';
+  if (h < 1.75) return 'Quarter- to golf-ball hail: dented cars, broken skylights.';
+  if (h < 2.75) return 'Golf-ball to tennis-ball hail: broken windows and windshields, roof damage.';
+  if (h < 6) return 'Baseball-size or larger hail: destructive, injuries to anyone outside.';
+  if (h <= 8) return 'Record-class hail (Vivian, SD, 2010: 8 inches): roofs punctured.';
+  return 'Hail beyond any recorded stone.';
+}
+
+const SEVERE_TIERS = [
+  { level: 'Quiet',                css: 'sev0' },
+  { level: 'Rumble',               css: 'sev1' },
+  { level: 'Passing Storm',        css: 'sev2' },
+  { level: 'Strong Storm',         css: 'sev3' },
+  { level: 'Severe Storm',         css: 'sev4' },
+  { level: 'Damaging Storm',       css: 'sev5' },
+  { level: 'Destructive Storm',    css: 'sev6' },
+  { level: 'Tornado Touchdown',    css: 'sev7' },
+  { level: 'Tornadic Supercell',   css: 'sev8' },
+  { level: 'Significant Tornado',  css: 'sev9' },
+  { level: 'Derecho-Class',        css: 'sev10' },
+  { level: 'Intense Tornado',      css: 'sev11' },
+  { level: 'Violent Tornado',      css: 'sev12' },
+  { level: 'Incredible Tornado',   css: 'sev13' },
+  // Fiction: beyond anything measured.
+  { level: 'Beyond EF5',           css: 'sev14' },
+  { level: 'Supersonic Vortex',    css: 'sev15' },
+  { level: 'Atmospheric Tear',     css: 'sev16' }
+];
+function severeTierIndex(x) {
+  const idx = name => SEVERE_TIERS.findIndex(t => t.level === name);
+  let i = x.anyStorm ? idx('Rumble') : idx('Quiet');
+  const g = x.gust || 0, h = x.hail || 0;
+  if (g >= 40) i = Math.max(i, idx('Passing Storm'));
+  if (g >= 50 || h >= 0.75) i = Math.max(i, idx('Strong Storm'));
+  if (g >= 58 || h >= 1) i = Math.max(i, idx('Severe Storm'));
+  if (g >= 70 || h >= 1.75) i = Math.max(i, idx('Damaging Storm'));
+  if (g >= 80 || h >= 2.75) i = Math.max(i, idx('Destructive Storm'));
+  if (g >= 100) i = Math.max(i, idx('Derecho-Class'));
+  if (x.rain >= 6) i = Math.max(i, idx('Destructive Storm'));
+  else if (x.rain >= 3) i = Math.max(i, idx('Damaging Storm'));
+  if (x.tornado) {
+    const ef = tornadoAssessment(x.tornado).ef;
+    const map = { 'Sub-EF0': 'Strong Storm', EF0: 'Tornado Touchdown', EF1: 'Tornadic Supercell', EF2: 'Significant Tornado',
+      EF3: 'Intense Tornado', EF4: 'Violent Tornado', EF5: 'Incredible Tornado', 'Beyond EF5': 'Beyond EF5' };
+    i = Math.max(i, idx(map[ef]));
+  }
+  const maxWind = Math.max(g, x.tornado || 0);
+  if (maxWind >= 5000) i = Math.max(i, idx('Atmospheric Tear'));
+  else if (maxWind >= 767) i = Math.max(i, idx('Supersonic Vortex'));
+  else if (g > 200) i = Math.max(i, idx('Beyond EF5'));
+  return i;
+}
+
+function severeProducts(x) {
+  const out = [];
+  const g = x.gust || 0, h = x.hail || 0;
+  if (x.tornado) {
+    const ef = tornadoAssessment(x.tornado).ef;
+    out.push(['EF4', 'EF5', 'Beyond EF5'].includes(ef) ? 'Tornado Emergency' : (ef === 'EF3' ? 'Tornado Warning (PDS)' : 'Tornado Warning'));
+  }
+  if (g >= 58 || h >= 1) {
+    const tag = (g >= 80 || h >= 2.75) ? ' (Destructive)' : (g >= 70 || h >= 1.75) ? ' (Considerable)' : '';
+    out.push('Severe Thunderstorm Warning' + tag);
+  }
+  if (x.rain > 0) {
+    if (x.rain >= 3 || (x.rate >= 2 && x.rain >= 2)) out.push(x.rain >= 6 ? 'Flash Flood Emergency' : 'Flash Flood Warning');
+    else if (x.rate >= 1) out.push('Flood Advisory (urban and poor-drainage ponding)');
+  }
+  return out.length ? out : ['No warnings'];
+}
+
+// Power restoration, in hours after the storm ends.
+function severePowerHours(x) {
+  const g = x.gust || 0;
+  let hrs = 0;
+  if (g >= 58) hrs = 8;
+  if (g >= 70) hrs = 24;
+  if (g >= 80) hrs = 72;
+  if (g >= 100) hrs = 168;
+  if (x.tornado) {
+    const ef = tornadoAssessment(x.tornado).ef;
+    hrs = Math.max(hrs, { 'Sub-EF0': 4, EF0: 12, EF1: 36, EF2: 96, EF3: 240, EF4: 504, EF5: 1008, 'Beyond EF5': Infinity }[ef]);
+  }
+  if ((x.hail || 0) >= 2.75) hrs = Math.max(hrs, 12);
+  return hrs;
+}
+
+// entry: { n, temp, dew, gust, hail, rain, rainMin, startMb, lowMb, fallMin, tornado, start (Date) }
+function evaluateSevereCity(entry) {
+  const T = entry.temp, dew = (entry.dew === null || entry.dew === undefined) ? T - 20 : entry.dew;
+  const rainMin = entry.rainMin > 0 ? entry.rainMin : (entry.rain > 0 ? Math.max(15, entry.rain / 1.2 * 60) : 0);
+  const rate = entry.rain > 0 ? entry.rain / (rainMin / 60) : 0;
+  const x = { gust: entry.gust || 0, hail: entry.hail || 0, rain: entry.rain || 0, rate, tornado: entry.tornado || 0,
+    anyStorm: (entry.rain || 0) > 0 || (entry.gust || 0) > 0 || (entry.hail || 0) > 0 || (entry.tornado || 0) > 0 };
+  const tierIndex = severeTierIndex(x);
+  const pressure = severePressureSignature(entry.startMb, entry.lowMb, entry.fallMin);
+  // Behind the gust front the air cools toward the pre-storm wet-bulb, and a few
+  // degrees below it where downdrafts bring down evaporatively cooled air.
+  let outflow = null;
+  if (T !== null && T !== undefined && !isNaN(T) && x.anyStorm) {
+    const tw = heatWetBulbC(T, heatRH(T, Math.min(dew, T)));
+    outflow = tw === null ? null : Math.round(Math.min(T - 8, tw * 9 / 5 + 32 - 5));
+  }
+  const tn = x.tornado ? tornadoAssessment(x.tornado) : null;
+  // Minute timeline: gust front at start, peak wind 5 minutes in, rain after the
+  // gust front, a tornado near the heaviest part of the storm, pressure low with it.
+  const start = entry.start || null;
+  const at = m => start ? new Date(start.getTime() + m * 60000) : m;
+  const stormMin = Math.max(rainMin, 15, tn ? tn.minutes + 10 : 0);
+  const timeline = [
+    { m: 0, label: 'Gust front arrives' + (x.gust ? ` (${x.gust} mph)` : '') },
+    { m: Math.min(5, stormMin), label: 'Peak wind' },
+  ];
+  if (x.rain) timeline.push({ m: 2, label: `Rain begins (${x.rain}″ over ${Math.round(rainMin)} min, ${rate.toFixed(1)}″/hr)` });
+  if (x.hail) timeline.push({ m: Math.round(stormMin * 0.3), label: `Hail up to ${x.hail}″` });
+  if (tn) timeline.push({ m: Math.round(stormMin * 0.45), label: `${tn.ef} tornado on the ground ~${tn.minutes} min` });
+  if (pressure) timeline.push({ m: tn ? Math.round(stormMin * 0.45) : Math.round(stormMin * 0.6), label: `Pressure bottoms at ${entry.lowMb} mb (\u2212${pressure.fall.toFixed(1)} mb over ${pressure.minutes} min)` });
+  timeline.push({ m: stormMin, label: 'Storm exits' + (outflow !== null ? `; ${outflow}°F behind it` : '') });
+  timeline.sort((a, b) => a.m - b.m);
+  const powerHrs = severePowerHours(x);
+  return {
+    n: entry.n, entry, x, rate, rainMin, tierIndex, tier: SEVERE_TIERS[tierIndex], products: severeProducts(x),
+    pressure, outflow, tornado: tn, windDamage: severeWindDamage(x.gust), hailDamage: severeHailDamage(x.hail),
+    timeline: timeline.map(e => ({ ...e, when: at(e.m) })), powerHrs
+  };
+}
+function severeFormatPower(h) {
+  if (!h) return 'No outages expected.';
+  if (!isFinite(h)) return 'Grid in the path is gone; rebuilt, not restored.';
+  if (h < 24) return `Most power back within ${h} hours.`;
+  const d = Math.round(h / 24);
+  return d < 14 ? `Most power back in about ${d} day${d === 1 ? '' : 's'}.` : `Power restoration in the path takes about ${Math.round(d / 7)} weeks.`;
+}
+
+/* ---- Severe Storm Mode: UI ---- */
+const severeCities = [];
+const sevEl = id => document.getElementById(id);
+function sevNum(id) { const v = sevEl(id).value; return v === '' ? null : parseFloat(v); }
+
+function severeValidate(e) {
+  if (!e.n) return 'Please enter a city name.';
+  if (e.temp === null || isNaN(e.temp)) return 'Enter the temperature before the storm.';
+  const nums = ['dew', 'gust', 'hail', 'rain', 'rainMin', 'startMb', 'lowMb', 'fallMin', 'tornado'];
+  for (const k of nums) if (e[k] !== null && (isNaN(e[k]) || e[k] < 0)) return 'Numbers must be zero or more.';
+  if (e.dew !== null && e.dew > e.temp) return "Dewpoint can't be higher than the temperature.";
+  if ((e.startMb === null) !== (e.lowMb === null)) return 'Enter both the starting pressure and the low, or neither.';
+  if (e.startMb !== null && e.lowMb > e.startMb) return 'The pressure low must be at or below the starting pressure.';
+  if (!(e.gust || e.hail || e.rain || e.tornado)) return 'Enter at least one of gust, hail, rain, or tornado.';
+  return null;
+}
+function severeAddCity() {
+  sevEl('severeError').textContent = '';
+  const name = sevEl('severeCityInput').value.trim();
+  const db = CITY_DB.find(c => c.n.toLowerCase() === name.toLowerCase());
+  const e = { n: db ? db.n : name, temp: sevNum('severeTemp'), dew: sevNum('severeDew'), gust: sevNum('severeGust'),
+    hail: sevNum('severeHail'), rain: sevNum('severeRain'), rainMin: sevNum('severeRainMin'),
+    startMb: sevNum('severeStartMb'), lowMb: sevNum('severeLowMb'), fallMin: sevNum('severeFallMin'), tornado: sevNum('severeTornado') };
+  const err = severeValidate(e);
+  if (err) { sevEl('severeError').textContent = err; return; }
+  severeCities.push(e);
+  ['severeCityInput', 'severeTemp', 'severeDew', 'severeGust', 'severeHail', 'severeRain', 'severeRainMin', 'severeStartMb', 'severeLowMb', 'severeFallMin', 'severeTornado']
+    .forEach(id => { sevEl(id).value = ''; });
+  severeRenderList();
+}
+function severeRemoveCity(i) { severeCities.splice(i, 1); severeRenderList(); }
+function severeRenderList() {
+  sevEl('severeGenerateBtn').disabled = !severeCities.length;
+  sevEl('severeCityList').innerHTML = severeCities.map((c, i) => `<div class="city-item">
+      <span>${esc(c.n)} &mdash; ${c.temp}°F${c.gust ? ' · gust ' + c.gust + ' mph' : ''}${c.hail ? ' · hail ' + c.hail + '″' : ''}${c.rain ? ' · ' + c.rain + '″ rain' : ''}${c.tornado ? ' · tornado ' + c.tornado + ' mph' : ''}</span>
+      <button class="btn-remove" onclick="severeRemoveCity(${i})">&times;</button>
+    </div>`).join('');
+}
+function severeStart() {
+  const v = sevEl('severeStartTime').value;
+  return v ? new Date(v) : null;
+}
+function severeGenerate() {
+  const start = severeStart();
+  const results = severeCities.map(c => evaluateSevereCity({ ...c, start }));
+  renderSevereProfile(results);
+  sevEl('severeProfileCard').style.display = '';
+  sevEl('severeProfileCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function renderSevereProfile(results) {
+  const peak = results.reduce((a, b) => b.tierIndex > a.tierIndex ? b : a);
+  const fmtWhen = w => (w instanceof Date) ? formatTimeline(w) : `+${w} min`;
+  const rows = results.map(r => {
+    const hazards = [
+      r.x.gust ? `\u{1F4A8} ${r.x.gust} mph gust: ${r.windDamage}` : '',
+      r.hailDamage ? `\u{1F9CA} ${r.hailDamage}` : '',
+      r.tornado ? `\u{1F32A}️ ${r.tornado.ef} (${r.x.tornado} mph): ${r.tornado.damage}` : '',
+      r.x.rain ? `\u{1F327}️ ${r.x.rain}″ in ${Math.round(r.rainMin)} min (${r.rate.toFixed(1)}″/hr)` : ''
+    ].filter(Boolean).map(h => `<div>${h}</div>`).join('');
+    const tl = r.timeline.map(e => `<div class="heat-sub">${fmtWhen(e.when)} — ${esc(e.label)}</div>`).join('');
+    const pr = r.pressure ? `<strong>${r.pressure.label}</strong><div class="heat-sub">−${r.pressure.fall.toFixed(1)} mb in ${r.pressure.minutes} min (${r.pressure.rate.toFixed(1)} mb/hr). ${r.pressure.note}</div>` : '<span class="heat-sub">Not entered</span>';
+    return `<tr>
+      <td><strong>${esc(r.n)}</strong></td>
+      <td style="min-width:200px">${tl}</td>
+      <td style="min-width:260px">${hazards}</td>
+      <td style="min-width:180px">${pr}</td>
+      <td>${r.outflow !== null ? `${r.entry.temp}°F → ~${r.outflow}°F` : '—'}</td>
+      <td>${r.products.map(p => `<div>${esc(p)}</div>`).join('')}</td>
+      <td><span class="impact-pill impact-${r.tier.css}">${r.tier.level}</span></td>
+      <td class="heat-sub">${severeFormatPower(r.powerHrs)}</td>
+    </tr>`;
+  }).join('');
+  sevEl('severeProfileCard').innerHTML = `
+    <h2>Severe Storm Profile</h2>
+    <span class="storm-badge impact-${peak.tier.css}">${peak.tier.level}</span>
+    <div class="impact-table-wrap">
+    <table class="impact-table">
+      <thead><tr><th>City</th><th>Timeline</th><th>Hazards &amp; Damage</th><th>Pressure Signature</th><th>Temp Crash</th><th>NWS Products</th><th>Impact</th><th>Power</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    </div>
+    <p class="heat-sub" style="margin-top:8px">Straight-line wind, hail, and flood products follow NWS criteria (severe at 58 mph or 1″ hail; Considerable at 70 mph or 1.75″; Destructive at 80 mph or 2.75″). Tornado damage follows the Enhanced Fujita scale.</p>`;
+}
+sevEl('severeAddBtn').addEventListener('click', severeAddCity);
+sevEl('severeGenerateBtn').addEventListener('click', severeGenerate);
+sevEl('severeCityInput').addEventListener('input', () => {
+  const q = sevEl('severeCityInput').value.trim().toLowerCase();
+  const m = q.length < 2 ? [] : CITY_DB.filter(c => c.n.toLowerCase().includes(q)).slice(0, 8);
+  sevEl('severeAcList').innerHTML = m.map(c => `<div class="ac-item" data-name="${esc(c.n)}"><span>${esc(c.n)}</span></div>`).join('');
+  sevEl('severeAcList').classList.toggle('open', m.length > 0);
+});
+sevEl('severeAcList').addEventListener('click', e => {
+  const item = e.target.closest('.ac-item');
+  if (!item) return;
+  sevEl('severeCityInput').value = item.dataset.name;
+  sevEl('severeAcList').classList.remove('open');
+});
+document.addEventListener('click', e => { if (!e.target.closest('#severeCard .city-field')) sevEl('severeAcList').classList.remove('open'); });
+
 /* ======================================================================
    SELFTEST HARNESS
    Browser-run tests. Load index.html?selftest=1 and read the console.
@@ -10772,6 +11099,35 @@ window.__snowTests.push((t) => {
   t('real heat still recovers', !heatRecovery(tj).none);
   t('Routine Weather in November', calculateRHI([ev('Tulsa, OK', 48, null, 1, {}, { date: D(2026, 11, 19) })]).category.label === 'Routine Weather');
   t('Routine Summer in July', calculateRHI([ev('Tulsa, OK', 90, 60, 1, {}, { date: D(2026, 7, 4) })]).category.label === 'Routine Summer');
+});
+
+// SEV-1 Severe Storm mode engine
+window.__snowTests.push((t) => {
+  const aug30 = evaluateSevereCity({ n: 'Tulsa, OK', temp: 92, dew: null, gust: 60, hail: 0, rain: 0.4, rainMin: 20,
+    startMb: 1011, lowMb: 995, fallMin: 40, tornado: 75, start: new Date(2026, 7, 30, 17) });
+  t('Aug 30 EF0 is a Tornado Touchdown', aug30.tier.level === 'Tornado Touchdown');
+  t('Aug 30 gets a Tornado Warning', aug30.products.includes('Tornado Warning'));
+  t('Aug 30 gets a Severe Thunderstorm Warning', aug30.products.some(p => p.startsWith('Severe Thunderstorm Warning')));
+  t('Aug 30 1.2in/hr gets a Flood Advisory, not a Flash Flood', aug30.products.some(p => p.startsWith('Flood Advisory')) && !aug30.products.some(p => /Flash Flood/.test(p)));
+  t('16 mb in 40 min is a mesocyclone signature', aug30.pressure.label === 'Mesocyclone / tornado passage');
+  t('temperature crashes into the 70s', aug30.outflow >= 68 && aug30.outflow <= 80);
+  t('timeline is in minutes', (aug30.timeline[aug30.timeline.length - 1].when - aug30.timeline[0].when) / 60000 <= 60);
+  const svr = evaluateSevereCity({ n: 'Tulsa, OK', temp: 92, gust: 60, rain: 0.4, rainMin: 20 });
+  t('60 mph without a tornado is a Severe Storm', svr.tier.level === 'Severe Storm');
+  t('wake low signature', severePressureSignature(1010, 1005, 60).label === 'Wake low / mesolow');
+  t('direct hit signature', severePressureSignature(990, 950, 5).label === 'Direct tornado hit');
+  t('Destructive tag at 80 mph', severeProducts({ gust: 85, hail: 0, rain: 0, rate: 0, tornado: 0 })[0] === 'Severe Thunderstorm Warning (Destructive)');
+  t('Considerable tag for 2in hail', severeProducts({ gust: 0, hail: 2, rain: 0, rate: 0, tornado: 0 })[0] === 'Severe Thunderstorm Warning (Considerable)');
+  t('EF5 is a Tornado Emergency', severeProducts({ gust: 0, hail: 0, rain: 0, rate: 0, tornado: 210 })[0] === 'Tornado Emergency');
+  t('3in of rain is a Flash Flood Warning', severeProducts({ gust: 0, hail: 0, rain: 3.2, rate: 1.5, tornado: 0 }).includes('Flash Flood Warning'));
+  t('derecho at 110 mph', evaluateSevereCity({ n: 'X', temp: 90, gust: 110 }).tier.level === 'Derecho-Class');
+  t('EF5 is realistic, beyond is fiction', evaluateSevereCity({ n: 'X', temp: 90, tornado: 250 }).tier.level === 'Incredible Tornado'
+    && evaluateSevereCity({ n: 'X', temp: 90, tornado: 400 }).tier.level === 'Beyond EF5');
+  t('power: EF0 about half a day', severePowerHours({ gust: 60, tornado: 75, hail: 0 }) === 12);
+  t('validation needs a hazard', severeValidate({ n: 'Tulsa, OK', temp: 90, dew: null, gust: null, hail: null, rain: null, rainMin: null, startMb: null, lowMb: null, fallMin: null, tornado: null }) !== null);
+  renderSevereProfile([aug30]);
+  t('profile renders the tier', document.getElementById('severeProfileCard').innerHTML.includes('Tornado Touchdown'));
+  document.getElementById('severeProfileCard').innerHTML = '';
 });
 
 window.addEventListener('load', () => {
