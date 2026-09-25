@@ -10695,6 +10695,85 @@ window.__snowTests.push((t) => {
   heatLastResults = []; heatGapResults = []; renderHeatGap();
 });
 
+// FIX-1 realistic tier cap and re-spaced ladder (benchmarks from the realism notes)
+window.__snowTests.push((t) => {
+  const c = p => CITY_DB.find(x => x.n.startsWith(p));
+  const lvl = (p, snow, temp, w, g, pr) => { const x = c(p); return getImpact(snow, x.snow, temp !== null, temp, snow, w, g, x.lat, pr).level; };
+  t('Muskegon 1978 is Catastrophic', lvl('Muskegon', 52, 15, 50, 70, 956) === 'Catastrophic');
+  t('Providence 2026 is Calamitous', lvl('Providence', 37.9, 20, 30, 60, 970) === 'Calamitous');
+  t('Wilmington 1989 is Catastrophic', lvl('Wilmington, NC', 15.4, 26, 15, 25, 1000) === 'Catastrophic');
+  t('36.8in Tulsa blizzard stays realistic (Historic)', getImpact(36.8, 9, true, 28, 40.48, 95, null, 36.2, 955, 1, 5.5).level === 'Historic');
+  t('impossible inputs still reach fiction', getImpact(500, 9, true, -150, 500, 300, 400, 36.15, 600).level === 'Omega Point Frost');
+  t('stack cap max 2.0 for plausible', capMultiplierStack(4, true) === 2.0 && capMultiplierStack(1.2, true) === 1.2);
+  t('peak rate multiplier', getPeakRateMultiplier(5.5) === 1.2 && getPeakRateMultiplier(1) === 1.0);
+});
+// FIX-2 precipitation types, tornado, labels, products
+window.__snowTests.push((t) => {
+  const d = computeDerivedPrecip([{ type: 'thunderstorm', amount: 0.4 }, { type: 'tornado', amount: 75 }]);
+  t('thunderstorm is not frozen', d.snow === 0);
+  t('tornado adds no snow-equivalent', d.snowEquivalent === 0);
+  t('tornado adds no flood depth', rainEquivInches('tornado', 75) === 0);
+  t('EF0 at 75 mph', tornadoAssessment(75).ef === 'EF0' && tornadoAssessment(75).minutes === 5);
+  t('EF3 at 150 mph', tornadoAssessment(150).ef === 'EF3');
+  t('60 mph is Storm-Force, not hurricane', getWindLabel(60).label === 'Storm-Force');
+  t('95 mph is Cat 1', getWindLabel(95).label === 'Cat 1 Hurricane-Force');
+  t('25 mph is Windy', getWindLabel(25).label === 'Windy');
+  const tl = calculateTimeline([{ type: 'thunderstorm', amount: 0.4 }, { type: 'tornado', amount: 75 }], true, new Date(2026, 7, 30, 17), 0);
+  const tn = tl.phaseEvents.find(p => p.type === 'tornado'), ts = tl.phaseEvents.find(p => p.type === 'thunderstorm');
+  t('convective burst lasts minutes', (ts.endTime - ts.startTime) / 60000 <= 30);
+  t('tornado sits inside its storm', tn.startTime >= ts.startTime && tn.endTime <= ts.endTime);
+  const allDay = calculateTimeline([{ type: 'rain', amount: 0.6, hours: 12 }], true, new Date(2026, 9, 29, 6), 0);
+  t('entered duration is honored', Math.abs((allDay.end - allDay.start) / 3600000 - 12) < 0.01);
+  t('slow rain rated lower', totalRainInchesRated([{ type: 'rain', amount: 0.6, hours: 12 }]) < 0.6);
+  const city = (phases, extra) => Object.assign({ phases, region: 'SO', lat: 36.2, hasStormTemp: false, windSpeed: 0, gustSpeed: 0 }, extra);
+  const A = (c) => hazardAlerts(c, { alerts: 'Blizzard Warning; State of Emergency.' });
+  t('tornado gets a Tornado Warning', /Tornado Warning/.test(A(city([{ type: 'thunderstorm', amount: 0.4 }, { type: 'tornado', amount: 75 }], { windSpeed: 60 }))));
+  t('58+ mph storm gets Severe Thunderstorm Warning', /Severe Thunderstorm Warning/.test(A(city([{ type: 'thunderstorm', amount: 0.4 }], { windSpeed: 60 }))));
+  t('no Blizzard Warning without wind', !/Blizzard/.test(A(city([{ type: 'ice', amount: 0.3 }, { type: 'sleet', amount: 2 }]))));
+  t('0.3in ice gets Ice Storm Warning', /Ice Storm Warning/.test(A(city([{ type: 'ice', amount: 0.3 }]))));
+  t('glaze gets freezing-rain advisory', /Winter Weather Advisory for freezing rain/.test(hazardAlerts(city([{ type: 'ice', amount: 0.02 }]), { alerts: 'Special Weather Statement.' })));
+  t('blizzard wind with snow keeps Blizzard Warning', /Blizzard Warning/.test(A(city([{ type: 'powder', amount: 6 }], { windSpeed: 40 }))));
+  t('wind chill formula', Math.round(windChillF(48, 15)) === 42 && Math.round(windChillF(18, 25)) === 0);
+  t('Cold Weather Advisory in Tulsa at -12', coldProduct(-12, 'SO', 36.2) === 'Cold Weather Advisory');
+  t('glaze gives no snow-war ammo', packableInches([{ type: 'ice', amount: 0.02 }]) === 0);
+  t('ice still armors real snow', packableInches([{ type: 'snowball', amount: 2 }, { type: 'ice', amount: 0.2 }]) > 2);
+  t('glaze wording is black ice', /black ice/.test(iceDescription(city([{ type: 'ice', amount: 0.02 }]))));
+  t('dry day badge', eventBadge([city([])], { label: 'x' }).label === 'Dry Weather Day');
+  t('tornado badge', eventBadge([city([{ type: 'thunderstorm', amount: 0.4 }, { type: 'tornado', amount: 75 }])], { label: 'x' }).label === 'Tornadic Storm');
+  t('light glaze badge', eventBadge([city([{ type: 'ice', amount: 0.02 }])], { label: 'x' }).label === 'Light Glaze');
+});
+// FIX-3 storm-type classifier fits the precipitation type
+window.__snowTests.push((t) => {
+  const mk = (n, phases) => Object.assign({ name: n, phases, region: regionForCity(n), hasStormTemp: false, windSpeed: 0 }, computeDerivedPrecip(phases));
+  const type = list => (classifyStormType(list) || { type: '(none)' }).type;
+  t('Tulsa snow is not a flood', !/Flood|Deluge|Rain/.test(type([mk('Tulsa, OK', [{ type: 'snowball', amount: 1.2 }])])));
+  t('Tulsa 0.6in rain is not a flash-flood emergency or a sprinkle', !/Flash Flood|Sprinkle/.test(type([mk('Tulsa, OK', [{ type: 'rain', amount: 0.6, hours: 12 }])])));
+  t('glaze is not a dud', !/Dud/.test(type([mk('Tulsa, OK', [{ type: 'ice', amount: 0.02 }])])));
+  t('dry day has no storm type', classifyStormType([mk('Tulsa, OK', [])]) === null);
+  t('big Texas rain is still a flash flood', /Flash Flood/.test(type([mk('Houston, TX', [{ type: 'rain', amount: 12 }]), mk('Dallas, TX', [{ type: 'rain', amount: 8 }])])));
+});
+// FIX-4 heat seasonality, gap-fill cap, lake edge, recovery gate, RHI label
+window.__snowTests.push((t) => {
+  const D = (y, m, d) => new Date(y, m - 1, d);
+  const ev = (n, temp, dew, days, lakes, opts) => evaluateHeatCity({ n, temp, dew, days }, lakes || {}, null, opts);
+  const tulsa = CITY_DB.find(c => c.n === 'Tulsa, OK');
+  t('no date keeps summer normals', heatNormalHigh(tulsa, null) === 93);
+  t('Tulsa mid-Nov normal about 60', Math.abs(heatNormalHigh(tulsa, D(2026, 11, 19)) - 60) <= 3);
+  t('Tulsa mid-Sep dewpoint low 60s', Math.abs(heatSeasonalDewpoint(tulsa, D(2026, 9, 17)) - 62) <= 3);
+  t('sunny assumed dewpoint is not saturated', ev('Tulsa, OK', 62, null, 1, {}, { date: D(2027, 3, 14), sky: 'sunny' }).Td <= 50);
+  t('Sep 17 84F is near normal', Math.abs(ev('Tulsa, OK', 84, null, 1, {}, { date: D(2026, 9, 17) }).anom) <= 4);
+  const tj = ev('Tulsa, OK', 96, 74, 1, {}, { date: D(2026, 7, 4) });
+  const hou = estimateHeatForCity(CITY_DB.find(c => c.n === 'Houston, TX'), [tj]);
+  t('gap estimate never outranks its input city', evaluateHeatCity(hou, {}, null, { date: D(2026, 7, 4) }).score <= tj.score + 1e-9);
+  t('gap estimate is whole degrees', Number.isInteger(hou.temp) && Number.isInteger(hou.dew));
+  const gr = ev('Grand Rapids, MI', 81, null, 1, { michigan: 68 });
+  t('Grand Rapids lake breeze is 1-2F', 81 - gr.T >= 1 && 81 - gr.T <= 2);
+  t('below-normal day has no recovery', heatRecovery(gr).none === true);
+  t('real heat still recovers', !heatRecovery(tj).none);
+  t('Routine Weather in November', calculateRHI([ev('Tulsa, OK', 48, null, 1, {}, { date: D(2026, 11, 19) })]).category.label === 'Routine Weather');
+  t('Routine Summer in July', calculateRHI([ev('Tulsa, OK', 90, 60, 1, {}, { date: D(2026, 7, 4) })]).category.label === 'Routine Summer');
+});
+
 window.addEventListener('load', () => {
   if (!/(\?|&)selftest\b/.test(location.search)) return;
   let pass = 0, fail = 0;
