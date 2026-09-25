@@ -670,6 +670,32 @@
     .ladder-title { font-size: 0.46rem; }
     .ladder-item { font-size: 0.44rem; padding: 2px 1px; }
   }
+  /* Heat Index Mode */
+  .heat-num { width: 130px; }
+  .heat-opt { opacity: 0.5; font-size: 0.7rem; }
+  .heat-lakes { margin-top: 16px; }
+  .heat-lake-fields { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+  .heat-lake-fields > div { width: 110px; }
+  .heat-sub { font-size: 0.72rem; opacity: 0.6; }
+  @media (max-width: 600px) { .heat-num, .heat-lake-fields > div { width: calc(50% - 6px); } }
+  .impact-h0  { background: #0f172a; color: #475569; }
+  .impact-h1  { background: #14281c; color: #86efac; }
+  .impact-h2  { background: #2a2a12; color: #fde68a; }
+  .impact-h3  { background: #3a2a0a; color: #fcd34d; }
+  .impact-h4  { background: #422006; color: #fbbf24; }
+  .impact-h5  { background: #451a03; color: #fb923c; }
+  .impact-h6  { background: #4a1505; color: #f97316; }
+  .impact-h7  { background: #4c0f0f; color: #f87171; }
+  .impact-h8  { background: #500a0a; color: #ef4444; }
+  .impact-h9  { background: #4a0620; color: #fb7185; }
+  .impact-h10 { background: #3b0a2e; color: #f472b6; }
+  .impact-h11 { background: #3b0764; color: #e879f9; }
+  .impact-h12 { background: #2e1065; color: #c4b5fd; }
+  .impact-h13 { background: #7c2d12; color: #fed7aa; }
+  .impact-h14 { background: #a16207; color: #fef9c3; }
+  .impact-h15 { background: #ea580c; color: #fff7ed; }
+  .impact-h16 { background: #fde68a; color: #78350f; }
+  .impact-h17 { background: #ffffff; color: #6d28d9; }
 </style>
 </head>
 <body>
@@ -828,8 +854,8 @@
 </aside>
 
 <div class="container">
-  <h1>Snow Event Profile Maker 3.1.4</h1>
-  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">8607 lines of code</p>
+  <h1>Snow Event Profile Maker 3.2.0</h1>
+  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">9336 lines of code</p>
   <p class="subtitle">Powered by real NOAA RSI methodology with location-based impact scaling</p>
 
   <div class="card">
@@ -846,6 +872,7 @@
       <button type="button" class="mode-btn" data-mode="historic">Historic Reference</button>
       <button type="button" class="mode-btn" data-mode="replay">Historic Replay</button>
       <button type="button" class="mode-btn" data-mode="snowwar">Snow War Tiers</button>
+      <button type="button" class="mode-btn" data-mode="heat">Heat Index</button>
     </div>
   </div>
 
@@ -854,6 +881,46 @@
     <p class="paragraph-hint">All <span id="snowWarCount">&mdash;</span> snow war activity tiers, ordered by the packable snow depth that reaches them &mdash; from a single disputed flake up past 30,000&Prime;. Every city in a storm lands on exactly one of these, based on how much of its precipitation packs.</p>
     <div class="historic-list" id="snowWarList"></div>
   </div>
+
+  <div class="card" id="heatCard" style="display:none">
+    <h2>Add Cities &mdash; Heat Index</h2>
+    <div class="row">
+      <div class="city-field">
+        <label for="heatCityInput">City</label>
+        <input type="text" id="heatCityInput" placeholder="e.g. Tulsa, OK" autocomplete="off">
+        <div class="autocomplete-list" id="heatAcList"></div>
+      </div>
+      <div class="heat-num">
+        <label for="heatTempInput">Temp (&deg;F)</label>
+        <input type="number" id="heatTempInput" placeholder="96">
+      </div>
+      <div class="heat-num">
+        <label for="heatDewInput">Dewpoint <span class="heat-opt">optional</span></label>
+        <input type="number" id="heatDewInput" placeholder="auto">
+      </div>
+      <div class="heat-num">
+        <label for="heatDaysInput">Days <span class="heat-opt">optional</span></label>
+        <input type="number" id="heatDaysInput" placeholder="1" min="1" max="365" step="1">
+      </div>
+      <button type="button" class="btn-add" id="heatAddBtn">Add City</button>
+    </div>
+    <div class="error-msg" id="heatError"></div>
+    <div class="heat-lakes">
+      <div class="warming-label">Great Lakes water temps (&deg;F)
+        <span class="help-text">Optional. A cool lake cuts lakeshore highs (lake breeze); a warm lake adds humidity and keeps nights warm. Every Michigan city is affected.</span>
+      </div>
+      <div class="heat-lake-fields">
+        <div><label for="lake_superior">Superior</label><input type="number" id="lake_superior" placeholder="&mdash;"></div>
+        <div><label for="lake_michigan">Michigan</label><input type="number" id="lake_michigan" placeholder="&mdash;"></div>
+        <div><label for="lake_huron">Huron</label><input type="number" id="lake_huron" placeholder="&mdash;"></div>
+        <div><label for="lake_erie">Erie</label><input type="number" id="lake_erie" placeholder="&mdash;"></div>
+        <div><label for="lake_ontario">Ontario</label><input type="number" id="lake_ontario" placeholder="&mdash;"></div>
+      </div>
+    </div>
+    <div id="heatCityList" style="margin-top:12px"></div>
+    <button class="btn-generate" id="heatGenerateBtn" disabled>Generate Heat Profile</button>
+  </div>
+  <div class="card" id="heatProfileCard" style="display:none"></div>
 
   <div class="card" id="historicReplayCard" style="display:none">
     <h2>Replay Historic Storm</h2>
@@ -6977,6 +7044,9 @@ function setInputMode(mode) {
   historic.style.display = (mode === 'historic')  ? '' : 'none';
   replay.style.display   = (mode === 'replay')    ? '' : 'none';
   snowWar.style.display  = (mode === 'snowwar')   ? '' : 'none';
+  document.getElementById('heatCard').style.display = (mode === 'heat') ? '' : 'none';
+  const heatProfile = document.getElementById('heatProfileCard');
+  heatProfile.style.display = (mode === 'heat' && heatProfile.innerHTML.trim()) ? '' : 'none';
 }
 document.querySelectorAll('.mode-btn').forEach(b => {
   b.addEventListener('click', () => setInputMode(b.dataset.mode));
@@ -7726,6 +7796,515 @@ phaseBuilder.addEventListener('keydown', e => { if (e.key==='Enter' && e.target.
     el.style.opacity=0.1+Math.random()*0.3; c.appendChild(el);
   }
 })();
+
+/* ---- Heat Index Mode: physics ----
+   NWS heat index (Steadman + Rothfusz with NWS adjustments), RH from dewpoint
+   (Magnus), and wet-bulb (Stull 2011). All temperatures in °F except wet-bulb (°C). */
+function heatSatVapor(c) { return 6.112 * Math.exp(17.62 * c / (243.12 + c)); }
+function heatFtoC(f) { return (f - 32) * 5 / 9; }
+function heatRH(T, Td) {
+  return Math.min(100, 100 * heatSatVapor(heatFtoC(Td)) / heatSatVapor(heatFtoC(T)));
+}
+// Returns null past 135°F, where the Rothfusz fit is meaningless.
+function heatIndexF(T, RH) {
+  if (T > 135) return null;
+  const simple = 0.5 * (T + 61 + (T - 68) * 1.2 + RH * 0.094);
+  if ((simple + T) / 2 < 80) return simple;
+  let hi = -42.379 + 2.04901523 * T + 10.14333127 * RH - 0.22475541 * T * RH
+    - 0.00683783 * T * T - 0.05481717 * RH * RH + 0.00122874 * T * T * RH
+    + 0.00085282 * T * RH * RH - 0.00000199 * T * T * RH * RH;
+  if (RH < 13 && T >= 80 && T <= 112) hi -= ((13 - RH) / 4) * Math.sqrt((17 - Math.abs(T - 95)) / 17);
+  else if (RH > 85 && T >= 80 && T <= 87) hi += ((RH - 85) / 10) * ((87 - T) / 5);
+  return hi;
+}
+// Stull is fit for -20..50°C; past 122°F there is no wet-bulb and tiering uses air temp.
+function heatWetBulbC(T, RH) {
+  if (T > 122) return null;
+  const t = heatFtoC(T);
+  return t * Math.atan(0.151977 * Math.sqrt(RH + 8.313659)) + Math.atan(t + RH)
+    - Math.atan(RH - 1.676331) + 0.00391838 * Math.pow(RH, 1.5) * Math.atan(0.023101 * RH) - 4.686035;
+}
+
+/* ---- Heat Index Mode: climatology ---- */
+const PACIFIC_MARINE = new Set([
+  'Seattle, WA', 'Portland, OR', 'San Francisco, CA', 'Oakland, CA', 'Los Angeles, CA',
+  'San Diego, CA', 'Ventura, CA', 'Olympia, WA', 'Bellingham, WA', 'Eugene, OR',
+  'Vancouver, BC, Canada', 'Victoria, BC, Canada'
+]);
+function heatIsUS(name) { return /,\s*[A-Z]{2}$/.test(name); }
+
+// Typical summer dewpoint when the user leaves dewpoint blank.
+function heatAssumedDewpoint(city) {
+  if (PACIFIC_MARINE.has(city.n)) return 55;
+  const lat = city.lat, lon = city.lon;
+  if (lat === null || lat === undefined) return 66;
+  if (lon < -105) return 45;
+  if (lon < -100) return 55;
+  if (lat < 31.5 && lon > -98 && Math.abs(lat) > 23.5) return 74;
+  if (Math.abs(lat) <= 23.5) return 74;
+  if (lat < 39.5 && lat > 0) return 70;
+  return 66;
+}
+
+// Warmest-month typical high (°F). Hand-set where known; estimated otherwise.
+const SUMMER_HIGH_OVERRIDES = {
+  'Tulsa, OK':93, 'Oklahoma City, OK':94, 'Dallas, TX':96, 'Houston, TX':94, 'San Antonio, TX':95,
+  'Austin, TX':97, 'El Paso, TX':95, 'Phoenix, AZ':106, 'Tucson, AZ':100, 'Yuma, AZ':107,
+  'Las Vegas, NV':104, 'Denver, CO':89, 'Salt Lake City, UT':94, 'Boise, ID':92,
+  'Albuquerque, NM':92, 'Reno, NV':92, 'Sacramento, CA':93, 'Fresno, CA':99, 'Bakersfield, CA':98,
+  'Redding, CA':99, 'Spokane, WA':85, 'Yakima, WA':89, 'Medford, OR':91, 'Bend, OR':83,
+  'Billings, MT':88, 'Missoula, MT':86, 'Flagstaff, AZ':81, 'Santa Fe, NM':85,
+  'Colorado Springs, CO':85, 'Seattle, WA':76, 'Portland, OR':81, 'San Francisco, CA':68,
+  'Oakland, CA':73, 'Los Angeles, CA':84, 'San Diego, CA':75, 'Ventura, CA':75, 'Olympia, WA':77,
+  'Bellingham, WA':73, 'Eugene, OR':83, 'Miami, FL':91, 'Tampa, FL':91, 'Orlando, FL':92,
+  'Jacksonville, FL':92, 'Atlanta, GA':90, 'Charlotte, NC':90, 'Raleigh, NC':90,
+  'Birmingham, AL':91, 'Nashville, TN':90, 'Memphis, TN':92, 'New Orleans, LA':91,
+  'Charleston, SC':91, 'Savannah, GA':92, 'Wilmington, NC':90, 'Richmond, VA':90,
+  'Norfolk, VA':89, 'Washington, DC':89, 'Baltimore, MD':88, 'New York, NY':85,
+  'Philadelphia, PA':88, 'Boston, MA':82, 'Pittsburgh, PA':83, 'Buffalo, NY':80,
+  'Rochester, NY':82, 'Syracuse, NY':82, 'Albany, NY':84, 'Erie, PA':80, 'Chicago, IL':84,
+  'Detroit, MI':84, 'Columbus, OH':85, 'Indianapolis, IN':85, 'Cleveland, OH':83,
+  'Cincinnati, OH':87, 'Milwaukee, WI':81, 'St. Louis, MO':90, 'Kansas City, MO':89,
+  'Louisville, KY':89, 'Toledo, OH':84, 'Grand Rapids, MI':83, 'Lansing, MI':83,
+  'Green Bay, WI':81, 'Madison, WI':83, 'Marquette, MI':77, 'Copper Harbor, MI':73,
+  'Traverse City, MI':81, 'Muskegon, MI':80, 'Duluth, MN':77, 'Minneapolis, MN':83,
+  'St. Paul, MN':83, 'International Falls, MN':78, 'Fargo, ND':82, 'Little Rock, AR':93,
+  'Wichita, KS':93, 'Amarillo, TX':91, 'Lubbock, TX':92, 'Midland, TX':95, 'Shreveport, LA':93,
+  'Jackson, MS':92, 'Corpus Christi, TX':94, 'Brownsville, TX':94, 'Anchorage, AK':65,
+  'Fairbanks, AK':73, 'Honolulu, HI':88, 'Mt. Washington Obs., NH':54,
+  'Toronto, ON, Canada':80, 'Montreal, QC, Canada':80, 'Vancouver, BC, Canada':72,
+  'Victoria, BC, Canada':71, 'Calgary, AB, Canada':74, 'Edmonton, AB, Canada':73,
+  'Winnipeg, MB, Canada':79, 'Ottawa, ON, Canada':80, 'Halifax, NS, Canada':74,
+  'Thunder Bay, ON, Canada':76, 'Regina, SK, Canada':79, 'Hamilton, ON, Canada':81,
+  'Sault Ste. Marie, ON, Canada':76, 'Mexico City, Mexico':74, 'Monterrey, Mexico':96,
+  'London, England':73, 'Paris, France':77, 'Berlin, Germany':76, 'Moscow, Russia':75,
+  'Tokyo, Japan':88, 'Madrid, Spain':90, 'Rome, Italy':88, 'Delhi, India':105,
+  'Dubai, UAE':106, 'Riyadh, Saudi Arabia':110, 'Cairo, Egypt':95,
+  'Johannesburg, South Africa':79, 'Cape Town, South Africa':79,
+  'Buenos Aires, Argentina':86, 'Perth, Australia':88, 'Sydney, Australia':80,
+  'Melbourne, Australia':79, 'Alice Springs, Australia':97, 'Ushuaia, Argentina':57,
+  'McMurdo Station, Antarctica':30, 'Amundsen-Scott South Pole, Antarctica':-15
+};
+// Piecewise by |latitude|, used only when no override exists.
+const SUMMER_HIGH_BY_LAT = [[0,88],[20,90],[30,94],[35,93],[40,87],[45,82],[50,77],[55,72],[60,67],[65,60],[70,50],[80,35],[90,20]];
+function heatSummerHigh(city) {
+  if (Object.prototype.hasOwnProperty.call(SUMMER_HIGH_OVERRIDES, city.n))
+    return { f: SUMMER_HIGH_OVERRIDES[city.n], est: false };
+  const a = Math.abs(city.lat === null || city.lat === undefined ? 40 : city.lat);
+  let f = 87;
+  for (let i = 1; i < SUMMER_HIGH_BY_LAT.length; i++) {
+    const [la, fa] = SUMMER_HIGH_BY_LAT[i - 1], [lb, fb] = SUMMER_HIGH_BY_LAT[i];
+    if (a <= lb) { f = fa + (fb - fa) * (a - la) / (lb - la); break; }
+  }
+  if (city.lat < -40) f -= (Math.abs(city.lat) - 40) * 1.2;   // cold southern oceans
+  if (PACIFIC_MARINE.has(city.n)) f -= 10;
+  if ((city.snow || 0) >= 250) f -= 15;                        // mountain / glacier stations
+  return { f: Math.round(Math.max(-20, f)), est: true };
+}
+function heatNormHI(city) {
+  const sh = heatSummerHigh(city).f, td = Math.min(sh, heatAssumedDewpoint(city));
+  return heatIndexF(sh, heatRH(sh, td));
+}
+
+/* ---- Heat Index Mode: Great Lakes modifier ---- */
+const HEAT_LAKES = ['superior', 'michigan', 'huron', 'erie', 'ontario'];
+const LAKE_NAMES = { superior:'Superior', michigan:'Michigan', huron:'Huron', erie:'Erie', ontario:'Ontario' };
+const LAKE_CENTROIDS = { superior:[47.7,-87.5], michigan:[43.8,-87.0], huron:[44.8,-82.4], erie:[42.2,-81.2], ontario:[43.7,-77.9] };
+const LAKE_K = { shore: 1.0, near: 0.67, peninsula: 0.33 };
+const LAKE_CITIES = {
+  'Duluth, MN':[['superior','shore']], 'Marquette, MI':[['superior','shore']],
+  'Copper Harbor, MI':[['superior','shore']], 'Thunder Bay, ON, Canada':[['superior','shore']],
+  'Sault Ste. Marie, ON, Canada':[['superior','near']],
+  'Chicago, IL':[['michigan','shore']], 'Milwaukee, WI':[['michigan','shore']],
+  'Green Bay, WI':[['michigan','shore']], 'Muskegon, MI':[['michigan','shore']],
+  'Traverse City, MI':[['michigan','shore']],
+  'South Bend, IN':[['michigan','near']], 'Grand Rapids, MI':[['michigan','near']],
+  'Saginaw, MI':[['huron','near']],
+  'Cleveland, OH':[['erie','shore']], 'Toledo, OH':[['erie','shore']], 'Erie, PA':[['erie','shore']],
+  'Buffalo, NY':[['erie','shore'], ['ontario','near']], 'Detroit, MI':[['erie','near']],
+  'Rochester, NY':[['ontario','shore']], 'Toronto, ON, Canada':[['ontario','shore']],
+  'Hamilton, ON, Canada':[['ontario','shore']],
+  'Watertown, NY':[['ontario','near']], 'Syracuse, NY':[['ontario','near']],
+  'Lansing, MI':[['michigan','peninsula'], ['huron','peninsula']], 'Flint, MI':[['huron','peninsula']],
+  'Kalamazoo, MI':[['michigan','peninsula']], 'Ann Arbor, MI':[['erie','peninsula']]
+};
+// Every Michigan city is lake-affected: unlisted ones get Peninsula on the nearest lake.
+function heatLakesFor(city) {
+  if (LAKE_CITIES[city.n]) return LAKE_CITIES[city.n];
+  if (/,\s*MI$/.test(city.n) && city.lat !== null && city.lat !== undefined) {
+    let best = null, bestD = Infinity;
+    for (const k of HEAT_LAKES) {
+      const [la, lo] = LAKE_CENTROIDS[k], d = (la - city.lat) ** 2 + (lo - city.lon) ** 2;
+      if (d < bestD) { bestD = d; best = k; }
+    }
+    return [[best, 'peninsula']];
+  }
+  return [];
+}
+// lakeTemps: { superior: 52, ... } with blanks omitted. Returns adjusted T/Td plus a
+// night-low floor and human-readable notes. First listed lake at full k, others at half.
+function heatApplyLakes(city, T, Td, lakeTemps) {
+  let cool = 0, tdCap = Infinity, tdAdd = 0, nightFloor = -Infinity;
+  const notes = [];
+  heatLakesFor(city).forEach(([lake, cls], i) => {
+    const tl = lakeTemps[lake];
+    if (tl === null || tl === undefined || isNaN(tl)) return;
+    const k = LAKE_K[cls] * (i === 0 ? 1 : 0.5), delta = T - tl;
+    if (delta >= 5) {
+      cool += k * Math.min(0.5 * delta, 15);
+      if (cls !== 'peninsula') tdCap = Math.min(tdCap, tl + 10);
+    }
+    if (tl >= 75) {
+      tdAdd += k * Math.min((tl - 72) * 0.5, 3);
+      nightFloor = Math.max(nightFloor, tl - { shore: 3, near: 6, peninsula: 9 }[cls]);
+    }
+    notes.push(`Lake ${LAKE_NAMES[lake]} ${tl}°F (${cls})`);
+  });
+  const T2 = T - Math.min(cool, 15);
+  const Td2 = Math.min(T2, Math.min(Td, tdCap) + tdAdd);
+  return { T: T2, Td: Td2, nightFloor, notes, affected: notes.length > 0 };
+}
+
+/* ---- Heat Index Mode: resilience ---- */
+const HEAT_RESILIENCE = [
+  { min: 104, label:'Furnace-Forged',  R:0.70, icon:'\u{1F525}\u{1F525}\u{1F525}' },
+  { min: 100, label:'Desert-Hardened', R:0.78, icon:'\u{1F525}\u{1F525}+' },
+  { min:  95, label:'Sun-Belt',        R:0.86, icon:'\u{1F525}\u{1F525}' },
+  { min:  92, label:'Heat-Seasoned',   R:0.93, icon:'\u{1F525}+' },
+  { min:  89, label:'Warm-Adapted',    R:1.00, icon:'\u{1F525}' },
+  { min:  85, label:'Temperate',       R:1.08, icon:'☀️' },
+  { min:  81, label:'Mild-Summer',     R:1.16, icon:'⛅' },
+  { min:  77, label:'Heat-Wary',       R:1.24, icon:'⚠' },
+  { min:  72, label:'Heat-Naive',      R:1.32, icon:'⚠⚠' },
+  { min: -Infinity, label:'Cool-Summer', R:1.40, icon:'❄️' }
+];
+// Low air-conditioning places sit one notch less resilient than their climate implies.
+function heatLowAC(city) {
+  if (PACIFIC_MARINE.has(city.n)) return true;
+  if (heatIsUS(city.n)) {
+    if (city.r === 'NE' || city.r === 'UM') return true;
+    return heatLakesFor(city).some(([, cls]) => cls === 'shore');
+  }
+  return city.lat !== null && city.lat !== undefined && Math.abs(city.lat) >= 35;
+}
+function heatResilience(city) {
+  const sh = heatSummerHigh(city).f;
+  let i = HEAT_RESILIENCE.findIndex(r => sh >= r.min);
+  if (heatLowAC(city)) i = Math.min(HEAT_RESILIENCE.length - 1, i + 1);
+  return HEAT_RESILIENCE[i];
+}
+
+/* ---- Heat Index Mode: overnight low and severity ---- */
+function heatNightLow(T, Td, summerHigh, floor) {
+  const range = 20 + 0.3 * Math.max(0, 60 - Td) + 0.6 * Math.max(0, T - summerHigh);
+  return Math.max(Td + 2, T - range, floor === undefined ? -Infinity : floor);
+}
+const HEAT_DUR_A = 0.25, HEAT_NIGHT_B = 0.28;
+function heatScore({ hi, hiNorm, days, nightLow, R, heatNaive }) {
+  if (hi === null) return Infinity;
+  const base = Math.max(0, hi - 70) + Math.max(0, hi - hiNorm);
+  const warm = nightLow >= (heatNaive ? 75 : 80) ? days : 0;
+  const D = 1 + HEAT_DUR_A * Math.sqrt(Math.max(0, days - 1)) + HEAT_NIGHT_B * Math.sqrt(warm);
+  return base * D * R;
+}
+
+/* ---- Heat Index Mode: impact ladder ----
+   Score tiers are realistic. Physical floors mark real-world extremes. Fiction starts
+   only past anything observed on Earth (wet-bulb ≥ 37°C or air > 134°F), keyed on air temp. */
+const HEAT_TIERS = [
+  // score regime: maxS is the inclusive upper bound of the score
+  { kind:'score', maxS: 0,    level:'None',          css:'h0' },
+  { kind:'score', maxS: 3,    level:'Pleasant',      css:'h1' },
+  { kind:'score', maxS: 6,    level:'Warm',          css:'h1' },
+  { kind:'score', maxS: 10,   level:'Balmy',         css:'h2' },
+  { kind:'score', maxS: 14,   level:'Summery',       css:'h2' },
+  { kind:'score', maxS: 18,   level:'Sticky',        css:'h3' },
+  { kind:'score', maxS: 22,   level:'Muggy',         css:'h3' },
+  { kind:'score', maxS: 26,   level:'Sultry',        css:'h3' },
+  { kind:'score', maxS: 30,   level:'Steamy',        css:'h4' },
+  { kind:'score', maxS: 35,   level:'Hot',           css:'h4' },
+  { kind:'score', maxS: 46,   level:'Sweltering',    css:'h5' },
+  { kind:'score', maxS: 56,   level:'Oppressive',    css:'h5' },
+  { kind:'score', maxS: 66,   level:'Scorcher',      css:'h6' },
+  { kind:'score', maxS: 75,   level:'Blistering',    css:'h6' },
+  { kind:'score', maxS: 84,   level:'Searing',       css:'h6' },
+  { kind:'score', maxS: 92,   level:'Heat Wave',     css:'h7' },
+  { kind:'score', maxS: 102,  level:'Dangerous Heat',css:'h7' },
+  { kind:'score', maxS: 110,  level:'Heat Emergency',css:'h7' },
+  { kind:'score', maxS: 117,  level:'Grid Strain',   css:'h8' },
+  { kind:'score', maxS: 123,  level:'Rolling Blackouts', css:'h8' },
+  { kind:'score', maxS: 129.999, level:'Mass-Casualty Heat', css:'h8' },
+  { kind:'score', maxS: 169.999, level:'2023 Phoenix–Class', css:'h9' },
+  { kind:'score', maxS: 189.999, level:'1980 Heat Wave–Class', css:'h9' },
+  { kind:'score', maxS: 209.999, level:'2021 Heat Dome–Class', css:'h9' },
+  { kind:'score', maxS: 249.999, level:'1995 Chicago–Class', css:'h10' },
+  { kind:'score', maxS: 319.999, level:'1936 Dust Bowl–Class', css:'h10' },
+  { kind:'score', maxS: Infinity, level:'2003 Europe–Class', css:'h10' },
+  // physical floors (realistic extremes)
+  { kind:'floor', level:'Death Valley–Class',  css:'h11', test: x => x.T >= 130 },
+  { kind:'floor', level:'Persian Gulf–Class',  css:'h11', test: x => x.tw !== null && x.tw >= 33 },
+  { kind:'floor', level:'Survivability Limit',      css:'h11', test: x => x.tw !== null && x.tw >= 35 },
+  { kind:'floor', level:'Dhahran-Class',            css:'h11', test: x => (x.tw !== null && x.tw >= 36) || (x.hi !== null && x.hi >= 170) },
+  // fiction: minT is the air temperature that reaches the tier
+  { kind:'fiction', minT: -Infinity, level:'Beyond Record',     css:'h12' },
+  { kind:'fiction', minT: 150,     level:'Uninhabitable',       css:'h12' },
+  { kind:'fiction', minT: 160,     level:'Asphalt Soup',        css:'h12' },
+  { kind:'fiction', minT: 212,     level:'Boiling Point',       css:'h13' },
+  { kind:'fiction', minT: 350,     level:'Oven-Class',          css:'h13' },
+  { kind:'fiction', minT: 451,     level:'Fahrenheit 451',      css:'h13' },
+  { kind:'fiction', minT: 621,     level:'Lead Melts',          css:'h14' },
+  { kind:'fiction', minT: 867,     level:'Venusian',            css:'h14' },
+  { kind:'fiction', minT: 1221,    level:'Aluminum Melts',      css:'h14' },
+  { kind:'fiction', minT: 2000,    level:'Lava Flow',           css:'h15' },
+  { kind:'fiction', minT: 2800,    level:'Iron Melts',          css:'h15' },
+  { kind:'fiction', minT: 6192,    level:'Tungsten Melts',      css:'h15' },
+  { kind:'fiction', minT: 10000,   level:'Solar Surface',       css:'h16' },
+  { kind:'fiction', minT: 3.6e6,   level:'Solar Corona',        css:'h16' },
+  { kind:'fiction', minT: 2.7e7,   level:'Stellar Core',        css:'h16' },
+  { kind:'fiction', minT: 1.8e11,  level:'Supernova',           css:'h17' },
+  { kind:'fiction', minT: 3.6e12,  level:'Quark-Gluon Plasma',  css:'h17' },
+  { kind:'fiction', minT: 2.5e32,  level:'Planck Temperature',  css:'h17' },
+  { kind:'fiction', minT: 2.6e32,  level:'Big Bang Recurrence', css:'h17' }
+];
+// x: { S, T, hi, tw }. Returns { tier, index }.
+function heatTierFor(x) {
+  const fiction = x.T > 134 || (x.tw !== null && x.tw >= 37);
+  if (fiction) {
+    let idx = -1;
+    HEAT_TIERS.forEach((t, i) => { if (t.kind === 'fiction' && x.T >= t.minT) idx = i; });
+    return { tier: HEAT_TIERS[idx], index: idx };
+  }
+  let idx = HEAT_TIERS.findIndex(t => t.kind === 'score' && x.S <= t.maxS);
+  HEAT_TIERS.forEach((t, i) => { if (t.kind === 'floor' && t.test(x) && i > idx) idx = i; });
+  return { tier: HEAT_TIERS[idx], index: idx };
+}
+
+/* ---- Heat Index Mode: alerts and outdoor impact ---- */
+function heatRiskCategory(hi) {
+  if (hi === null || hi >= 125) return 'Extreme Danger';
+  if (hi >= 103) return 'Danger';
+  if (hi >= 90) return 'Extreme Caution';
+  if (hi >= 80) return 'Caution';
+  return 'None';
+}
+function heatAlertRegion(city) {
+  if (!heatIsUS(city.n)) return null;
+  if (PACIFIC_MARINE.has(city.n)) return 'pacific';
+  if (city.lon < -105) return 'west';
+  if (city.lat < 31.5 && city.lon > -98) return 'gulf';
+  if (city.r === 'NE' || city.r === 'UM' || city.r === 'NR' || (city.r === 'OV' && city.lat >= 41)) return 'north';
+  return 'south';
+}
+const HEAT_ALERT_RULES = {
+  north:   x => x.hi >= 105 ? 2 : x.hi >= 100 ? 1 : 0,
+  south:   x => x.hi >= 110 ? 2 : x.hi >= 105 ? 1 : 0,
+  gulf:    x => x.hi >= 113 ? 2 : x.hi >= 108 ? 1 : 0,
+  pacific: x => x.anom >= 22 ? 2 : x.anom >= 15 ? 1 : 0,
+  west:    x => (x.T >= 115 || x.anom >= 12) ? 2 : (x.T >= 110 || x.anom >= 8) ? 1 : 0
+};
+function heatAlert(city, x) {
+  const region = heatAlertRegion(city);
+  if (!region) return { level: 0, label: 'No NWS product (outside U.S.)' };
+  let level = x.hi === null ? 2 : HEAT_ALERT_RULES[region](x);
+  if (level >= 1 && x.days >= 3 && x.warmNights) level = 2;
+  return { level, label: ['No heat product', 'Heat Advisory', 'Extreme Heat Warning'][level] };
+}
+function heatOutdoorImpact(hi, resilienceLabel) {
+  const naive = ['Heat-Wary', 'Heat-Naive', 'Cool-Summer'].includes(resilienceLabel);
+  const parts = [];
+  if (hi === null || hi >= 104) parts.push('No outdoor activity.');
+  else if (hi >= 95) parts.push('Modified practice: no pads, extra rest breaks.');
+  else if (hi >= 90) parts.push('Mandatory water breaks every 20 minutes.');
+  else parts.push('Normal outdoor activity.');
+  if (naive && (hi === null || hi >= 92)) parts.push('Schools without A/C dismiss early.');
+  return parts.join(' ');
+}
+
+/* ---- Heat Index Mode: per-city pipeline ---- */
+// entry: { n, temp, dew (or null), days }, lakeTemps: { lake: °F }.
+function evaluateHeatCity(entry, lakeTemps, cityOverride) {
+  const db = cityOverride || CITY_DB.find(c => c.n.toLowerCase() === entry.n.toLowerCase())
+    || { n: entry.n, lat: null, lon: null, r: null, snow: null };
+  const dewAssumed = entry.dew === null || entry.dew === undefined;
+  const tdIn = dewAssumed ? Math.min(entry.temp, heatAssumedDewpoint(db)) : entry.dew;
+  const lake = heatApplyLakes(db, entry.temp, tdIn, lakeTemps || {});
+  const T = lake.T, Td = lake.Td;
+  const rh = heatRH(T, Td);
+  const hi = heatIndexF(T, rh);
+  const tw = heatWetBulbC(T, rh);
+  const sh = heatSummerHigh(db);
+  const hiNorm = heatNormHI(db);
+  const res = heatResilience(db);
+  const heatNaive = ['Heat-Wary', 'Heat-Naive', 'Cool-Summer'].includes(res.label);
+  const days = entry.days || 1;
+  const nightLow = heatNightLow(T, Td, sh.f, lake.nightFloor);
+  const warmNights = nightLow >= (heatNaive ? 75 : 80);
+  const S = heatScore({ hi, hiNorm, days, nightLow, R: res.R, heatNaive });
+  const { tier, index } = heatTierFor({ S, T, hi, tw });
+  const anom = hi === null ? Infinity : hi - hiNorm;
+  const alert = heatAlert(db, { hi, T, anom, days, warmNights });
+  let inland = null;
+  if (lake.affected) {
+    const rh0 = heatRH(entry.temp, tdIn);
+    inland = { T: entry.temp, Td: tdIn, hi: heatIndexF(entry.temp, rh0) };
+  }
+  return {
+    n: entry.n, db, T, Td, dewAssumed, rh, hi, tw, summerHigh: sh, hiNorm, anom,
+    resilience: res, days, nightLow, warmNights, score: S, tier, tierIndex: index,
+    risk: heatRiskCategory(hi), alert, outdoor: heatOutdoorImpact(hi, res.label),
+    lakeNotes: lake.notes, inland
+  };
+}
+
+/* ---- Heat Index Mode: UI ---- */
+const heatCities = [];
+const heatEls = {
+  city: document.getElementById('heatCityInput'), ac: document.getElementById('heatAcList'),
+  temp: document.getElementById('heatTempInput'), dew: document.getElementById('heatDewInput'),
+  days: document.getElementById('heatDaysInput'), add: document.getElementById('heatAddBtn'),
+  err: document.getElementById('heatError'), list: document.getElementById('heatCityList'),
+  gen: document.getElementById('heatGenerateBtn'), profile: document.getElementById('heatProfileCard')
+};
+
+function heatShowAC() {
+  const q = heatEls.city.value.trim().toLowerCase();
+  if (q.length < 2) { heatEls.ac.classList.remove('open'); return; }
+  const matches = CITY_DB.filter(c => c.n.toLowerCase().includes(q)).slice(0, 8);
+  if (!matches.length) { heatEls.ac.classList.remove('open'); return; }
+  heatEls.ac.innerHTML = matches.map(c =>
+    `<div class="ac-item" data-name="${esc(c.n)}"><span>${esc(c.n)}</span>` +
+    `<span class="ac-meta">${heatResilience(c).label} | summer high ${heatSummerHigh(c).f}°F</span></div>`
+  ).join('');
+  heatEls.ac.classList.add('open');
+}
+heatEls.city.addEventListener('input', heatShowAC);
+heatEls.ac.addEventListener('click', e => {
+  const item = e.target.closest('.ac-item');
+  if (!item) return;
+  heatEls.city.value = item.dataset.name;
+  heatEls.ac.classList.remove('open');
+  heatEls.temp.focus();
+});
+document.addEventListener('click', e => {
+  if (!e.target.closest('#heatCard .city-field')) heatEls.ac.classList.remove('open');
+});
+
+function heatReadLakes() {
+  const out = {};
+  HEAT_LAKES.forEach(k => {
+    const v = document.getElementById('lake_' + k).value;
+    if (v !== '') out[k] = parseFloat(v);
+  });
+  return out;
+}
+
+// Returns an error string, or null when the inputs are valid.
+function heatValidate(name, temp, dew, days) {
+  if (!name) return 'Please enter a city name.';
+  if (temp === null || isNaN(temp)) return 'Enter a valid temperature.';
+  if (dew !== null && isNaN(dew)) return 'Enter a valid dewpoint, or leave it blank.';
+  if (dew !== null && dew > temp) return "Dewpoint can't be higher than the temperature.";
+  if (days !== null && (isNaN(days) || days < 1 || days > 365 || Math.floor(days) !== days))
+    return 'Days must be a whole number from 1 to 365.';
+  return null;
+}
+function heatValidateLakes(lakes) {
+  for (const k of Object.keys(lakes)) {
+    if (isNaN(lakes[k]) || lakes[k] < 32 || lakes[k] > 90)
+      return `Lake ${LAKE_NAMES[k]} temperature must be between 32 and 90°F.`;
+  }
+  return null;
+}
+
+function heatAddCity() {
+  heatEls.err.textContent = '';
+  const name = heatEls.city.value.trim();
+  const num = el => el.value === '' ? null : parseFloat(el.value);
+  const temp = num(heatEls.temp), dew = num(heatEls.dew), days = num(heatEls.days);
+  const error = heatValidate(name, temp, dew, days);
+  if (error) { heatEls.err.textContent = error; return; }
+  const db = CITY_DB.find(c => c.n.toLowerCase() === name.toLowerCase());
+  heatCities.push({ n: db ? db.n : name, temp, dew, days: days || 1 });
+  heatEls.city.value = ''; heatEls.temp.value = ''; heatEls.dew.value = ''; heatEls.days.value = '';
+  heatEls.city.focus();
+  heatRenderList();
+}
+heatEls.add.addEventListener('click', heatAddCity);
+
+function heatRemoveCity(i) { heatCities.splice(i, 1); heatRenderList(); }
+function heatRenderList() {
+  heatEls.gen.disabled = !heatCities.length;
+  heatEls.list.innerHTML = heatCities.map((c, i) => `<div class="city-item">
+      <span>${esc(c.n)} &mdash; ${c.temp}°F${c.dew === null ? '' : ' / Td ' + c.dew + '°F'}${c.days > 1 ? ' · ' + c.days + ' days' : ''}</span>
+      <button class="btn-remove" onclick="heatRemoveCity(${i})">&times;</button>
+    </div>`).join('');
+}
+
+function heatGenerate() {
+  heatEls.err.textContent = '';
+  const lakes = heatReadLakes();
+  const lakeError = heatValidateLakes(lakes);
+  if (lakeError) { heatEls.err.textContent = lakeError; return; }
+  const results = heatCities.map(c => evaluateHeatCity(c, lakes));
+  renderHeatProfile(results);
+  heatEls.profile.style.display = '';
+  heatEls.profile.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+heatEls.gen.addEventListener('click', heatGenerate);
+
+/* ---- Heat Index Mode: Heat Profile card ---- */
+function heatFmt(v, unit) {
+  if (v === null || v === undefined) return '—';
+  if (!isFinite(v)) return '∞';
+  const r = Math.abs(v) >= 1e6 ? v.toExponential(1) : Math.round(v).toLocaleString();
+  return r + (unit || '');
+}
+function renderHeatProfile(results) {
+  const peak = results.reduce((a, b) =>
+    (b.tierIndex > a.tierIndex || (b.tierIndex === a.tierIndex && (b.hi ?? Infinity) > (a.hi ?? Infinity))) ? b : a);
+  const advisories = results.filter(r => r.alert.level === 1).length;
+  const warnings = results.filter(r => r.alert.level === 2).length;
+  const rows = results.map(r => {
+    const assumed = r.dewAssumed ? ' <span class="heat-sub">(dewpoint assumed)</span>' : '';
+    const inland = r.inland
+      ? `<div class="heat-sub">inland ${heatFmt(r.inland.T, '°')} / ${heatFmt(r.inland.Td, '°')} / HI ${heatFmt(r.inland.hi, '°')}</div>` : '';
+    const details = [
+      `Summer high ${r.summerHigh.f}°F${r.summerHigh.est ? ' (est.)' : ''}`,
+      r.hi === null ? 'Past the heat-index scale' : `Anomaly ${r.anom >= 0 ? '+' : ''}${heatFmt(r.anom, '°')}`,
+      `Night low ~${heatFmt(r.nightLow, '°F')}${r.warmNights ? ' (warm nights)' : ''}`,
+      r.days > 1 ? `${r.days} days` : '',
+      ...r.lakeNotes
+    ].filter(Boolean).join('<br>');
+    return `<tr>
+      <td><strong>${esc(r.n)}</strong></td>
+      <td>${heatFmt(r.T, '°')} / ${heatFmt(r.Td, '°')}${assumed}<br><strong>HI ${heatFmt(r.hi, '°F')}</strong>${inland}</td>
+      <td>${r.tw === null ? '—' : r.tw.toFixed(1) + '°C'}</td>
+      <td><span class="impact-pill impact-${r.tier.css}">${r.tier.level}</span></td>
+      <td>${r.alert.label}<div class="heat-sub">${r.risk}</div></td>
+      <td>${r.resilience.icon} ${r.resilience.label}</td>
+      <td>${r.outdoor}</td>
+      <td class="heat-sub">${details}</td>
+    </tr>`;
+  }).join('');
+  const lakeNote = results.some(r => r.lakeNotes.length)
+    ? '<p class="heat-sub" style="margin-top:8px">Lakeshore values assume a typical afternoon lake breeze; a strong offshore wind removes the cooling.</p>' : '';
+  heatEls.profile.innerHTML = `
+    <h2>Heat Profile</h2>
+    <span class="storm-badge impact-${peak.tier.css}">${peak.tier.level}</span>
+    <div class="stats-row">
+      <div class="stat-box"><div class="val">${results.length}</div><div class="lbl">${results.length === 1 ? 'City' : 'Cities'}</div></div>
+      <div class="stat-box"><div class="val">${heatFmt(peak.hi, '°F')}</div><div class="lbl">Peak Heat Index (${esc(peak.n)})</div></div>
+      <div class="stat-box"><div class="val">${advisories}</div><div class="lbl">Heat Advisories</div></div>
+      <div class="stat-box"><div class="val">${warnings}</div><div class="lbl">Extreme Heat Warnings</div></div>
+    </div>
+    <div class="impact-table-wrap">
+    <table class="impact-table">
+      <thead><tr><th>City</th><th>Temp / Dew / HI</th><th>Wet-Bulb</th><th>Impact</th><th>NWS Alert</th><th>Resilience</th><th>School / Outdoor</th><th>Details</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    </div>
+    ${lakeNote}`;
+}
 
 /* ======================================================================
    SELFTEST HARNESS
@@ -8586,6 +9165,156 @@ window.__snowTests.push((t, approx) => {
   t('past a year names the year', formatMeltMoment(d, 400) === 'Thu Feb 11, 2027');
   t('no date is never', formatMeltMoment(null, Infinity) === 'Never');
   t('permanent with a date still dates', formatMeltMoment(d, Infinity) === 'Thu Feb 11');
+});
+
+// T1 physics
+window.__snowTests.push((t, approx) => {
+  [[80,40,80],[90,50,95],[90,70,106],[96,50,108],[100,40,109],[104,40,119],
+   [86,90,105],[110,10,104],[84,85,96],[100,15,96],[92,65,108],[98,55,117]]
+    .forEach(([T, RH, ref]) => t(`HI ${T}F/${RH}% = ${ref} (NWS chart)`, approx(heatIndexF(T, RH), ref, 1)));
+  t('HI below 80 uses Steadman', approx(heatIndexF(70, 50), 69.05, 0.01));
+  t('HI null past 135F', heatIndexF(140, 20) === null);
+  t('saturated air is 100% RH', approx(heatRH(80, 80), 100, 0.01));
+  t('Tulsa 96/74 RH ~49%', approx(heatRH(96, 74), 49.4, 0.3));
+  t('Tulsa 96/74 HI ~107', approx(heatIndexF(96, heatRH(96, 74)), 107.2, 0.3));
+  t('Dhahran wet-bulb ~36.5C', approx(heatWetBulbC(108, heatRH(108, 95)), 36.5, 0.2));
+  t('wet-bulb null past 122F', heatWetBulbC(125, 20) === null);
+});
+
+// T2 climatology
+window.__snowTests.push((t) => {
+  const city = n => CITY_DB.find(c => c.n === n);
+  [['Tulsa, OK',93],['Chicago, IL',84],['Phoenix, AZ',106],['Las Vegas, NV',104],['Miami, FL',91],
+   ['Dallas, TX',96],['New York, NY',85],['San Francisco, CA',68],['Seattle, WA',76],['San Diego, CA',75],
+   ['Denver, CO',89],['Duluth, MN',77],['Marquette, MI',77],['Portland, OR',81]]
+    .forEach(([n, f]) => t(`summer high ${n}`, Math.abs(heatSummerHigh(city(n)).f - f) <= 2));
+  t('override not flagged est', heatSummerHigh(city('Tulsa, OK')).est === false);
+  t('non-override flagged est', heatSummerHigh(city('Fort Wayne, IN')).est === true);
+  t('every override exists in CITY_DB', Object.keys(SUMMER_HIGH_OVERRIDES).every(n => city(n)));
+  t('every marine city exists in CITY_DB', [...PACIFIC_MARINE].every(n => city(n)));
+  t('Houston dewpoint 74', heatAssumedDewpoint(city('Houston, TX')) === 74);
+  t('El Paso dewpoint 45', heatAssumedDewpoint(city('El Paso, TX')) === 45);
+  t('Seattle dewpoint 55', heatAssumedDewpoint(city('Seattle, WA')) === 55);
+  t('Tulsa dewpoint 70', heatAssumedDewpoint(city('Tulsa, OK')) === 70);
+  t('Chicago dewpoint 66', heatAssumedDewpoint(city('Chicago, IL')) === 66);
+  t('Reno is not marine', heatAssumedDewpoint(city('Reno, NV')) === 45);
+});
+
+// T3 Great Lakes
+window.__snowTests.push((t, approx) => {
+  const city = n => CITY_DB.find(c => c.n === n);
+  const duluth = city('Duluth, MN');
+  const d = heatApplyLakes(duluth, 90, 68, { superior: 52 });
+  t('Duluth shore cooled to 75', approx(d.T, 75, 0.01));
+  t('Duluth shore dewpoint capped at 62', approx(d.Td, 62, 0.01));
+  const blank = heatApplyLakes(duluth, 90, 68, {});
+  t('blank lake = no change', blank.T === 90 && blank.Td === 68 && !blank.affected);
+  t('inland city unaffected', heatApplyLakes(city('Madison, WI'), 95, 70, { michigan: 60 }).T === 95);
+  t('every Michigan city is lake-affected',
+    CITY_DB.filter(c => /,\s*MI$/.test(c.n)).every(c => heatLakesFor(c).length > 0));
+  const unlisted = heatLakesFor({ n: 'Nowhere, MI', lat: 44.0, lon: -84.5 });
+  t('unlisted MI city defaults to peninsula', unlisted.length === 1 && unlisted[0][1] === 'peninsula');
+  t('every lake-table city exists in CITY_DB', Object.keys(LAKE_CITIES).every(n => city(n)));
+  t('cooling capped at 15', heatApplyLakes(duluth, 110, 60, { superior: 40 }).T === 95);
+  const muggy = heatApplyLakes(city('Cleveland, OH'), 80, 79, { erie: 84 });
+  t('dewpoint never exceeds T', muggy.Td <= muggy.T);
+  t('warm Erie night floor 77', heatApplyLakes(city('Cleveland, OH'), 92, 72, { erie: 80 }).nightFloor === 77);
+  const one = heatApplyLakes(city('Buffalo, NY'), 90, 65, { erie: 70 }).T;
+  const two = heatApplyLakes(city('Buffalo, NY'), 90, 65, { erie: 70, ontario: 70 }).T;
+  t('Buffalo Erie cools 10', approx(90 - one, 10, 0.01));
+  t('Buffalo second lake at half strength', approx(one - two, 3.35, 0.01));
+});
+
+// T4 resilience and ladder
+window.__snowTests.push((t) => {
+  const city = n => CITY_DB.find(c => c.n === n);
+  t('Phoenix Furnace-Forged', heatResilience(city('Phoenix, AZ')).label === 'Furnace-Forged');
+  t('Tulsa Heat-Seasoned', heatResilience(city('Tulsa, OK')).label === 'Heat-Seasoned');
+  t('Seattle notched to Cool-Summer', heatResilience(city('Seattle, WA')).label === 'Cool-Summer');
+  t('London notched to Cool-Summer', heatResilience(city('London, England')).label === 'Cool-Summer');
+  t('ladder has 50 tiers', HEAT_TIERS.length === 50);
+  const names = HEAT_TIERS.map(x => x.level);
+  t('tier names unique', new Set(names).size === names.length);
+  const score = HEAT_TIERS.filter(x => x.kind === 'score');
+  t('score bounds increasing', score.every((x, i) => i === 0 || x.maxS > score[i - 1].maxS));
+  const fic = HEAT_TIERS.filter(x => x.kind === 'fiction');
+  t('fiction bounds increasing', fic.every((x, i) => i === 0 || x.minT > fic[i - 1].minT));
+  t('fiction at Tw 37', heatTierFor({ S: 10, T: 115, hi: 150, tw: 37.2 }).tier.level === 'Beyond Record');
+  t('fiction past 134F', heatTierFor({ S: 10, T: 136, hi: null, tw: null }).tier.level === 'Beyond Record');
+  t('Boiling Point at 212', heatTierFor({ S: Infinity, T: 212, hi: null, tw: null }).tier.level === 'Boiling Point');
+  t('Big Bang past Planck', heatTierFor({ S: Infinity, T: 1e33, hi: null, tw: null }).tier.level === 'Big Bang Recurrence');
+  t('Death Valley floor', heatTierFor({ S: 20, T: 130, hi: 125, tw: 24 }).tier.level === 'Death Valley–Class');
+  t('top score tier without floor', heatTierFor({ S: 400, T: 105, hi: 130, tw: 30 }).tier.level === '2003 Europe–Class');
+  t('floor raises past top score tier', heatTierFor({ S: 400, T: 105, hi: 130, tw: 33.5 }).tier.level === 'Persian Gulf–Class');
+  t('no snow-ladder name reused', !names.some(n => /Heat Death of Snow|Apocalyptic|Catastrophic/.test(n)));
+});
+
+// T5 alerts and outdoor impact
+window.__snowTests.push((t) => {
+  const city = n => CITY_DB.find(c => c.n === n);
+  t('risk Danger at 107', heatRiskCategory(107) === 'Danger');
+  t('risk Extreme Danger at 125', heatRiskCategory(125) === 'Extreme Danger');
+  t('risk Caution at 85', heatRiskCategory(85) === 'Caution');
+  t('Tulsa south', heatAlertRegion(city('Tulsa, OK')) === 'south');
+  t('Chicago north', heatAlertRegion(city('Chicago, IL')) === 'north');
+  t('Houston gulf', heatAlertRegion(city('Houston, TX')) === 'gulf');
+  t('Seattle pacific', heatAlertRegion(city('Seattle, WA')) === 'pacific');
+  t('Phoenix west', heatAlertRegion(city('Phoenix, AZ')) === 'west');
+  t('Toronto outside U.S.', heatAlertRegion(city('Toronto, ON, Canada')) === null);
+  const x = (hi, extra) => Object.assign({ hi, T: 96, anom: 0, days: 1, warmNights: false }, extra);
+  t('Tulsa 107 advisory', heatAlert(city('Tulsa, OK'), x(107)).label === 'Heat Advisory');
+  t('Tulsa 110 warning', heatAlert(city('Tulsa, OK'), x(110)).label === 'Extreme Heat Warning');
+  t('Chicago 100 advisory', heatAlert(city('Chicago, IL'), x(100)).label === 'Heat Advisory');
+  t('Miami 104 nothing', heatAlert(city('Miami, FL'), x(104)).level === 0);
+  t('3 warm days upgrade', heatAlert(city('Tulsa, OK'), x(106, { days: 3, warmNights: true })).level === 2);
+  t('outdoor 104 cancels', heatOutdoorImpact(104, 'Temperate').startsWith('No outdoor activity'));
+  t('outdoor naive dismissal', heatOutdoorImpact(93, 'Heat-Naive').includes('dismiss early'));
+  t('outdoor normal', heatOutdoorImpact(85, 'Sun-Belt') === 'Normal outdoor activity.');
+});
+
+// T6 calibration anchors, end to end
+window.__snowTests.push((t) => {
+  const ev = (n, temp, dew, days, lakes, ov) => evaluateHeatCity({ n, temp, dew, days }, lakes || {}, ov);
+  const idx = name => HEAT_TIERS.findIndex(x => x.level === name);
+  const tulsa = ev('Tulsa, OK', 96, 74, 1);
+  t('Tulsa -> Sweltering', tulsa.tier.level === 'Sweltering');
+  t('Tulsa -> Heat Advisory', tulsa.alert.label === 'Heat Advisory');
+  t('Phoenix routine <= Hot', ev('Phoenix, AZ', 108, 45, 1).tierIndex <= idx('Hot'));
+  t('Seattle anomaly >= Dangerous Heat', ev('Seattle, WA', 108, 60, 1).tierIndex >= idx('Dangerous Heat'));
+  t('Phoenix 2023', ev('Phoenix, AZ', 116, 45, 31).tier.level === '2023 Phoenix–Class');
+  t('Portland 2021', ev('Portland, OR', 116, 62, 3).tier.level === '2021 Heat Dome–Class');
+  t('Chicago 1995', ev('Chicago, IL', 104, 78, 5).tier.level === '1995 Chicago–Class');
+  const dh = ev('Dhahran', 108, 95, 1, {}, { n: 'Dhahran', lat: 26.3, lon: 50.1, r: null, snow: 0 });
+  t('Dhahran-Class', dh.tier.level === 'Dhahran-Class');
+  t('Dhahran HI ~176', Math.abs(dh.hi - 177) <= 2);
+  const inland = ev('Duluth, MN', 90, 68, 1), shore = ev('Duluth, MN', 90, 68, 1, { superior: 52 });
+  t('Duluth shore below inland', shore.tierIndex < inland.tierIndex);
+  t('Duluth shore keeps inland reference', shore.inland !== null && shore.inland.T === 90);
+  t('blank dewpoint flagged', ev('Tulsa, OK', 96, null, 1).dewAssumed === true);
+  t('unknown city still evaluates', ev('Atlantis', 100, 70, 1).hi > 100);
+  let prev = -1, mono = true;
+  for (let T = 60; T <= 1000; T++) {
+    const r = ev('Tulsa, OK', T, Math.min(T, 70), 1);
+    if (r.tierIndex < prev) mono = false;
+    prev = r.tierIndex;
+  }
+  t('tier never drops as temperature rises', mono);
+});
+
+// T7 UI validation and isolation from snow state
+window.__snowTests.push((t) => {
+  t('validate needs city', heatValidate('', 90, null, null) === 'Please enter a city name.');
+  t('validate needs temp', heatValidate('Tulsa, OK', null, null, null) !== null);
+  t('validate dewpoint <= temp', heatValidate('Tulsa, OK', 90, 95, null) !== null);
+  t('validate days range', heatValidate('Tulsa, OK', 90, null, 0) !== null && heatValidate('Tulsa, OK', 90, null, 2.5) !== null);
+  t('validate ok', heatValidate('Tulsa, OK', 96, 74, 3) === null);
+  t('lake temp range', heatValidateLakes({ erie: 95 }) !== null && heatValidateLakes({ erie: 75 }) === null);
+  const snowBefore = cities.length, profileBefore = profileCard.innerHTML;
+  renderHeatProfile([evaluateHeatCity({ n: 'Tulsa, OK', temp: 96, dew: 74, days: 1 }, {})]);
+  t('heat render fills heat card', heatEls.profile.innerHTML.includes('Sweltering'));
+  t('heat run leaves snow cities alone', cities.length === snowBefore);
+  t('heat run leaves snow profile alone', profileCard.innerHTML === profileBefore);
+  heatEls.profile.innerHTML = '';
 });
 
 window.addEventListener('load', () => {
