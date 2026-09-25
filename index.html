@@ -8050,6 +8050,42 @@ function heatOutdoorImpact(hi, resilienceLabel) {
   return parts.join(' ');
 }
 
+/* ---- Heat Index Mode: per-city pipeline ---- */
+// entry: { n, temp, dew (or null), days }, lakeTemps: { lake: °F }.
+function evaluateHeatCity(entry, lakeTemps, cityOverride) {
+  const db = cityOverride || CITY_DB.find(c => c.n.toLowerCase() === entry.n.toLowerCase())
+    || { n: entry.n, lat: null, lon: null, r: null, snow: null };
+  const dewAssumed = entry.dew === null || entry.dew === undefined;
+  const tdIn = dewAssumed ? Math.min(entry.temp, heatAssumedDewpoint(db)) : entry.dew;
+  const lake = heatApplyLakes(db, entry.temp, tdIn, lakeTemps || {});
+  const T = lake.T, Td = lake.Td;
+  const rh = heatRH(T, Td);
+  const hi = heatIndexF(T, rh);
+  const tw = heatWetBulbC(T, rh);
+  const sh = heatSummerHigh(db);
+  const hiNorm = heatNormHI(db);
+  const res = heatResilience(db);
+  const heatNaive = ['Heat-Wary', 'Heat-Naive', 'Cool-Summer'].includes(res.label);
+  const days = entry.days || 1;
+  const nightLow = heatNightLow(T, Td, sh.f, lake.nightFloor);
+  const warmNights = nightLow >= (heatNaive ? 75 : 80);
+  const S = heatScore({ hi, hiNorm, days, nightLow, R: res.R, heatNaive });
+  const { tier, index } = heatTierFor({ S, T, hi, tw });
+  const anom = hi === null ? Infinity : hi - hiNorm;
+  const alert = heatAlert(db, { hi, T, anom, days, warmNights });
+  let inland = null;
+  if (lake.affected) {
+    const rh0 = heatRH(entry.temp, tdIn);
+    inland = { T: entry.temp, Td: tdIn, hi: heatIndexF(entry.temp, rh0) };
+  }
+  return {
+    n: entry.n, db, T, Td, dewAssumed, rh, hi, tw, summerHigh: sh, hiNorm, anom,
+    resilience: res, days, nightLow, warmNights, score: S, tier, tierIndex: index,
+    risk: heatRiskCategory(hi), alert, outdoor: heatOutdoorImpact(hi, res.label),
+    lakeNotes: lake.notes, inland
+  };
+}
+
 /* ======================================================================
    SELFTEST HARNESS
    Browser-run tests. Load index.html?selftest=1 and read the console.
