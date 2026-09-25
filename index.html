@@ -7755,6 +7755,87 @@ function heatWetBulbC(T, RH) {
     - Math.atan(RH - 1.676331) + 0.00391838 * Math.pow(RH, 1.5) * Math.atan(0.023101 * RH) - 4.686035;
 }
 
+/* ---- Heat Index Mode: climatology ---- */
+const PACIFIC_MARINE = new Set([
+  'Seattle, WA', 'Portland, OR', 'San Francisco, CA', 'Oakland, CA', 'Los Angeles, CA',
+  'San Diego, CA', 'Ventura, CA', 'Olympia, WA', 'Bellingham, WA', 'Eugene, OR',
+  'Vancouver, BC, Canada', 'Victoria, BC, Canada'
+]);
+function heatIsUS(name) { return /,\s*[A-Z]{2}$/.test(name); }
+
+// Typical summer dewpoint when the user leaves dewpoint blank.
+function heatAssumedDewpoint(city) {
+  if (PACIFIC_MARINE.has(city.n)) return 55;
+  const lat = city.lat, lon = city.lon;
+  if (lat === null || lat === undefined) return 66;
+  if (lon < -105) return 45;
+  if (lon < -100) return 55;
+  if (lat < 31.5 && lon > -98 && Math.abs(lat) > 23.5) return 74;
+  if (Math.abs(lat) <= 23.5) return 74;
+  if (lat < 39.5 && lat > 0) return 70;
+  return 66;
+}
+
+// Warmest-month typical high (°F). Hand-set where known; estimated otherwise.
+const SUMMER_HIGH_OVERRIDES = {
+  'Tulsa, OK':93, 'Oklahoma City, OK':94, 'Dallas, TX':96, 'Houston, TX':94, 'San Antonio, TX':95,
+  'Austin, TX':97, 'El Paso, TX':95, 'Phoenix, AZ':106, 'Tucson, AZ':100, 'Yuma, AZ':107,
+  'Las Vegas, NV':104, 'Denver, CO':89, 'Salt Lake City, UT':94, 'Boise, ID':92,
+  'Albuquerque, NM':92, 'Reno, NV':92, 'Sacramento, CA':93, 'Fresno, CA':99, 'Bakersfield, CA':98,
+  'Redding, CA':99, 'Spokane, WA':85, 'Yakima, WA':89, 'Medford, OR':91, 'Bend, OR':83,
+  'Billings, MT':88, 'Missoula, MT':86, 'Flagstaff, AZ':81, 'Santa Fe, NM':85,
+  'Colorado Springs, CO':85, 'Seattle, WA':76, 'Portland, OR':81, 'San Francisco, CA':68,
+  'Oakland, CA':73, 'Los Angeles, CA':84, 'San Diego, CA':75, 'Ventura, CA':75, 'Olympia, WA':77,
+  'Bellingham, WA':73, 'Eugene, OR':83, 'Miami, FL':91, 'Tampa, FL':91, 'Orlando, FL':92,
+  'Jacksonville, FL':92, 'Atlanta, GA':90, 'Charlotte, NC':90, 'Raleigh, NC':90,
+  'Birmingham, AL':91, 'Nashville, TN':90, 'Memphis, TN':92, 'New Orleans, LA':91,
+  'Charleston, SC':91, 'Savannah, GA':92, 'Wilmington, NC':90, 'Richmond, VA':90,
+  'Norfolk, VA':89, 'Washington, DC':89, 'Baltimore, MD':88, 'New York, NY':85,
+  'Philadelphia, PA':88, 'Boston, MA':82, 'Pittsburgh, PA':83, 'Buffalo, NY':80,
+  'Rochester, NY':82, 'Syracuse, NY':82, 'Albany, NY':84, 'Erie, PA':80, 'Chicago, IL':84,
+  'Detroit, MI':84, 'Columbus, OH':85, 'Indianapolis, IN':85, 'Cleveland, OH':83,
+  'Cincinnati, OH':87, 'Milwaukee, WI':81, 'St. Louis, MO':90, 'Kansas City, MO':89,
+  'Louisville, KY':89, 'Toledo, OH':84, 'Grand Rapids, MI':83, 'Lansing, MI':83,
+  'Green Bay, WI':81, 'Madison, WI':83, 'Marquette, MI':77, 'Copper Harbor, MI':73,
+  'Traverse City, MI':81, 'Muskegon, MI':80, 'Duluth, MN':77, 'Minneapolis, MN':83,
+  'St. Paul, MN':83, 'International Falls, MN':78, 'Fargo, ND':82, 'Little Rock, AR':93,
+  'Wichita, KS':93, 'Amarillo, TX':91, 'Lubbock, TX':92, 'Midland, TX':95, 'Shreveport, LA':93,
+  'Jackson, MS':92, 'Corpus Christi, TX':94, 'Brownsville, TX':94, 'Anchorage, AK':65,
+  'Fairbanks, AK':73, 'Honolulu, HI':88, 'Mt. Washington Obs., NH':54,
+  'Toronto, ON, Canada':80, 'Montreal, QC, Canada':80, 'Vancouver, BC, Canada':72,
+  'Victoria, BC, Canada':71, 'Calgary, AB, Canada':74, 'Edmonton, AB, Canada':73,
+  'Winnipeg, MB, Canada':79, 'Ottawa, ON, Canada':80, 'Halifax, NS, Canada':74,
+  'Thunder Bay, ON, Canada':76, 'Regina, SK, Canada':79, 'Hamilton, ON, Canada':81,
+  'Sault Ste. Marie, ON, Canada':76, 'Mexico City, Mexico':74, 'Monterrey, Mexico':96,
+  'London, England':73, 'Paris, France':77, 'Berlin, Germany':76, 'Moscow, Russia':75,
+  'Tokyo, Japan':88, 'Madrid, Spain':90, 'Rome, Italy':88, 'Delhi, India':105,
+  'Dubai, UAE':106, 'Riyadh, Saudi Arabia':110, 'Cairo, Egypt':95,
+  'Johannesburg, South Africa':79, 'Cape Town, South Africa':79,
+  'Buenos Aires, Argentina':86, 'Perth, Australia':88, 'Sydney, Australia':80,
+  'Melbourne, Australia':79, 'Alice Springs, Australia':97, 'Ushuaia, Argentina':57,
+  'McMurdo Station, Antarctica':30, 'Amundsen-Scott South Pole, Antarctica':-15
+};
+// Piecewise by |latitude|, used only when no override exists.
+const SUMMER_HIGH_BY_LAT = [[0,88],[20,90],[30,94],[35,93],[40,87],[45,82],[50,77],[55,72],[60,67],[65,60],[70,50],[80,35],[90,20]];
+function heatSummerHigh(city) {
+  if (Object.prototype.hasOwnProperty.call(SUMMER_HIGH_OVERRIDES, city.n))
+    return { f: SUMMER_HIGH_OVERRIDES[city.n], est: false };
+  const a = Math.abs(city.lat === null || city.lat === undefined ? 40 : city.lat);
+  let f = 87;
+  for (let i = 1; i < SUMMER_HIGH_BY_LAT.length; i++) {
+    const [la, fa] = SUMMER_HIGH_BY_LAT[i - 1], [lb, fb] = SUMMER_HIGH_BY_LAT[i];
+    if (a <= lb) { f = fa + (fb - fa) * (a - la) / (lb - la); break; }
+  }
+  if (city.lat < -40) f -= (Math.abs(city.lat) - 40) * 1.2;   // cold southern oceans
+  if (PACIFIC_MARINE.has(city.n)) f -= 10;
+  if ((city.snow || 0) >= 250) f -= 15;                        // mountain / glacier stations
+  return { f: Math.round(Math.max(-20, f)), est: true };
+}
+function heatNormHI(city) {
+  const sh = heatSummerHigh(city).f, td = Math.min(sh, heatAssumedDewpoint(city));
+  return heatIndexF(sh, heatRH(sh, td));
+}
+
 /* ======================================================================
    SELFTEST HARNESS
    Browser-run tests. Load index.html?selftest=1 and read the console.
