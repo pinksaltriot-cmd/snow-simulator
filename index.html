@@ -696,6 +696,21 @@
   .impact-h15 { background: #ea580c; color: #fff7ed; }
   .impact-h16 { background: #fde68a; color: #78350f; }
   .impact-h17 { background: #ffffff; color: #6d28d9; }
+  /* Water War */
+  .war-ww0  { background: #0f1c24; color: #5b7a8a; }
+  .war-ww1  { background: #102530; color: #7fb4c8; }
+  .war-ww2  { background: #0e2e3a; color: #8fd3e8; }
+  .war-ww3  { background: #0c3444; color: #a5e4f5; }
+  .war-ww4  { background: #083b52; color: #7dd3fc; }
+  .war-ww5  { background: #07405e; color: #38bdf8; }
+  .war-ww6  { background: #064e5c; color: #5eead4; }
+  .war-ww7  { background: #065e66; color: #2dd4bf; }
+  .war-ww8  { background: #0b3a6e; color: #60a5fa; }
+  .war-ww9  { background: #0a2f5c; color: #93c5fd; }
+  .war-ww10 { background: #0a1f44; color: #bfdbfe; }
+  .war-ww11 { background: #111827; color: #e0f2fe; box-shadow: inset 0 0 0 1px rgba(224,242,254,0.3); }
+  .war-ww12 { background: #e5e7eb; color: #334155; }
+  .war-ww13 { background: #2e1065; color: #ddd6fe; }
 </style>
 </head>
 <body>
@@ -854,8 +869,8 @@
 </aside>
 
 <div class="container">
-  <h1>Snow Event Profile Maker 3.2.0</h1>
-  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">9336 lines of code</p>
+  <h1>Snow Event Profile Maker 3.3.0</h1>
+  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">9938 lines of code</p>
   <p class="subtitle">Powered by real NOAA RSI methodology with location-based impact scaling</p>
 
   <div class="card">
@@ -873,6 +888,7 @@
       <button type="button" class="mode-btn" data-mode="replay">Historic Replay</button>
       <button type="button" class="mode-btn" data-mode="snowwar">Snow War Tiers</button>
       <button type="button" class="mode-btn" data-mode="heat">Heat Index</button>
+      <button type="button" class="mode-btn" data-mode="waterwar">Water War Tiers</button>
     </div>
   </div>
 
@@ -921,6 +937,11 @@
     <button class="btn-generate" id="heatGenerateBtn" disabled>Generate Heat Profile</button>
   </div>
   <div class="card" id="heatProfileCard" style="display:none"></div>
+  <div class="card" id="waterWarCard" style="display:none">
+    <h2>Water War Tiers</h2>
+    <p class="paragraph-hint">All <span id="waterWarCount">&mdash;</span> water war tiers, ordered by the heat that reaches them &mdash; from a condensation ring on a glass to the first rain of the next universe. Heat alone decides the tier: the heat score through the realistic range, the deadliest wet-bulb readings at the top of Continental, and air temperature alone past 134&deg;F.</p>
+    <div class="historic-list" id="waterWarList"></div>
+  </div>
 
   <div class="card" id="historicReplayCard" style="display:none">
     <h2>Replay Historic Storm</h2>
@@ -7047,6 +7068,7 @@ function setInputMode(mode) {
   document.getElementById('heatCard').style.display = (mode === 'heat') ? '' : 'none';
   const heatProfile = document.getElementById('heatProfileCard');
   heatProfile.style.display = (mode === 'heat' && heatProfile.innerHTML.trim()) ? '' : 'none';
+  document.getElementById('waterWarCard').style.display = (mode === 'waterwar') ? '' : 'none';
 }
 document.querySelectorAll('.mode-btn').forEach(b => {
   b.addEventListener('click', () => setInputMode(b.dataset.mode));
@@ -8067,17 +8089,473 @@ const HEAT_TIERS = [
   { kind:'fiction', minT: 2.6e32,  level:'Big Bang Recurrence', css:'h17' }
 ];
 // x: { S, T, hi, tw }. Returns { tier, index }.
-function heatTierFor(x) {
+// Shared lookup for the heat impact ladder and the water war ladder.
+function ladderTierFor(ladder, x) {
   const fiction = x.T > 134 || (x.tw !== null && x.tw >= 37);
   if (fiction) {
     let idx = -1;
-    HEAT_TIERS.forEach((t, i) => { if (t.kind === 'fiction' && x.T >= t.minT) idx = i; });
-    return { tier: HEAT_TIERS[idx], index: idx };
+    ladder.forEach((t, i) => { if (t.kind === 'fiction' && x.T >= t.minT) idx = i; });
+    return { tier: ladder[idx], index: idx };
   }
-  let idx = HEAT_TIERS.findIndex(t => t.kind === 'score' && x.S <= t.maxS);
-  HEAT_TIERS.forEach((t, i) => { if (t.kind === 'floor' && t.test(x) && i > idx) idx = i; });
-  return { tier: HEAT_TIERS[idx], index: idx };
+  let idx = ladder.findIndex(t => t.kind === 'score' && x.S <= t.maxS);
+  ladder.forEach((t, i) => { if (t.kind === 'floor' && t.test(x) && i > idx) idx = i; });
+  return { tier: ladder[idx], index: idx };
 }
+function heatTierFor(x) { return ladderTierFor(HEAT_TIERS, x); }
+
+/* ---- Heat Index Mode: water war ----
+   222 tiers, driven by heat alone (the Wave 1 heat score, then physical floors, then
+   air temperature past 134°F). Bands: 1 Too Cool to Get Wet, 2 Incidental, 3 Backyard,
+   4 Neighborhood, 5 Municipal, 6 Continental, 7 Fiction. pump:true marks the Pump
+   storyline. Thresholds are literal so they can be hand-edited. */
+const WATER_WAR_BANDS = ['Too Cool to Get Wet', 'Incidental', 'Backyard', 'Neighborhood', 'Municipal', 'Continental', 'Fiction'];
+const WATER_WAR_TIERS = [
+  { band:1, kind:'score', maxS:0, css:'ww0', label:'No Water Drawn',
+    icon:'🚫', desc:'It is 68 degrees and nobody wants to be wet. The garden hose stays coiled in 14 loops on its reel, the balloons stay sealed in their bag of 100, and the only water in play is a glass on the porch rail that nobody has touched in 40 minutes. Zero throws attempted, zero completed. The summer opens with the ledger blank.' },
+  { band:1, kind:'score', maxS:0.545, css:'ww0', label:'Condensation Ring',
+    icon:'💧', desc:'The first moisture of the war is a ring on a patio table, 3 inches across, left by a glass of iced tea. Someone drags a finger through it and flicks roughly 0.05 mL at a sibling from 2 feet away. The sibling reports no contact. The glass is moved to a coaster, and the front goes quiet for the rest of the afternoon.' },
+  { band:1, kind:'score', maxS:1.091, css:'ww0', label:'Dewdrop Dare',
+    icon:'🌿', desc:'At 7:15 in the morning the lawn carries dew, and someone is dared to cross it barefoot. The crossing is 22 feet, takes 9 seconds, and leaves both feet soaked to the ankle. One party rules it an act of war and the other rules it weather. The dispute outlives the dew, which is gone by 9:40.' },
+  { band:1, kind:'score', maxS:1.636, css:'ww0', label:'Flicked Fingertip',
+    icon:'👆', desc:'A wet fingertip is flicked at the back of a neck, delivering an estimated 3 drops at point-blank range. The target turns around, finds 4 plausible suspects, and accuses the wrong one. Retaliation follows within 90 seconds, also by fingertip and also at the wrong person. By dinner the kitchen has split into 2 camps over a combined 7 drops.' },
+  { band:1, kind:'score', maxS:2.182, css:'ww0', label:'Ice Cube Down the Back',
+    icon:'🧊', desc:'The first true projectile is an ice cube: about 1 ounce at 32 degrees, delivered down the back of a shirt rather than thrown. It melts in roughly 4 minutes and leaves a wet stripe 11 inches long. The victim screams at a pitch audible 2 houses away, which the perpetrator logs as a confirmed hit.' },
+  { band:1, kind:'score', maxS:2.727, css:'ww0', label:'Fountain Thumb',
+    icon:'⛲', desc:'At the park drinking fountain, a thumb over the spout turns a 2-foot drinking arc into a flat spray reaching 6 feet. It hits 3 people waiting in line and 1 who was only walking past. The fountain is declared neutral ground by general agreement, then used again 11 minutes later by the same thumb.' },
+  { band:1, kind:'score', maxS:3.273, css:'ww1', label:'Glass Tipped',
+    icon:'🥛', desc:'Half a glass of water, about 4 ounces, is tipped over a sibling’s head at the dinner table. The act is premeditated, takes roughly 1.5 seconds, and is witnessed by 2 parents. Both rule against the tipper, and the war’s first sanction is imposed: no dessert for 1 night. The sibling considers this inadequate.' },
+  { band:1, kind:'score', maxS:3.818, css:'ww1', label:'Puddle Stomp',
+    icon:'🥾', desc:'A leftover sprinkler puddle, 18 inches across and half an inch deep, becomes the first contested ground. One stomp throws water about 3 feet in every direction and soaks 2 pairs of socks, neither belonging to the stomper. The puddle is spent after 5 stomps. Nobody thinks to refill it.' },
+  { band:1, kind:'score', maxS:4.364, css:'ww1', label:'Sketch of a Pump', pump:true,
+    icon:'✏️', desc:'Nobody is fighting, so someone draws instead: a tube, a plunger, a handle, and an arrow labeled ‘water comes out here.’ At 4 squares to the inch the tube works out to a 1-inch bore with a 6-inch stroke, or 4.7 cubic inches a pull, about 2.6 ounces. Nothing is built. It is the first page of a design record that will outlast the weather.' },
+  { band:1, kind:'score', maxS:4.909, css:'ww1', label:'Wet Sponge Rumor',
+    icon:'🧽', desc:'Word goes around that someone has a car-wash sponge soaked and ready, holding roughly 8 ounces. The report is repeated 6 times in an hour and grows to 3 sponges and a bucket. No sponge is ever produced. Two people change their route home anyway, adding 400 feet to the walk.' },
+  { band:1, kind:'score', maxS:5.455, css:'ww1', label:'Spray Bottle Found',
+    icon:'🧴', desc:'A spray bottle turns up under the kitchen sink: 24 ounces, last used on windows. At roughly 0.8 mL a pull it holds about 880 shots, more ammunition than the war has used all month. Its range is 9 feet on the stream setting. It is rinsed twice before anyone agrees to point it at a person.' },
+  { band:1, kind:'score', maxS:6, css:'ww1', label:'Spray Bottle Skirmish',
+    icon:'💦', desc:'The spray bottle is deployed. Over 20 minutes it fires 140 times, lands 31 hits, and drains by about a sixth. The skirmish ends when the nozzle is twisted to ‘mist’ by accident, cutting range from 9 feet to 3 and the threat to zero. It is the first engagement anyone bothers to count.' },
+  { band:2, kind:'score', maxS:6.8, css:'ww2', label:'Mister Fan Duel',
+    icon:'💨', desc:'Two handheld battery fans with mister reservoirs square off on the porch, each holding about 3 ounces. At full setting they throw a fine mist roughly 2 feet, which is less than the 5 feet between the chairs. After 14 minutes of steady fire both parties are measurably cooler and neither is measurably wet. The duel is scored a draw, and the batteries, 2 AA each, are listed as the only casualties.' },
+  { band:2, kind:'score', maxS:7.6, css:'ww2', label:'Cup Toss',
+    icon:'🥤', desc:'The first open-container attack: a plastic cup of about 8 ounces, thrown underhand across 4 feet of patio. Roughly 5 ounces reach the target, and the other 3 land on the thrower’s own shoes. The cup itself is not released, which is later cited as evidence of restraint. Retaliation follows within 90 seconds, using the same cup.' },
+  { band:2, kind:'score', maxS:8.4, css:'ww2', label:'Dixie Cup Volley',
+    icon:'🧃', desc:'At a church picnic, a stack of paper cone cups sits beside a 5-gallon water cooler, each cup holding about 4 ounces. A cone cup cannot be set down, so every cup filled must be used. 3 children fire 22 cups in 6 minutes, drawing the cooler down by about 0.7 gallons. An adult removes the cups; the cooler stays, and so does the problem.' },
+  { band:2, kind:'score', maxS:9.2, css:'ww2', label:'Water Bottle Squeeze',
+    icon:'🫗', desc:'A half-liter plastic water bottle with the cap off, squeezed hard, sends a stream about 7 feet. It empties in 4 squeezes and crackles loudly on each one, which gives away every attack roughly 1 second early. The bottle is refilled at the kitchen sink 3 times before it splits along a seam. It is the war’s first piece of equipment retired due to wear.' },
+  { band:2, kind:'score', maxS:10, css:'ww2', label:'Sports Bottle Squirt',
+    icon:'⚽', desc:'The sports bottle holds 24 ounces behind a pull-top valve and was built to be squeezed. A firm squeeze reaches 12 feet, nearly double the plain water bottle, with no crackle to warn anyone. Because it can be carried closed, it is brought to a soccer game, where 9 ounces are spent on teammates during 1 water break. The coach holds it until the second half.' },
+  { band:2, kind:'score', maxS:10.8, css:'ww2', label:'Garden Hose Left On',
+    icon:'🌱', desc:'A garden hose is left running in the side yard after watering, at about 9 gallons a minute. By the time anyone notices, 40 minutes have passed, about 360 gallons are gone, and a low spot in the lawn holds water 3 inches deep. Nobody sprayed anyone. It is recorded anyway, because 360 gallons is more than the war has used in its entire history.' },
+  { band:2, kind:'score', maxS:11.6, css:'ww2', label:'Hose Kink Ambush',
+    icon:'🐍', desc:'The hose is folded double 20 feet from the spigot, trapping about 50 psi behind the kink. A sibling holding the dead nozzle turns it around to look into it. The fold is released, and about 0.5 gallons arrive in 3 seconds at a range of roughly 4 inches. It is the first attack to use stored pressure, and it will not work on that sibling again.' },
+  { band:2, kind:'score', maxS:12.4, css:'ww2', label:'Thumb-over-Hose Fan',
+    icon:'👍', desc:'A thumb pressed over the open hose end turns 12 gallons a minute into a flat fan reaching about 15 feet, the longest reach yet recorded. It covers a 90-degree arc and requires no aim, only a willingness to lose feeling in the thumb after 2 minutes. 4 targets are hit in a single sweep of the driveway. The thumb is switched to the other hand at the 3-minute mark, and accuracy drops by about half.' },
+  { band:2, kind:'score', maxS:13.2, css:'ww2', label:'Sprinkler Dash',
+    icon:'🌀', desc:'An oscillating sprinkler sweeps a 30-by-40-foot rectangle about once every 20 seconds. The game is to cross it dry, and the record after 1 afternoon is 0 successful crossings in 47 attempts. The sprinkler favors no one, which makes it the war’s first impartial combatant. Overnight it is moved 6 feet closer to the patio by someone who has picked a side.' },
+  { band:2, kind:'score', maxS:14, css:'ww2', label:'Car Wash Crossfire',
+    icon:'🚗', desc:'A family car wash with 2 buckets and 1 hose turns into crossfire within 8 minutes. The driver’s side, which faced away from most of the shooting, ends up cleaner than the passenger side. About 70 gallons are used against a planned 25. The sponge from the earlier rumor is confirmed to exist and is thrown 3 times.' },
+  { band:2, kind:'score', maxS:14.8, css:'ww2', label:'Dog Bowl Incident',
+    icon:'🐕', desc:'A full dog bowl, 2 quarts, is picked up and thrown mid-battle, the first time anyone has used water that belonged to someone else. The dog, 60 pounds, watches its bowl empty onto a neighbor’s child and does not take a side. Public opinion turns sharply against the thrower. The bowl is refilled within 2 minutes, and the dog’s water is declared off-limits in the war’s first written rule.' },
+  { band:2, kind:'score', maxS:15.6, css:'ww2', label:'Kiddie Pool Splash',
+    icon:'🏊', desc:'A 6-foot kiddie pool holding about 100 gallons becomes the first reservoir that does not need a spigot. Two cupped hands move roughly 6 ounces a splash, so emptying it this way would take over 2,000 splashes. Nobody tries. Instead the pool becomes a base, and anyone standing in it is treated as holding a fortified position, although the water is 10 inches deep.' },
+  { band:2, kind:'score', maxS:16.4, css:'ww2', label:'Pump Specs Drawn', pump:true,
+    icon:'📐', desc:'The pump sketch is redrawn to scale at 4 squares to the inch, this time with dimensions: a 1-inch bore, a 6-inch stroke, 4.7 cubic inches a pull, about 2.6 ounces. That is 2 strokes to empty a 4-ounce cone cup and roughly 4,900 to empty a 100-gallon kiddie pool. A parts list follows: 1 length of 1-inch tube, 1 dowel, 2 rubber washers, and 1 check valve of unknown origin. Nothing is built yet.' },
+  { band:2, kind:'score', maxS:17.2, css:'ww3', label:'Bucket Rumor',
+    icon:'👂', desc:'Word goes around that someone on the next street has a 5-gallon bucket, which would hold 640 ounces, or about 160 cone cups at once. No one has seen it. 3 separate children claim to know where it is kept, and their accounts place it in 3 different garages. Defensive plans are drawn up anyway, mostly involving running.' },
+  { band:2, kind:'score', maxS:18, css:'ww3', label:'Dollar-Store Squirt Gun',
+    icon:'🔫', desc:'The first purpose-built weapon arrives: a clear plastic squirt gun, $1, holding about 1 ounce. It reaches 10 to 15 feet and gets roughly 30 pulls per fill, each small enough to be denied by the person hit. Its main advantage is that it looks like a weapon, which changes how everyone else behaves. 4 more are bought the following afternoon.' },
+  { band:2, kind:'score', maxS:18.8, css:'ww3', label:'Leaky Trigger',
+    icon:'🔧', desc:'One squirt gun develops a leak at the trigger seal and loses about a third of its 1 ounce into its owner’s palm on the walk to the front. By the time the owner is in range, 12 feet, the gun fires roughly 20 times instead of 30. Electrical tape is applied twice without effect. The owner is the wettest person in every engagement, including the ones they win.' },
+  { band:2, kind:'score', maxS:19.6, css:'ww3', label:'First Water Balloon',
+    icon:'🎈', desc:'A pack of 50 water balloons appears, and the first one is filled at the bathroom sink to about 5 ounces in 5 seconds. Tying it takes 40 seconds, because nobody has tied one before. It is carried outside in both hands at walking pace, thrown 20 feet, lands on grass, and does not break. It is thrown again.' },
+  { band:2, kind:'score', maxS:20.4, css:'ww3', label:'Burst in Hand',
+    icon:'💥', desc:'The second balloon is filled to about 9 ounces, well past the usual 4 to 6, and bursts while being tied, delivering its full load into the filler’s lap from 0 inches. Of the next 10 balloons, 3 burst in hand, 2 burst on launch, and 5 reach a target. The 50% failure rate is written down. Filling them outdoors is proposed and adopted immediately.' },
+  { band:2, kind:'score', maxS:21.2, css:'ww3', label:'Knot-Tying Bottleneck',
+    icon:'🪢', desc:'Filling a balloon takes about 5 seconds; tying it takes 8 to 10, and only 2 of the 6 fighters can tie at all. Output caps at roughly 4 balloons a minute per tyer. The front line throws faster than that, so the back line becomes a factory. The best tyer is withdrawn from combat entirely, a promotion they did not ask for.' },
+  { band:2, kind:'score', maxS:22, css:'ww3', label:'Refill Queue',
+    icon:'⏳', desc:'There is 1 outdoor spigot and 5 people who need it. The queue forms at 2:15 and settles into a rotation of about 90 seconds a person, so each fighter waits 6 minutes to refill for roughly 2 minutes of fighting. Line-cutting is attempted twice and punished with a cup of water each time. The spigot, not any fighter, is now the most important position in the yard.' },
+  { band:2, kind:'score', maxS:22.8, css:'ww3', label:'Truce at the Spigot',
+    icon:'🏳️', desc:'A truce is declared for everything within 3 feet of the spigot: no firing while anyone is filling. It holds for 26 minutes, the longest ceasefire yet, and is broken by a hose left attached to the spigot that was, technically, not filling anything. A 15-minute dispute follows over whether the hose counts as the spigot. It is ruled that it does, retroactively.' },
+  { band:2, kind:'score', maxS:23.6, css:'ww3', label:'Faucet Adapter',
+    icon:'🚰', desc:'A $4 faucet adapter lets balloons be filled straight from the kitchen tap, ending the spigot’s monopoly. The house now has 2 fill points and a parent who has agreed to neither. About 1 in 8 balloons slips off the adapter early and fills the sink instead. The spigot truce is found not to extend to the kitchen, which is discovered the hard way.' },
+  { band:2, kind:'score', maxS:24.4, css:'ww3', label:'Wet Shirt Surrender',
+    icon:'👕', desc:'The first formal surrender: a fighter whose shirt has absorbed an estimated 20 ounces, enough to hang 2 inches lower than it did at noon, walks to the middle of the yard and wrings it out. The wringing is accepted as capitulation. Terms are generous: 10 minutes of amnesty and first place in the refill queue. The shirt is on the fence by 4:00 and dry by 4:40.' },
+  { band:2, kind:'score', maxS:25.2, css:'ww3', label:'Towel Neutrality',
+    icon:'🏖️', desc:'Towels are declared neutral: anyone holding one may not be targeted, and 3 are hung on the porch rail for common use. By 5:00 the rule has been abused 6 times, mostly by fighters carrying a towel into position and dropping it 10 feet from a target. Neutrality is then limited to towels on the porch itself. A dry towel now trades at roughly the value of a full squirt gun.' },
+  { band:2, kind:'score', maxS:26, css:'ww3', label:'Balloon Bucket',
+    icon:'🪣', desc:'A real 5-gallon bucket, the one from the rumor or one like it, is filled halfway with water and stocked with 60 tied balloons, the water cushioning them against each other. 2 tyers fill it in about 8 minutes, and it weighs roughly 40 pounds. For the first time, ammunition is made before the fighting instead of during it. The bucket takes 2 people to carry, which is how the war learns it has logistics.' },
+  { band:3, kind:'score', maxS:27, css:'ww4', label:'Balloon Brigade',
+    icon:'🎈', desc:'The balloon bucket gets a crew. 4 kids form a line from the spigot to the fence: 1 fills, 1 ties, 1 carries, and 1 throws, at a sustained rate of 6 balloons a minute. The line breaks down at the tying station, where each knot takes 11 seconds and 1 balloon in 5 bursts in hand. The tyer ends up wetter than any target.' },
+  { band:3, kind:'score', maxS:28, css:'ww4', label:'Sprinkler Fort',
+    icon:'🏰', desc:'An oscillating sprinkler is set in the middle of the yard, and its 40-foot sweep is declared a fort. Anyone inside the arc counts as defended, and anyone outside counts as dry, which is worse. The defenders learn the cycle, 18 seconds side to side, and time their dashes to it. Nobody attacks the fort, because nobody can work out whose side the sprinkler is on.' },
+  { band:3, kind:'score', maxS:29, css:'ww4', label:'Kiddie Pool Keep',
+    icon:'🛟', desc:'A 6-foot plastic kiddie pool, filled to 8 inches with about 140 gallons, becomes the keep: the one water supply everyone has to come back to. It is held by 2 defenders who sit in it and refuse to get out. Attackers dip cups over the rim at a cost of 1 splash per dip. By late afternoon the water is 84 degrees and holds 14 grass clippings, and it is defended anyway.' },
+  { band:3, kind:'score', maxS:30, css:'ww4', label:'Slip \'n Slide Front',
+    icon:'🛝', desc:'A 25-foot slide mat is unrolled down the gentle slope of the yard and wetted with the hose, opening the first front with a direction. A run takes about 3 seconds and ends in a flowerbed 4 feet past the mat. The mat is a supply route and an ambush point at once, since whoever is lying at the bottom is hit by whoever launches next. Casualties are grass stains, 9 by count, all on the same pair of shorts.' },
+  { band:3, kind:'score', maxS:31, css:'ww4', label:'Tarp Slide',
+    icon:'🟦', desc:'The mat is judged too short, and a 20-by-40-foot blue tarp from the garage replaces it, weighted at the corners with 4 bricks and slicked with a squirt of dish soap. Length goes up by 15 feet and friction goes down by an amount nobody measures. One slider leaves the tarp entirely and continues 11 feet across the lawn. The bricks are moved inward and the tarp is renamed a runway.' },
+  { band:3, kind:'score', maxS:32, css:'ww4', label:'Hose Artillery',
+    icon:'🚿', desc:'The garden hose enters the war as artillery. At 12 gallons a minute on the jet setting it throws a stream about 35 feet, outranging everything else in the yard by a factor of 3. It also has a 50-foot tether and a single operator who cannot chase anyone. The first volley soaks 3 targets and 1 open kitchen window.' },
+  { band:3, kind:'score', maxS:33, css:'ww4', label:'Nozzle Settings Treaty',
+    icon:'📜', desc:'The hose nozzle has 8 settings, and after the window incident all 8 are negotiated. Jet is banned inside 15 feet. Shower, mist, and cone are permitted everywhere. Flat, soaker, and center are permitted although nobody knows what they do, and full is reserved for filling the kiddie pool. The treaty is written on a paper plate and signed by 5 parties, 1 of them in crayon.' },
+  { band:3, kind:'score', maxS:34, css:'ww4', label:'Squirt Pistol Pair',
+    icon:'🔫', desc:'2 matching squirt pistols appear, bought at a gas station for $2.49 each. Each holds about 3 ounces and shoots 12 feet at roughly 0.2 ounces a pull, so a full tank lasts 15 pulls. The owner carries both, one in each hand, and is empty in 40 seconds. The owner then spends 4 minutes at the spigot refilling them, which is where the owner is ambushed.' },
+  { band:3, kind:'score', maxS:35, css:'ww4', label:'Pump-Action Prototype', pump:true,
+    icon:'🔧', desc:'The graph-paper design is finally built from PVC pipe: a 1-inch bore, a 6-inch stroke, and 2.6 ounces a stroke, exactly as drawn at 4 squares to the inch. It takes 2 afternoons, 1 hacksaw, and $11.40 in fittings, and the plunger seal is a trimmed faucet washer. A full pull reaches about 30 feet. The first shot works, the second leaks at the elbow, and nobody present doubts the design again.' },
+  { band:3, kind:'score', maxS:36, css:'ww4', label:'Pressure Chamber Debate',
+    icon:'🗣️', desc:'The prototype fires one stroke at a time, and a proposal is filed to add an air chamber so it can be pumped ahead. Proponents cite a 2-liter soda bottle, which holds well past 100 psi before it bursts. Opponents cite the same bottle and ask what happens at the burst. The debate runs 45 minutes across 2 porches and ends without a vote when a parent puts the bottle in the recycling.' },
+  { band:3, kind:'score', maxS:37, css:'ww4', label:'Backpack Tank',
+    icon:'🎒', desc:'Range is no longer the problem; refills are. A 3-liter hydration bladder from a hiking pack is filled and run through 4 feet of tubing to a squirt pistol, which now does not run dry for about 500 pulls. Loaded, the rig weighs about 8 pounds and sloshes audibly, ending any hope of a quiet approach. The wearer is still hit first, because the pack makes a very large target.' },
+  { band:3, kind:'score', maxS:38, css:'ww4', label:'Ice Water Escalation',
+    icon:'🥶', desc:'A cooler of ice water at about 34 degrees joins the arsenal, and every weapon filled from it changes category. A 3-ounce hit that was refreshing at 72 degrees now produces a scream audible 2 houses down. The first complaint is filed within 6 minutes. Ice water is not banned, but it is logged, and from here on every tank is asked its temperature before it is allowed to fire.' },
+  { band:3, kind:'score', maxS:39, css:'ww4', label:'Three-Person Balloon Launcher',
+    icon:'🏹', desc:'A surgical-tubing launcher arrives: 2 people hold the handles, and a third pulls the pouch back 8 feet and lets go. The first balloon clears the yard, the next yard, and the street, landing about 300 feet away on a parked car nobody recognizes. At that range accuracy is measured in property lines. The crew agrees to fire only inside the fence, which caps range at 90 feet and wastes 70 percent of the launcher.' },
+  { band:3, kind:'score', maxS:40, css:'ww4', label:'Trampoline Sprinkler',
+    icon:'🤸', desc:'A sprinkler is set under the 14-foot trampoline, turning it into a platform that is both elevated and permanently wet. Jumpers gain about 4 feet of height, which makes them harder to hit and easier to see. Throws from the mat come down at a steep angle, over any cover in the yard. The platform is held for 25 minutes, until 3 jumpers land on the same spot and 1 is ejected onto the lawn, damp but unhurt.' },
+  { band:3, kind:'score', maxS:41, css:'ww4', label:'Fence Line Ambush',
+    icon:'🫣', desc:'The first cross-yard attack goes over the 6-foot privacy fence. 2 attackers standing on overturned buckets lob 9 balloons blind into the next yard, where a family is eating corn at a picnic table. 4 hit the grass, 3 hit the table, 1 hits the corn, and 1 lands on the grill, which hisses. Retaliation is not immediate, which is more worrying than if it were.' },
+  { band:3, kind:'score', maxS:42, css:'ww4', label:'Two-Yard War',
+    icon:'⚔️', desc:'The neighbors answer with their own hose, their own balloons, and 3 cousins visiting from out of state. The war now spans 2 yards, 1 fence, and roughly 11,000 square feet of lawn. A gate halfway down the fence is the only crossing, and it changes hands 6 times in an hour. Both water meters are spinning at once for the first time, and neither family has looked at either one.' },
+  { band:3, kind:'score', maxS:43, css:'ww4', label:'Water Table Seized',
+    icon:'🌡️', desc:'The heat index is past 100 and nobody is running anymore. The prize is no longer a yard but the plastic water table on the patio: 2 gallons across 3 basins, rated for ages 18 months and up, sitting in the only shade on either lot. It is seized by 2 kids who kneel over it and ration it by the cupful. An adult imposes the one rule nobody contests, a drink of actual water every 20 minutes, and the seizure is allowed to stand.' },
+  { band:3, kind:'score', maxS:44, css:'ww4', label:'Rain Barrel Claimed',
+    icon:'🛢️', desc:'The rain barrel under the garage downspout, rated at 55 gallons and last filled 19 days ago, is claimed as a strategic reserve. It holds 41 gallons of water the color of weak tea and 1 drowned wasp. The spigot at its base delivers about 2 gallons a minute, too slow to fight with and too much to ignore. The claim is contested by a parent who says the barrel is for the tomatoes, and the tomatoes win.' },
+  { band:3, kind:'score', maxS:45, css:'ww4', label:'Garage Armory',
+    icon:'🧰', desc:'The garage is converted into an armory. Inspection turns up 1 watering can, 3 empty paint buckets, a 2-gallon pump sprayer that last held weed killer, a turkey baster, and 60 feet of spare hose nobody knew existed. The sprayer is rinsed 4 times and still rejected. The armory is guarded by the family dog, which has no position on the war and sleeps through the inventory.' },
+  { band:3, kind:'score', maxS:46, css:'ww4', label:'Bucket Brigade',
+    icon:'🪣', desc:'With the armory open, the line graduates from balloons to buckets. 5 kids pass 2-gallon paint buckets hand to hand across 60 feet from the spigot to the front, losing about a quarter of every load to sloshing. Each delivered bucket is thrown in one motion and is spent in 1 second. The ratio of labor to effect is noted by the oldest kid and ignored by everyone else.' },
+  { band:3, kind:'score', maxS:47, css:'ww5', label:'Five-Gallon Dump',
+    icon:'🏋️', desc:'A full 5-gallon bucket weighs about 42 pounds, and it takes 2 kids to lift one to the edge of the trampoline. It is tipped over the side onto 1 target standing directly below. The dump lasts under 2 seconds and beats the previous record, a sloshed-down paint bucket, by about 42 pounds to 12. The target does not move for 5 full seconds, then asks, calmly, for a turn.' },
+  { band:3, kind:'score', maxS:48, css:'ww5', label:'Cooler Raid',
+    icon:'🥤', desc:'The drink cooler on the porch, 48 quarts of cans and ice, is raided. The objective is not the drinks but the meltwater: about 3 gallons at 34 degrees, bailed into 2 buckets while the adults are inside. The raid takes 90 seconds. The 11 cans left behind sit in a dry cooler in the sun, warming at a rate the adults notice around the 20-minute mark.' },
+  { band:3, kind:'score', maxS:49, css:'ww5', label:'Popsicle Ceasefire',
+    icon:'🍧', desc:'A box of 24 popsicles comes out of the freezer, and all fire stops within 15 seconds. The ceasefire is total and enforced by the popsicles themselves, which drip about once every 3 seconds in the heat and require both hands. It lasts 7 minutes, the time it takes the slowest eater to reach the stick. That eater reads the joke on the stick aloud to no reaction, and fighting resumes.' },
+  { band:3, kind:'score', maxS:50, css:'ww5', label:'No-Faces Rule',
+    icon:'🙅', desc:'After a direct hit to an eye from 6 feet, the first rule of engagement is adopted: no faces. Targeting is restricted to the band between shoulders and knees, roughly 2 feet tall on the average combatant. Hit rates drop about 30 percent. The rule is broken 4 times in the first hour, each time described by the shooter as a ducking error on the target’s part.' },
+  { band:3, kind:'score', maxS:51, css:'ww5', label:'Sunscreen Truce',
+    icon:'🧴', desc:'A parent announces sunscreen, and a mandatory truce holds while 6 kids are lined up and coated in SPF 50. Each application takes about 40 seconds, uses roughly 1 ounce, and is resisted. Wet kids must be dried first, which requires towels, which are already wet. The truce lasts 12 minutes. The label says to reapply after 80 minutes in water, and nobody is keeping time.' },
+  { band:3, kind:'score', maxS:52, css:'ww5', label:'Screen Door Neutral Zone',
+    icon:'🚪', desc:'The back screen door is declared neutral: anyone within 3 feet of it cannot be targeted, because a parent is on the other side. The zone is exploited within 10 minutes by a kid who stands in it for 26 minutes with a full pistol, waiting. The door itself takes 2 stray balloons, and the mesh passes about half of each one into the kitchen.' },
+  { band:3, kind:'score', maxS:53, css:'ww5', label:'Wet Towel Ban',
+    icon:'🧺', desc:'The wet towel is weaponized and banned on the same afternoon. A beach towel, twisted and soaked, snaps with about 2 feet of reach and leaves a red mark roughly 3 inches long. It is ruled a melee weapon and outside the spirit of a water war. Towels are restricted to drying, and the count of dry towels falls from 8 to 1 within the hour anyway.' },
+  { band:3, kind:'score', maxS:54, css:'ww5', label:'Chlorine Tag',
+    icon:'🏊', desc:'The backyard pool opens: 18,000 gallons at 84 degrees and 3 parts per million chlorine. The war moves into it and becomes tag, in which whoever is ‘it’ must land a splash on someone within arm’s reach. The no-faces rule is suspended in the water by a vote of 5 to 2, on the grounds that every face is already wet. Eyes are red by the 40-minute mark.' },
+  { band:3, kind:'score', maxS:55, css:'ww5', label:'Cannonball Contest',
+    icon:'💥', desc:'A cannonball contest is held to settle, by splash, who controls the deep end. 7 entrants jump from the edge and are judged on how far the water carries across the deck. The winner, at 94 pounds, puts water 14 feet across the patio and onto a lawn chair with a phone on it. The phone survives. The result is ruled binding, and the deep end changes hands.' },
+  { band:3, kind:'score', maxS:56, css:'ww5', label:'Diving Board Command',
+    icon:'🎖️', desc:'The diving board, 8 feet long and 1 meter over the water, becomes the command post. Whoever holds it sees the whole pool and can fire down on anyone who surfaces within 10 feet. It is held by the cannonball winner, who issues 12 orders in the first 5 minutes, 3 of which are obeyed. The board is lost only when the commander is dared to try a backflip and accepts.' },
+  { band:3, kind:'score', maxS:57, css:'ww5', label:'Pool Noodle Cannon',
+    icon:'🪈', desc:'A pool noodle, 5 feet long with a hollow core just under 1 inch across, is filled underwater, capped with a palm, and fired by blowing hard into the other end. The shot reaches about 8 feet and delivers roughly 2 cups. The operator swallows some of the pool 3 times in 10 shots. Someone notes that the core is nearly the pump’s bore and goes looking for a broom handle.' },
+  { band:3, kind:'score', maxS:58, css:'ww5', label:'Water Blob',
+    icon:'🫧', desc:'A water blob is built: 2 plastic sheets, 10 by 20 feet, taped along all 4 edges with 3 rolls of duct tape and filled from the hose for 50 minutes. It holds about 500 gallons and weighs roughly 2 tons. It is terrain rather than a weapon, since anyone standing on it can be launched off by anyone jumping on it. It leaks from 1 corner at about a cup a minute, and that corner is guarded.' },
+  { band:3, kind:'score', maxS:59, css:'ww5', label:'Splash Radius',
+    icon:'📏', desc:'For the first time, damage is measured as an area. A synchronized jump by 3 kids onto the blob throws water outward in a ring, and someone paces it off: 17 feet in every direction, about 900 square feet. Everything inside the circle is presumed wet, including 2 folding chairs, a bag of chips, and the last dry towel. From here on, weapons are rated by radius as well as range.' },
+  { band:3, kind:'score', maxS:60, css:'ww5', label:'Dripping Retreat',
+    icon:'🏃', desc:'The first organized retreat: the losing side pulls back from the pool deck to the side yard, leaving a trail of drips that shows exactly where it went. A combatant fresh out of the pool sheds about 1 cup of water in the first 30 seconds on land, enough to mark 40 feet of concrete. The pursuers follow the trail at a walk. In this heat it evaporates in about 6 minutes, which is how long the retreat has to regroup.' },
+  { band:3, kind:'score', maxS:61, css:'ww5', label:'Kitchen Sink Supply Line',
+    icon:'🚰', desc:'The spigot is overcommitted, so a second supply line opens through the house. The kitchen sink sprayer is pulled to its full 3 feet and aimed out the window into waiting buckets at about 1.5 gallons a minute, slower than the outdoor tap but closer to the ice maker. The line runs for 17 minutes before the counter, the floor, and 1 adult are found wet.' },
+  { band:3, kind:'score', maxS:62, css:'ww5', label:'Soaker Showroom',
+    icon:'🛒', desc:'An errand to the store passes an aisle of pressurized soakers priced from $14 to $49, each rated at 30 to 40 feet from a tank of 1 to 2 liters. 3 kids stand in front of it for 22 minutes reading the boxes. They have $8.75 between them. Nothing is bought, but every spec is memorized, and the PVC prototype, at 30 feet, is now known to be merely average.' },
+  { band:3, kind:'score', maxS:63, css:'ww5', label:'Refill Station',
+    icon:'⛽', desc:'A refill station is set up at the spigot: a Y-splitter, 2 short hoses, and a posted rule of 1 minute per person, then the back of the line. With the tap’s 12 gallons a minute split 2 ways, a 3-liter bladder fills in about 8 seconds and a pistol in under 1. The line therefore consists mostly of people arguing about the minute. It is the first shared infrastructure of the war and at once the most contested ground in the yard.' },
+  { band:3, kind:'score', maxS:64, css:'ww5', label:'Sprinkler Timer Sabotage',
+    icon:'⏲️', desc:'Someone finds the lawn irrigation controller in the garage and reprograms zone 3 to run at 4:15 for 20 minutes. The first cycle catches the other side mid-refill and soaks 5 of them from 6 buried heads. Nobody suspects sabotage until 4:15 the next morning, when zone 3 runs again, set for both halves of the clock, under a row of open bedroom windows.' },
+  { band:3, kind:'score', maxS:65, css:'ww5', label:'Dunk Tank Tribunal',
+    icon:'⚖️', desc:'A tribunal of 3 judges on a picnic bench hears the sabotage case. The sentence is a dunk tank: the defendant sits on a plank across the kiddie pool, and the trigger is a pie tin nailed to a stake 20 feet away. The first 11 throws miss, the 12th hits, and the defendant drops into 8 inches of 88-degree water. There is no appeal, since it is the coolest anyone has been all day.' },
+  { band:3, kind:'score', maxS:66, css:'ww5', label:'Backyard Hegemony',
+    icon:'👑', desc:'By 7 in the evening one yard holds everything that matters: the pool, the blob, the refill station, the pump prototype, and 14 of the 19 active combatants. The other yards still have water but no one left to throw it. Terms are dictated from the diving board and are generous, because the hegemon needs everyone back tomorrow. At sunset it is still 89 degrees, and 3 driveways down, a car is unloading a box of pressurized soakers.' },
+  { band:4, kind:'score', maxS:66.8, css:'ww6', label:'Super Soakers Arrive',
+    icon:'🔫', desc:'The first pressurized soaker arrives on the block in a box marked for ages 8 and up, carried by a kid who is 7. Its tank holds 2.5 liters, and after 12 pumps it throws a stream about 50 feet, farther than anything previously fired on the street. Every spray bottle within 3 houses is obsolete by 2:15 that afternoon. Nobody surrenders, but several people go inside to ask about their birthdays.' },
+  { band:4, kind:'score', maxS:67.6, css:'ww6', label:'Pressure Wars',
+    icon:'📈', desc:'By the end of the week 4 soakers are in service, and the argument shifts from who gets wet to how many pumps each owner puts in before firing. One kid pumps 40 times and claims the block record; another pumps 55 and a seam starts to weep. Range stops improving at around 50 feet no matter what anyone does. This is recorded but not believed.' },
+  { band:4, kind:'score', maxS:68.4, css:'ww6', label:'Tank Capacity Race',
+    icon:'🛢️', desc:'Range has topped out, so the contest moves to endurance. A 2-liter tank lasts about 90 seconds of steady fire, so a rival duct-tapes a 3-liter soda bottle to the stock as a reserve and advertises 3 minutes. The taped rig weighs 7 pounds loaded and cannot be aimed above the shoulder. It still wins its first engagement, by attrition, against a kid who ran dry at the mailbox.' },
+  { band:4, kind:'score', maxS:69.2, css:'ww6', label:'Cul-de-Sac Front',
+    icon:'🏘️', desc:'The fighting consolidates around the cul-de-sac, a circle 80 feet across with 6 driveways opening onto it. Each household holds its own driveway and treats the center as open ground. The storm drain in the middle takes an estimated 40 gallons over the weekend. A parked minivan is struck 19 times and is later found to belong to someone visiting.' },
+  { band:4, kind:'score', maxS:70, css:'ww6', label:'Block Alliance',
+    icon:'🤝', desc:'Three yards on the east side sign a pact on the back of a cereal box: shared ammunition, shared refill rights, and no firing across each other’s property lines. The alliance fields 9 combatants against the west side’s 5. Within 2 days the west side forms its own pact on a pizza box, which is larger, and they consider that a point in their favor.' },
+  { band:4, kind:'score', maxS:70.8, css:'ww6', label:'Sidewalk No-Man\'s-Land',
+    icon:'🚷', desc:'The 4-foot public sidewalk between the two alliances becomes ground that neither side can hold. Anyone on it is in range of both sides at once, including a mail carrier who is hit twice and a man walking a dog, which is hit 3 times. A chalk line is drawn down the middle. The mail is delivered the next day by someone walking in the street.' },
+  { band:4, kind:'score', maxS:71.6, css:'ww6', label:'Garden Hose Network',
+    icon:'🐍', desc:'The east alliance connects 3 garden hoses end to end, 150 feet in total, so a single spigot can reach the front line. Flow at the far nozzle drops by about half, from a usable 9 gallons a minute to a sulking 4 or so. The coupling in the middle leaks steadily onto a flower bed that has done nothing to anyone. It is the first infrastructure project of the war.' },
+  { band:4, kind:'score', maxS:72.4, css:'ww6', label:'Splitter Manifold',
+    icon:'🔱', desc:'A brass 4-way splitter is threaded onto the main spigot, and one tap now feeds 4 hoses at once. Opened fully, the house line delivers perhaps 12 gallons a minute, divided into 3 gallons apiece, which is less than anyone was promised. A valve schedule is written on an index card and taped to the siding. It is ignored within 20 minutes.' },
+  { band:4, kind:'score', maxS:73.2, css:'ww6', label:'Balloon Factory',
+    icon:'🎈', desc:'Balloon production moves from hand-tying on the lawn to a folding table in the garage staffed by 3 kids. The line produces about 4 balloons a minute, with a failure rate near 1 in 5 from splits and knots that let go. Output is stored in a laundry basket that holds roughly 60. The table is soaked, the floor is soaked, and it is the only chore anyone on the block has ever volunteered for.' },
+  { band:4, kind:'score', maxS:74, css:'ww6', label:'Rapid-Fill Clusters',
+    icon:'⚡', desc:'A quick-fill bunch arrives: 100 balloons on straws, filled from the hose in about 60 seconds and self-sealing when shaken loose. The garage factory, at 4 a minute, is rendered obsolete in the time it takes to read the package. One bunch yields about 85 usable rounds. The hand-tying crew is reassigned to throwing, which they consider a demotion.' },
+  { band:4, kind:'score', maxS:74.8, css:'ww6', label:'Bike Couriers',
+    icon:'🚲', desc:'With the front 3 houses from the nearest spigot, resupply falls to kids on bicycles carrying balloons in handlebar baskets. A basket holds about 15 balloons, and the round trip takes 90 seconds at speeds nobody’s parents have approved. Losses in transit run near 20 percent, mostly at the curb cut. One courier is intercepted and his cargo is used against his own side.' },
+  { band:4, kind:'score', maxS:75.6, css:'ww6', label:'Wagon Convoys',
+    icon:'🛞', desc:'A red wagon replaces the bicycles, hauling a 5-gallon bucket and 2 laundry baskets, about 110 balloons, in a single run. It moves at walking pace and requires 1 puller and 2 escorts with soakers. The convoy is ambushed at the halfway point on its second trip. After that it travels only along the fence line, which adds 40 feet to the route and cuts losses to almost nothing.' },
+  { band:4, kind:'score', maxS:76.4, css:'ww6', label:'Ice Chest Logistics',
+    icon:'🧊', desc:'Someone discovers that water kept in a cooler with 2 bags of ice stays around 40 degrees, while hose water that sat in the sun comes out near 95. Cold rounds are reserved for high-value targets. The cooler holds 48 quarts and is guarded by a kid on a lawn chair with a clipboard, who logs every withdrawal. Unauthorized access is punishable by being hit with the contents.' },
+  { band:4, kind:'score', maxS:77.2, css:'ww6', label:'Popsicle Economy',
+    icon:'🍡', desc:'The box of 24 freezer pops in one family’s garage becomes the block’s first currency. A balloon bunch trades for 3 pops, a turn with the biggest soaker for 1, and the other side’s refill schedule for 2. Inflation arrives on day 4, when a second box of 100 is opened across the street. The exchange rate never recovers.' },
+  { band:4, kind:'score', maxS:78, css:'ww6', label:'Lemonade Stand Treasury',
+    icon:'🍋', desc:'The west alliance opens a lemonade stand at 50 cents a cup to fund the war, selling to adults on the sidewalk who have no idea what the money is for. Receipts reach 14 dollars and 25 cents by Saturday afternoon. After cups and mix, net profit is about 9 dollars, which buys 2 more quick-fill bunches. It is the first war chest on the street with an actual ledger.' },
+  { band:4, kind:'score', maxS:78.8, css:'ww6', label:'Treehouse Water Tower',
+    icon:'🌳', desc:'A 5-gallon bucket is hoisted into a treehouse 10 feet up, with a hose run from its base to the ground as a siphon. The drop yields about 4 psi at the nozzle, enough for a lazy arc of 6 feet. It is useless as a weapon and excellent as a refill point, because nobody on the ground can reach it. The rope ladder is pulled up at night.' },
+  { band:4, kind:'score', maxS:79.6, css:'ww6', label:'Gutter Aqueduct',
+    icon:'🏠', desc:'Somebody notices that the roof gutter along one house is 40 feet long and slopes toward the front. A hose run into the high end at the back turns it into an aqueduct that delivers water, unaided, to a downspout aimed at the sidewalk. Flow at the outlet is about 5 gallons a minute, and it cannot be aimed at all. The first person to walk under it is a neighbor returning a casserole dish.' },
+  { band:4, kind:'score', maxS:80.4, css:'ww6', label:'Driveway Moat',
+    icon:'🏰', desc:'One household lays a rolled-up tarp across the bottom of its driveway, runs a sprinkler behind it, and floods a strip about 3 inches deep and 12 feet wide. Anyone approaching the garage has to wade. It holds for 2 hours, until the water finds a way under the tarp and into the storm drain. The owner’s father backs out at 5:30 and considers the moat defeated.' },
+  { band:4, kind:'score', maxS:81.2, css:'ww6', label:'Sprinkler Minefield',
+    icon:'💦', desc:'Six lawn sprinklers are hidden under grass clippings in one front yard and connected to a single valve by the porch. When an attacker reaches the middle, all 6 open at once, covering about 1,200 square feet. The first test catches 3 enemies and the family cat. After that the enemy walks around the yard, which the defenders count as a win.' },
+  { band:4, kind:'score', maxS:82, css:'ww6', label:'Hose Reel Artillery',
+    icon:'🎯', desc:'A wall-mounted hose reel is unbolted and fitted to a wagon, with 100 feet of hose and a jet nozzle set to its narrowest stream. At house pressure, around 50 psi, it reaches roughly 35 feet and needs 2 operators: one to aim and one to keep the hose from kinking. It outranges nothing but outlasts everything, since its tank is the city. The reel goes back on the wall each night before anyone’s father gets home.' },
+  { band:4, kind:'score', maxS:82.8, css:'ww6', label:'Pump Patent Dispute', pump:true,
+    icon:'📜', desc:'Two households both claim the pump on the corner’s best soaker as their own design: 1-inch bore, 6-inch stroke, about 2.6 ounces a stroke. The case is heard on a porch by a panel of 3 older kids. The original is entered as evidence: graph paper at 4 squares to the inch, folded into 8 and dated in crayon. The panel rules for the kid who drew it and grants the other household production rights, on the condition of a credit line on every stock in marker.' },
+  { band:4, kind:'score', maxS:83.6, css:'ww6', label:'Two-Stage Pressure',
+    icon:'🔧', desc:'A garage workshop adds a second, smaller pump barrel that tops up the main chamber after it is charged, pushing pressure past anything the original tank was built to hold. A kid records 58 feet on a tape measure, then 61, then a burst hose at 64. The rig is repaired with electrical tape 3 times in one afternoon. Everyone agrees it is the future, and nobody wants to stand next to it.' },
+  { band:4, kind:'score', maxS:84.4, css:'ww6', label:'Elastic-Bladder Soakers',
+    icon:'🧪', desc:'A new design stores pressure in a stretched rubber bladder instead of compressed air, so the stream stays strong until the tank is almost empty. It fires about 1 liter in 20 seconds at a steady 40 feet, with no fade at the end. The air-pressure crowd calls it a gimmick for 2 days and then acquires 3 of them.' },
+  { band:4, kind:'score', maxS:85.2, css:'ww7', label:'Constant-Pressure Chamber',
+    icon:'⚙️', desc:'Someone builds a chamber that is filled straight from the hose at full house pressure, about 50 psi, and released at a steady rate through a trigger valve. The tank holds 2 liters and refills in 15 seconds at the spigot, against 60 pumps for the old soakers. Pumping is now a skill nobody needs. The kids with the strongest arms on the block lose their standing overnight.' },
+  { band:4, kind:'score', maxS:86, css:'ww7', label:'Neighbor\'s Pool Treaty',
+    icon:'🏊', desc:'The only in-ground pool on the block holds about 20,000 gallons, and its owners are adults who never agreed to anything. A treaty is negotiated through the fence: the alliances may draw up to 5 buckets a day in exchange for keeping all balloon fragments out of the skimmer. Violations are reported by a retired neighbor in a lawn chair. Two buckets in, the treaty is already in dispute over what counts as a bucket.' },
+  { band:4, kind:'score', maxS:86.8, css:'ww7', label:'Pool Party Summit',
+    icon:'🎉', desc:'Leaders of both alliances are invited to a Sunday pool party by a parent who does not know there is a war. Weapons are checked at the gate in a laundry basket, 11 in total. Over 3 hours the delegates agree on a no-fire zone around the grill and nothing else. The summit ends when a cannonball off the diving board lands 2 feet from the east side’s leader and is ruled accidental by a vote of 4 to 3.' },
+  { band:4, kind:'score', maxS:87.6, css:'ww7', label:'Chlorine Diplomacy',
+    icon:'⚗️', desc:'Pool water, at about 3 parts per million of chlorine, is found to sting the eyes more than hose water and to fade a green shirt in 1 afternoon. Both sides agree it is a different category of weapon. A convention is signed banning chlorinated water above the shoulders. Compliance is high, since the pool owner can revoke bucket rights for the whole block in 1 sentence.' },
+  { band:4, kind:'score', maxS:88.4, css:'ww7', label:'Water Bill Crisis',
+    icon:'💸', desc:'The monthly bill arrives at the house with the splitter manifold. Usage is up about 9,000 gallons over the same month last year, which at around 7 dollars per 1,000 gallons is a 63 dollar line item that nobody can explain away. The lemonade treasury holds 11 dollars. A hearing is held at the kitchen table, and the manifold is confiscated pending review.' },
+  { band:4, kind:'score', maxS:89.2, css:'ww7', label:'Parental Intervention',
+    icon:'👪', desc:'Parents from 5 households meet on a driveway at 8 in the evening, which is the first time some of them have met. They set rules: fighting only between 10 and 7, no balloons after dark, and no water anyone has to pay for without asking. The kids are informed by the youngest sibling, who was listening from behind a recycling bin. Compliance is total for about 36 hours.' },
+  { band:4, kind:'score', maxS:90, css:'ww7', label:'Spigot Map',
+    icon:'🗺️', desc:'With home water rationed, the kids chart every outdoor spigot within 4 blocks on the back of a placemat. The map shows 37 spigots, color-coded by whether the owner is home during the day, owns a dog, or has ever yelled. Only 6 are starred as usable. The map is copied by hand twice, and one copy is lost to the enemy by Thursday.' },
+  { band:4, kind:'score', maxS:90.8, css:'ww7', label:'Spigot Key Black Market',
+    icon:'🔑', desc:'Several of the starred spigots turn out to have their handles removed, leaving a square stem that needs a key. A spigot key costs about 8 dollars at the hardware store, which no one under 12 can reach without a ride. Keys are rented by the hour at 1 dollar, or 3 freezer pops. By the end of the week 2 are in circulation, and 1 is held by a kid who has no side and is doing very well.' },
+  { band:4, kind:'score', maxS:91.6, css:'ww7', label:'Night Raid',
+    icon:'🌙', desc:'At 9:40 at night, 4 east-side kids cross 2 backyards in socks and open the valve on the west’s sprinkler minefield all the way. It runs for 7 hours. The west wakes to a lawn that squelches and a stockpile of 60 balloons floating in the basket where they were stored. Nobody is hit, and it is still considered the worst thing done all summer.' },
+  { band:4, kind:'score', maxS:92.4, css:'ww7', label:'Glow-Stick Balloons',
+    icon:'✨', desc:'To fight after dark in defiance of the parental rules, someone snaps a glow stick into each balloon before filling it. Each stick costs about 20 cents and turns a 6-inch balloon into a green tracer. The rounds can now be seen coming from 40 feet, which defeats the point, and by parents from 200 feet, which ends the night. It is the first technology banned by both sides and the adults at once.' },
+  { band:4, kind:'score', maxS:93.2, css:'ww7', label:'Summer Camp Raid',
+    icon:'⛺', desc:'A day camp from a church 3 blocks over walks 26 campers to the park at the same hour the east alliance is resupplying at the park spigot. The campers are armed with 2 buckets and camp-issued sponges and outnumber the alliance roughly 4 to 1. Contact lasts 12 minutes and the spigot is lost for the afternoon. The counselors file an incident report, the first document about the war written by anyone over 18.' },
+  { band:4, kind:'score', maxS:94, css:'ww7', label:'Garden Collateral',
+    icon:'🥀', desc:'A tally of collateral damage is taken for the first time: 1 flattened tomato cage, 14 trampled impatiens, a hydrangea that has drifted from pink toward blue for reasons nobody can prove, and a zucchini patch that has never been happier. The gardens that got watered outnumber the ones that got damaged 3 to 1. Only the damaged ones complain.' },
+  { band:4, kind:'score', maxS:94.8, css:'ww7', label:'HOA Complaint',
+    icon:'📋', desc:'The homeowners association receives a written complaint citing 3 bylaws: standing water, unsightly objects in yards, and noise before 8 in the morning. It runs 2 pages and includes a photograph of a laundry basket. A warning letter is issued to 4 addresses and posted on the mailbox cluster. It is taken down within an hour and reused as a target.' },
+  { band:4, kind:'score', maxS:95.6, css:'ww7', label:'Neighborhood Watch Recruited',
+    icon:'👀', desc:'The neighborhood watch, 7 adults with a group text, is asked to report water activity alongside its usual prowlers and package thefts. In the first week it logs 22 sightings, 19 of them children with buckets and 3 of them a sprinkler on a timer. One member is found to be supplying the west alliance with ice. The group text is renamed twice.' },
+  { band:4, kind:'score', maxS:96.4, css:'ww7', label:'Ice Cream Truck Ceasefire',
+    icon:'🍦', desc:'At 3:30 the ice cream truck turns onto the street playing its tune, and all fire stops within about 10 seconds by unspoken agreement. Both sides line up at the window in a single queue, holding a combined 23 dollars. The truck stays 6 minutes. A kid holding a full balloon eats a cone one-handed rather than break the truce, and fire resumes once the music fades below hearing.' },
+  { band:4, kind:'score', maxS:97.2, css:'ww7', label:'Hydrant Diplomacy',
+    icon:'🧯', desc:'The yellow fire hydrant at the corner is noticed as a strategic asset for the first time. Opened, it would put out more than 1,000 gallons a minute, roughly 100 garden hoses at once. Nobody owns the 5-sided wrench it takes, and nobody is sure whose side it is on. Both alliances post a sentry on it anyway, and the 2 sentries spend the afternoon talking about bikes.' },
+  { band:4, kind:'score', maxS:98, css:'ww7', label:'Sprinkler-Cap Hydrant',
+    icon:'⛲', desc:'A parent calls the city and learns there is a lawful version: a sprinkler cap bolted onto the hydrant by the fire department, throttling flow to about 25 gallons a minute through a spray head. The request form is 2 pages and needs an adult sponsor. It is approved for a Saturday from 1 to 4. For those 3 hours the war is suspended and everyone stands in the same spray.' },
+  { band:4, kind:'score', maxS:98.8, css:'ww7', label:'Fire Department Visit',
+    icon:'🚒', desc:'An engine company arrives with 4 firefighters to install the cap. Before fitting it they flush the hydrant wide open for 30 seconds to clear the rust, putting about 500 gallons into the gutter, and every kid on the block watches. No soaker, manifold, or moat ever looks the same again. The firefighters leave after 20 minutes with 2 cups of lemonade, paid for out of the treasury.' },
+  { band:4, kind:'score', maxS:99.6, css:'ww7', label:'Hydrant Cap Treaty',
+    icon:'🕊️', desc:'Both alliances sign a treaty governing the capped hydrant: equal time in 15-minute shifts, no tampering with the cap, and no balloons filled from it, on the theory that the city agreed to a sprinkler and nothing more. It is witnessed by 2 parents and stapled to the fire department’s form. The treaty holds for all 4 approved Saturdays. It is the first agreement of the war that anyone over 30 has read.' },
+  { band:4, kind:'score', maxS:100.4, css:'ww7', label:'Block Party Armistice',
+    icon:'🌭', desc:'The street closes for the annual block party, with 2 sawhorses and a permit, and an armistice is signed on a folding table between the potato salad and the beanbag toss. Terms: both alliances dissolve, the spigot keys are returned, and the water bill is split 5 ways. About 60 people attend. The signing pen is used afterward to label the leftovers.' },
+  { band:4, kind:'score', maxS:101.2, css:'ww7', label:'Neighborhood Hegemony',
+    icon:'👑', desc:'When the armistice lapses in the next heat wave, one alliance emerges holding the pool rights, the treehouse tower, 3 of the 6 starred spigots, and a lemonade treasury that has reached 31 dollars. Nothing on the block happens without its approval, including a toddler’s birthday water table. Its leader is 11. The rest of the neighborhood pays tribute in freezer pops at a rate fixed on graph paper.' },
+  { band:4, kind:'score', maxS:102, css:'ww7', label:'The Long Summer',
+    icon:'☀️', desc:'The heat runs 41 days above 95 degrees, and the war settles into routine: skirmishes before lunch, a ceasefire at the truck, a raid most Fridays. The block has used an estimated 60,000 gallons beyond normal, about 420 dollars at city rates, and worn out 4 soakers and the grass along the sidewalk. Nobody remembers how it started. In the last week, someone notices that the splash pad at the city park, 2 blocks away, has run all summer with nobody defending it.' },
+  { band:5, kind:'score', maxS:103.7, css:'ww8', label:'Splash Pad Seized',
+    icon:'💦', desc:'At 97°F the neighborhood splash pad, which runs 60 gallons a minute through 14 ground jets, is taken by 9 children at 10:02 in the morning. They hold the center jet by standing on it in rotation, bending its 8-foot column sideways into the queue. The parks department’s posted rules, all 11 of them, are read aloud by a parent and then ignored. The pad shuts off on its timer at 8 in the evening, which both sides treat as a ceasefire.' },
+  { band:5, kind:'score', maxS:105.4, css:'ww8', label:'Public Pool Occupation',
+    icon:'🏊', desc:'At 108°F, in a city that owns more umbrellas than air conditioners, the municipal pool’s 380,000 gallons become the only cold thing for 3 miles. Capacity is 250, and the line at opening is 412. Those inside decline to leave, rotating through the shallow end in shifts and holding the lane ropes as a perimeter, while cannonballs go toward the deck about every 40 seconds. The staff extend hours to 10 at night rather than attempt an eviction.' },
+  { band:5, kind:'score', maxS:107.1, css:'ww8', label:'Lifeguard Neutrality',
+    icon:'🛟', desc:'The 4 lifeguards on duty issue a joint statement from the high chair: they are not taking sides, and they will blow the whistle on anyone who runs. Their jurisdiction ends exactly at the edge of the deck, 6 feet past the gutter. In 3 hours they blow the whistle 212 times, split evenly between factions, which both factions cite as proof of bias. The lifeguards each drink 2 gallons of water and remain neutral.' },
+  { band:5, kind:'score', maxS:108.8, css:'ww8', label:'Cooling Center Sanctuary',
+    icon:'📚', desc:'The library opens as a cooling center, held at 68°F, with 120 folding chairs and 3 water coolers. By general agreement it is sanctuary: nothing may be thrown inside, and loaded soakers go in a bin by the door, which holds 27 of them by 2 in the afternoon. Combatants from both sides sit 4 feet apart reading the same magazine. The truce inside is total and ends at the automatic doors.' },
+  { band:5, kind:'score', maxS:110.5, css:'ww8', label:'Open Hydrant Summer',
+    icon:'🌊', desc:'Someone opens the hydrant on the corner, and 1,100 gallons a minute cross the street in a white fan 40 feet wide. In 1 hour that is 66,000 gallons, about a sixth of the public pool, delivered to a single block free of charge. Children stand in it, cars drive through it slowly with the windows down, and the water department logs the pressure dip within 4 minutes. The hydrant is closed by 3 in the afternoon and open again by 5.' },
+  { band:5, kind:'score', maxS:112.2, css:'ww8', label:'Hydrant Wrench Guild',
+    icon:'🔧', desc:'The hydrant’s operating nut is a pentagon, 1.5 inches point to flat, chosen specifically so that ordinary wrenches won’t fit it. An association of people who own the right wrench forms within 1 week. Membership is 7, dues are unspoken, and the wrenches cost about $30 each. The guild agrees to open hydrants only with a spray cap fitted, cutting flow to 25 gallons a minute, a concession the water department did not ask for and does not acknowledge.' },
+  { band:5, kind:'score', maxS:113.9, css:'ww8', label:'Street-Wide Mist',
+    icon:'🌫️', desc:'The city installs misting poles along 6 blocks of the commercial strip, 1 nozzle every 3 feet, each putting out half a gallon an hour in droplets fine enough to evaporate before they land. The air under the mist drops about 10°F. Both factions claim the misting line as a supply route and walk its length repeatedly, a 0.4-mile march that takes 9 minutes. Nobody gets wet, and the corridor becomes the busiest neutral zone in the war.' },
+  { band:5, kind:'score', maxS:115.6, css:'ww8', label:'Water Main Pressure Drop',
+    icon:'📉', desc:'With 31 hydrants open across the district, system pressure falls from 65 psi to 22. Second-floor showers stop producing water, and the fire department notes, in writing, that 20 psi at the hydrant is the least it needs to fight a fire. The city asks residents to close hydrants in the interest of public safety. Within the hour 19 are closed; the other 12 are declared strategic.' },
+  { band:5, kind:'score', maxS:117.3, css:'ww8', label:'Fire Engine Deluge',
+    icon:'🚒', desc:'Faced with hydrants it cannot keep closed, the fire department parks an engine at the block party and opens it up on purpose. The pump moves 1,500 gallons a minute through a sprinkler attachment at a controlled 50 psi, and 300 residents stand under it for 45 minutes. It is officially a community cooling event. Both factions regard it as the fire department choosing a side, and neither can work out which one.' },
+  { band:5, kind:'score', maxS:119, css:'ww8', label:'Deck Gun Diplomacy',
+    icon:'🕊️', desc:'The deck gun on top of the engine can put 1,200 gallons a minute onto a point 200 feet away, which is farther than any faction’s perimeter. The captain elevates it to 45 degrees and does not fire. Its presence alone ends 2 separate standoffs in 20 minutes. Negotiations held within its reach are unusually brief, and the resulting agreement fits on 1 index card.' },
+  { band:5, kind:'score', maxS:120.7, css:'ww8', label:'Ladder Truck Rain',
+    icon:'🪜', desc:'An aerial ladder extends 100 feet over the park at a 70-degree angle and fogs its nozzle straight up. The water comes down as artificial rain over a circle about 90 feet across, at a rate that registers 3 inches an hour on a rain gauge someone has brought. For the first time, 2 factions stand under the same weather. The rain stops after 30 minutes when the truck is dispatched to an actual call, and the grass is dry again by 4:15.' },
+  { band:5, kind:'score', maxS:122.4, css:'ww8', label:'Fountain Occupation',
+    icon:'⛲', desc:'The civic fountain in the downtown plaza, 60 feet across and 18 inches deep, is waded into by 40 people despite 4 signs forbidding it. Its pumps turn over the whole basin, about 30,000 gallons, every 2 hours, which the occupiers treat as a free resupply. The central jet reaches 25 feet and is contested at close range. Security asks politely twice, then brings a folding chair and watches.' },
+  { band:5, kind:'score', maxS:124.1, css:'ww8', label:'Reflecting Pool Front',
+    icon:'🪞', desc:'The reflecting pool in front of the government building is 400 feet long and 2 feet deep, designed for looking at rather than standing in. Wading parties enter from both ends at 11 in the morning and meet at the midpoint, which becomes a front line marked by a floating flip-flop. The water is 88°F, barely cooler than the crowd. The building’s reflection is not seen again for 6 days.' },
+  { band:5, kind:'score', maxS:125.8, css:'ww8', label:'River Beach Landing',
+    icon:'🏖️', desc:'Unable to hold the fountains, one faction moves to the river, landing 23 people and 4 inflatable rafts on a gravel bar at 9:40 in the morning. The river runs 64°F at 3 miles an hour, which the landing party underestimates by about 2 miles an hour. Fighting on the bar is done with 5-gallon buckets, the first weapons in the war too heavy to aim. The county posts a swift-water advisory, and the beach is abandoned by sunset.' },
+  { band:5, kind:'score', maxS:127.5, css:'ww8', label:'Fireboat Salute',
+    icon:'🚢', desc:'The harbor fireboat, rated at 20,000 gallons a minute from its monitors, goes out for a scheduled salute and puts up 8 arcing columns over the river. The spray drifts 300 feet downwind onto the beach party, soaking all 23 of them in about 11 seconds. It is not known whether this was aimed. The department describes it as ceremonial, and the beach party records it as the largest single hit of the war.' },
+  { band:5, kind:'score', maxS:129.2, css:'ww8', label:'Water Tower Siege',
+    icon:'🗼', desc:'The neighborhood water tower holds 1,000,000 gallons 150 feet up, which is what gives every tap below it about 65 psi. For 3 days a group camps at its fenced base, gauging the tank by the sound of the overflow pipe and debating whether it could be drained all at once. It could not; the valve is locked and 0.8 miles away. The siege succeeds only in getting the utility to install a camera and 2 more padlocks.' },
+  { band:5, kind:'score', maxS:130.9, css:'ww8', label:'Utility Board Hearings',
+    icon:'🏛️', desc:'The water utility board holds a hearing on hydrant losses, estimated at 14 million gallons for the month. 212 residents sign up to speak at 3 minutes each, which is 10.6 hours, and the board allots 2. Testimony divides along faction lines, except for 1 speaker who reads the water tower’s pressure logs aloud in full and receives the only applause. The hearing is continued to the following Tuesday, when it is 104°F.' },
+  { band:5, kind:'score', maxS:132.6, css:'ww8', label:'Watering Restrictions',
+    icon:'🌱', desc:'The utility bans lawn sprinklers between 10 in the morning and 6 in the evening, with fines starting at $50. The reporting line takes 1,840 calls in the first week, 71% of them about neighbors on the other side of the war. Inspectors issue 38 warnings. Within 12 days every front lawn on both sides of the street has gone the same shade of tan, the first thing the factions have agreed on.' },
+  { band:5, kind:'score', maxS:134.3, css:'ww8', label:'Odd-Even Days',
+    icon:'📅', desc:'Watering is now assigned by address: odd house numbers on Tuesdays and Saturdays, even numbers on Wednesdays and Sundays, before 8 in the morning only. The street divides accordingly, and the war finally has a calendar. On a Wednesday, the household at number 1418 hoses the household at 1417 and cites the ordinance. Nobody may water on Monday, Thursday, or Friday, which become the war’s rest days.' },
+  { band:5, kind:'score', maxS:136, css:'ww8', label:'Pressure Rationing',
+    icon:'🚰', desc:'To stretch supply, the utility turns the whole system down from 60 psi to 35. Showers lose about a third of their flow, garden hoses reach 15 feet instead of 30, and upstairs sinks run in a thin thread. Every weapon connected to a spigot is weakened by the same fraction at the same moment. It is the most evenhanded thing that has happened in the war, and both sides complain about it at the next hearing.' },
+  { band:5, kind:'score', maxS:137.7, css:'ww9', label:'Bottled Water Hoard',
+    icon:'📦', desc:'After 31 straight days at or above 110°F, with nights that do not fall below 90, the war stops being about throwing water and starts being about having it. Households buy it by the case, 24 bottles of half a liter each, about 3 gallons, and a single garage is found holding 86 cases. Shelves clear by 7 in the morning and restock at 2 in the afternoon from a truck that is met in the parking lot. Nobody throws a bottle; the water that was ammunition in June is now counted, stacked, and kept out of the sun.' },
+  { band:5, kind:'score', maxS:139.4, css:'ww9', label:'Ice Shortage',
+    icon:'🧊', desc:'Every bag of ice within 5 miles is sold by noon, at $3.49 for 10 pounds until it is $6. The ice machine at the gas station makes 400 pounds a day and has a line of 17 people with coolers at 6 in the morning. Ice is no longer thrown or dropped down shirts or used for any tactical purpose; it goes into the coolers of people who need their medicine kept cold. The factions wait in the same line and do not speak.' },
+  { band:5, kind:'score', maxS:141.1, css:'ww9', label:'Swamp Cooler Bargain',
+    icon:'🌬️', desc:'The evaporative cooler on 1 roof drinks about 10 gallons an hour on a dry day to keep a house 20°F below the outside air. Its owner, who is on the other side of the war, offers a trade: a hose tap to keep the cooler filled, in exchange for a 3-day halt to hostilities on the block. The terms are written on the back of a utility bill and signed by 4 households. It is the first treaty of the war to trade water for peace instead of the reverse.' },
+  { band:5, kind:'score', maxS:142.8, css:'ww9', label:'Grid Truce',
+    icon:'⚡', desc:'The grid operator posts an emergency alert: demand is at 98% of capacity, and the treatment plant’s pumps run on the same electricity as the air conditioners. Both factions agree to set thermostats at 78°F from 4 to 9 in the evening. The truce is kept by 83% of households, visible on the utility’s dashboard as a 40-megawatt dip. For those 5 hours the war’s whole arsenal sits in the garage, unfilled and unfired.' },
+  { band:5, kind:'score', maxS:144.5, css:'ww9', label:'Pump Station Garrison',
+    icon:'🏭', desc:'The neighborhood booster station, a brick building with 3 pumps moving 4,000 gallons a minute each, loses power for 22 minutes in a rolling blackout, and pressure on the hill drops to nothing. The next day a garrison of 6 residents from both sides sits outside the station with folding chairs and a cooler, guarding nothing in particular. The utility installs a 500-kilowatt backup generator within the week. The garrison takes credit.' },
+  { band:5, kind:'score', maxS:146.2, css:'ww9', label:'Canal Front',
+    icon:'🛶', desc:'The war reaches the irrigation canal at the edge of town, 40 feet wide and 6 feet deep, carrying 800 cubic feet a second of water that belongs to farmers 30 miles downstream. Swimming in it is illegal and dangerous, and posted as such every 500 feet. The factions confine themselves to filling buckets from the concrete lip and throwing them across, a range of exactly 1 canal. The ditch rider patrols in a pickup twice a day and writes down license plates.' },
+  { band:5, kind:'score', maxS:147.9, css:'ww9', label:'Drainage Ditch Trenches',
+    icon:'🪖', desc:'With the canal patrolled, fighting drops into the drainage ditches, 4 feet deep, which run behind 3 subdivisions and hold no water at all. They are good for cover and for nothing else. Each side digs a sump in the bottom and fills it from a 50-foot garden hose, producing a puddle of about 20 gallons that evaporates in 90 minutes. The war now has trenches, and they are the driest places in it.' },
+  { band:5, kind:'score', maxS:149.6, css:'ww9', label:'Stormwater Tunnels',
+    icon:'🕳️', desc:'Beneath the ditches runs the storm drain system: concrete pipes 6 feet across, dry for 97 days and 7°F cooler than the street. A faction discovers that a whisper at 1 grate can be heard 800 feet away at the next. Nobody fights inside, because the grates are welded shut and a single thunderstorm could fill the pipes in 10 minutes. The tunnels are used for acoustic intelligence only, gathered by lying on the pavement with an ear to the grate.' },
+  { band:5, kind:'score', maxS:151.3, css:'ww9', label:'Center-Pivot Artillery',
+    icon:'🌾', desc:'A farmer’s center-pivot irrigator, a quarter mile long on 8 wheeled towers, sweeps a 125-acre circle every 20 hours at about 800 gallons a minute. A faction from town learns its schedule and times raids so the outer end passes over them at 11 in the morning. At 9 feet up and about 7 feet a minute, it is the slowest heavy artillery ever fielded and the most accurate. Asked about it, the farmer says he does not care as long as the corn gets watered.' },
+  { band:5, kind:'score', maxS:153, css:'ww9', label:'Crop Duster Air Raid',
+    icon:'✈️', desc:'An agricultural pilot, contracted to spray fields 2 miles out, is persuaded by $200 and a case of cold drinks to make 1 pass over the park with a 300-gallon hopper of plain water. The plane crosses at 110 miles an hour and releases in 4 seconds. The load spreads into a 60-foot swath of drizzle that reaches the ground mostly as a rumor. The aviation authority calls on Monday, and the pilot does not do it again.' },
+  { band:5, kind:'score', maxS:154.7, css:'ww9', label:'Snowmaking Guns Recalled',
+    icon:'❄️', desc:'A ski area 90 miles away, closed for the season, lends the town 2 snowmaking guns, each a fan the size of a small car that atomizes 100 gallons a minute. At 96°F nothing freezes; the guns produce a cold fog that brings the park down to 81°F within 50 feet of the nozzles. Both factions stand in the same cloud. The resort recalls the guns after 4 days, citing its electric bill, which the town agrees to split.' },
+  { band:5, kind:'score', maxS:156.4, css:'ww9', label:'Water Cannon Trucks',
+    icon:'🚛', desc:'The city brings out 2 water cannon trucks, on loan from the county, and assigns them to mobile cooling. Each carries 2,400 gallons and throws 300 gallons a minute to 150 feet, set to a wide fog. They make scheduled stops at 12 intersections, 10 minutes each, posted on the city website. The factions attend every stop and stand on opposite curbs, and the trucks, by design, spray the middle.' },
+  { band:5, kind:'score', maxS:158.1, css:'ww9', label:'City Council Arbitration',
+    icon:'🗳️', desc:'The city council takes up the war as agenda item 14, after a zoning variance and before the dog park. It rules 5 to 2 that hydrants may be opened only with city spray caps, that the fire department will run 3 cooling events a week, and that both factions will sit on a new 9-member heat committee. The committee meets once, in the library, at 68°F. Its minutes run to 11 pages and contain no water.' },
+  { band:5, kind:'score', maxS:159.8, css:'ww9', label:'Municipal Pump Standard', pump:true,
+    icon:'📐', desc:'The pump from the graph paper, still drawn at 4 squares to the inch, is scaled up by a factor of 12: the 1-inch bore becomes 12 inches and the 6-inch stroke becomes 72, keeping the proportions exact. One pull now moves about 8,120 cubic inches, roughly 35 gallons, instead of 2.6 ounces. The council adopts it as the reference design for emergency hand pumps and writes it into the city code as Section 14-212. The original sheet is entered into the record as Exhibit A, and nobody asks who drew it.' },
+  { band:5, kind:'score', maxS:161.5, css:'ww9', label:'Pump Works',
+    icon:'⚙️', desc:'A shop in the industrial park tools up to build the standard pump, casting a 12-inch cylinder and fitting a handle that takes 2 adults to pull through its full stroke. The first 10 units ship to fire stations and cooling centers at $4,800 each. Each fills a 55-gallon drum in 2 strokes, with some left over. The shop hires 14 people and hangs the original diagram, framed, on the wall by the time clock.' },
+  { band:5, kind:'score', maxS:163.2, css:'ww9', label:'Reservoir Rumors',
+    icon:'💧', desc:'The city reservoir, 6 miles north, stands at 41% of capacity, and a rumor spreads that it will be empty in 19 days. The utility’s actual figure is 140 days at current use, but the rumor is shared 22,000 times and the correction 900. People drive out to look at the exposed shoreline, a pale band 30 feet tall. Each faction accuses the other of starting the rumor, and both are partly right.' },
+  { band:5, kind:'score', maxS:164.9, css:'ww9', label:'Regional Compact',
+    icon:'🤝', desc:'The city and 4 neighboring towns sign a regional water compact at 2:30 in the afternoon in an air-conditioned hotel ballroom. It sets shared drought triggers, moves 3,000 acre-feet between systems, and pledges that no town will cool a neighbor’s children with its hydrants without asking first. The document is 64 pages long. The children, who were not consulted, keep fighting under whichever town’s pressure is highest that day.' },
+  { band:5, kind:'score', maxS:166.6, css:'ww9', label:'Water Rights Court',
+    icon:'⚖️', desc:'A farmer 30 miles downstream sues the city over the canal, citing a water right dated 1911 that predates the city’s by 36 years. Under the rule of first in time, first in right, the older claim is served first in a shortage, and the judge agrees. The city must release 1,200 acre-feet it had planned to keep. Hydrants in town get locking caps the next week, and the war’s oldest grievance turns out to belong to someone else.' },
+  { band:5, kind:'score', maxS:168.3, css:'ww9', label:'Metro Hegemony',
+    icon:'🏙️', desc:'The metro water authority absorbs 11 smaller utilities and now serves 2.3 million people from a single control room. Every tap, hydrant, splash pad, and cooling center in the war answers to 1 set of pressure setpoints. The neighborhood factions discover that their real opponent is a dispatcher on a 12-hour shift who can lower their pressure by 10 psi with a mouse click. They send a joint letter, and it is logged.' },
+  { band:5, kind:'score', maxS:170, css:'ww9', label:'The Hot Summer',
+    icon:'☀️', desc:'The summer ends with 67 days over 100°F, 3 rolling blackouts, 2 lawsuits, 1 compact, and a pump standard in the city code. The utility reports it delivered 9% more water than in any year on record and still ran short. Nobody can say who won; the splash pad is back on its timer and the hydrants wear locks. The one thing everyone agrees on is the next fight: the water comes down a pipe 233 miles long, and the pipe is not the city’s.' },
+  { band:6, kind:'score', maxS:179.17, css:'ww10', label:'Aqueduct Seizure',
+    icon:'🏛️', desc:'The war outgrows the block and takes its first piece of real infrastructure: an aqueduct 233 miles long that runs downhill on gravity the whole way. The seizing faction holds 1 intake gate for 36 hours with 11 people and a folding table. Nobody downstream notices for 2 days, because the channel still has that much water in transit. The occupiers learn that owning the pipe is not the same as owning what is in it.' },
+  { band:6, kind:'score', maxS:188.84, css:'ww10', label:'River Diversion',
+    icon:'🏞️', desc:'An upstream faction cuts a diversion channel 1,400 feet long and pulls 40 cubic feet per second off a river carrying 310. The downstream side files a complaint, then a second complaint, then digs its own channel 2 miles farther down to take back 25. Both channels are dry by August. The river has meanwhile become the most litigated 9 miles in the county.' },
+  { band:6, kind:'score', maxS:199.03, css:'ww10', label:'Dam Occupation',
+    icon:'🧱', desc:'A concrete dam 210 feet high is occupied by a faction with no idea how to run it. They hold the control room for 3 days and open no gates, because the operating manual is 640 pages and the first 80 are about safety. The reservoir behind them rises 4 inches from inflow alone. They leave having changed nothing but the control room thermostat, which they set to 68.' },
+  { band:6, kind:'score', maxS:209.76, css:'ww10', label:'Great Lakes Compact',
+    icon:'🌊', desc:'Eight states and 2 provinces bind themselves to a compact over roughly 5,400 cubic miles of fresh water and agree that almost none of it may leave the basin; ratification takes 3 years. Heat at this tier looks like the 2021 Pacific Northwest dome: 116°F in a city built for summers near 80, where the contest is not over who gets wet but over who can reach a cooling center. The compact holds. The lakes do not move an inch.' },
+  { band:6, kind:'score', maxS:221.08, css:'ww10', label:'Colorado River Treaty',
+    icon:'🏜️', desc:'The 1922 split is reopened: about 15 million acre-feet a year, divided among 7 states on the assumption that the river carries that much. It does not, and has not for most of a century. The negotiators meet in a hotel ballroom kept at 71°F and spend 11 days on the last 200,000 acre-feet. The treaty is signed, and the river goes on delivering about 12 million.' },
+  { band:6, kind:'score', maxS:233.01, css:'ww10', label:'Aquifer Drilling Race',
+    icon:'🕳️', desc:'Both factions drill for the same aquifer, 380 feet down, from lots 60 feet apart. Each new well lowers the other’s water, so the race becomes one of depth: 500 feet, then 720, then a rig rented at $38,000 a week. The aquifer took about 10,000 years to fill and now drops 3 feet a year from the contest alone. Both sides describe their pumping as sustainable.' },
+  { band:6, kind:'score', maxS:245.58, css:'ww10', label:'Pipeline Campaign',
+    icon:'🔧', desc:'The campaign lays a pipeline: 48-inch steel, 186 miles, at about 1 mile a day, with crews working only before 10 in the morning. Heat at this tier matches Chicago in July 1995, 106°F in the shade, nights that never cooled, and upper-floor apartments with windows painted shut. The lesson that city learned was to knock on doors, and the pipeline authority adopts it as policy. The line is finished 7 months late, which the annual report calls a schedule adjustment.' },
+  { band:6, kind:'score', maxS:258.83, css:'ww10', label:'Tanker Convoys',
+    icon:'🚛', desc:'Water moves by road now, in convoys of 9 tanker trucks at 6,500 gallons each, running a 140-mile loop twice a day. A convoy delivers about 117,000 gallons daily and burns 1,100 gallons of diesel doing it. A rival faction sets up a checkpoint at the county line and charges a toll of 1 bottle per truck. The toll is paid, logged, and eventually audited.' },
+  { band:6, kind:'score', maxS:272.8, css:'ww10', label:'Water Barons',
+    icon:'🎩', desc:'Control consolidates into 4 families who hold the rights, the wells, and the trucks. A baron’s holdings are measured in acre-feet, and the largest claims 340,000 of them on the strength of a filing from 1887. Water sells at $1,200 an acre-foot in a dry year and $2,900 in a drier one. The barons meet quarterly, never in summer, and always somewhere with a lake view.' },
+  { band:6, kind:'score', maxS:287.51, css:'ww10', label:'Canal Empire',
+    icon:'🛶', desc:'The barons’ holdings are joined by open canal: 1,100 miles of it, concrete-lined, 40 feet wide at the top and falling about 1 foot per mile. Under desert sun an open canal loses roughly 6 feet of depth a year to evaporation, so much of the empire’s effort goes to watering the sky. Boundaries are redrawn to follow the canals. The canals follow the gradient, which nobody negotiated with.' },
+  { band:6, kind:'score', maxS:303.03, css:'ww10', label:'Aquifer Fortress',
+    icon:'🏰', desc:'One faction stops competing for surface water and walls off an aquifer instead: 14 wells inside a fenced compound of 2,600 acres, watched by 38 sensors that report the water table every 15 minutes. At current rates the fortress can pump for 11 years before the water falls below its intakes. The fence cost $6 million. The aquifer extends 40 miles past it in every direction, which the fence does not address.' },
+  { band:6, kind:'score', maxS:319.37, css:'ww10', label:'Reservoir Kingdom',
+    icon:'👑', desc:'The largest reservoir in the region, about 26 million acre-feet at full pool, is declared a kingdom with its throne room in the dam. Full pool has not been seen in 40 years, and the bathtub ring on the canyon walls, about 150 feet tall, serves as the official history. Succession is set by elevation: below 1,050 feet above sea level, the crown passes to a committee. The committee meets weekly.' },
+  { band:6, kind:'score', maxS:336.61, css:'ww10', label:'Cloud Seeding Arms Race',
+    icon:'☁️', desc:'The war goes airborne. Twin-engine aircraft fly into passing cumulus and burn silver iodide flares, a technique that at best adds 5 to 15 percent to rain from clouds that were likely to rain anyway. Both sides send 6 planes into the same storm, and both claim the 0.4 inches that falls. A neutral rain gauge is installed on the border and knocked over within 3 weeks.' },
+  { band:6, kind:'score', maxS:354.77, css:'ww10', label:'Silver Iodide Embargo',
+    icon:'🥈', desc:'One side corners the supply of silver iodide, a yellow powder dispensed a few grams per flight, and declares an embargo. The stockpile covers 340 kilograms, enough for about 70,000 flares. The other side switches to dry ice, which works, and to table salt, which mostly does not. The embargo is lifted after 9 months with nobody able to prove it made a difference, which is also true of the seeding.' },
+  { band:6, kind:'score', maxS:373.91, css:'ww10', label:'Iceberg Towing',
+    icon:'🧊', desc:'A tabular iceberg 1 mile long, half a mile wide, and 1,000 feet thick is hooked to 3 oceangoing tugs and pulled toward a thirsty coast at 1 knot. The trip is 6,000 nautical miles and takes about 250 days, during which the berg loses roughly half its mass to warm water. What arrives still holds about 50 billion gallons. Nobody has built a way to get it ashore, which comes up at the first press conference.' },
+  { band:6, kind:'score', maxS:394.08, css:'ww11', label:'Desalination Coast',
+    icon:'🏭', desc:'The coast is lined with reverse-osmosis plants, each making about 50 million gallons a day by forcing seawater through membranes at around 800 psi. For every gallon kept, a plant returns roughly 1 gallon of brine at twice the salt of the sea. There are 14 plants on a 90-mile stretch, and the fish notice before the regulators do. The water is excellent and costs about $2,000 an acre-foot.' },
+  { band:6, kind:'score', maxS:415.34, css:'ww11', label:'Fog Harvesting Frontier',
+    icon:'🌫️', desc:'On coastal ridges where it almost never rains, mesh nets 40 meters long and 10 high are strung into the fog. At about 1 liter per square meter per day, one net yields 400 liters, enough for roughly 20 careful people. The frontier runs 30 miles of ridgeline, and claims are staked by the square meter. The first land dispute concerns a net standing in another net’s fog shadow.' },
+  { band:6, kind:'score', maxS:437.75, css:'ww11', label:'Dew Collectors Guild',
+    icon:'🌙', desc:'Below the fog line a guild forms around dew: cooled panels that radiate heat into a clear night sky and collect about 0.3 liters per square meter by dawn. Membership requires 100 square meters of panel and 3 years of logged sunrises. The guild’s 6,000 members produce roughly 180,000 liters a night, less than one desalination plant makes in 2 minutes. The guild charter describes this as artisanal.' },
+  { band:6, kind:'score', maxS:461.37, css:'ww11', label:'Atmospheric Water Mines',
+    icon:'⛏️', desc:'The air itself is mined. Refrigerated condensers the size of shipping containers pull about 2,000 liters a day each from humid air, burning roughly 0.5 kilowatt-hours per liter. A mine of 250 units yields 500,000 liters a day and draws as much power as a small town. Claims are filed on air masses by the cubic mile, and the claims leave at 12 miles an hour, which the registry has not yet solved.' },
+  { band:6, kind:'score', maxS:486.26, css:'ww11', label:'Monsoon Capture',
+    icon:'🌧️', desc:'The factions turn to the monsoon, which drops about 80 inches on a single basin in 4 months. Capture means catchment: 1,900 check dams, 60,000 rooftop cisterns, and a reservoir that fills in 11 days and spills on the 12th. Most of the rain still reaches the sea, where it was going. The captured share is 8 percent, which is enough to start a new war over the other 92.' },
+  { band:6, kind:'score', maxS:512.49, css:'ww11', label:'Hurricane Harvest',
+    icon:'🌀', desc:'A landfalling hurricane can drop on the order of 20 trillion gallons, and the harvest plan is to keep some of it. Spillways are opened in advance to make 900,000 acre-feet of room. The storm delivers more than that to 1 county in 36 hours, most of it into streets. The harvest is declared a partial success on the grounds that the reservoirs are, in fact, full.' },
+  { band:6, kind:'score', maxS:540.14, css:'ww11', label:'Continental Soak Grid',
+    icon:'🗺️', desc:'All of it is wired together: aqueducts, canals, pipelines, desalination plants, and dew panels, run from a single control room with 1,400 screens. The grid moves about 90 million acre-feet a year across 3 time zones, routing water by price the way electricity is routed by load. A valve closed in one state registers as a pressure surge 700 miles away. For the first time the whole continent could soak one neighborhood, and the neighborhood has asked it not to.' },
+  { band:6, kind:'score', maxS:569.29, css:'ww11', label:'Pump Dynasty', pump:true,
+    icon:'⚙️', desc:'The 12-inch municipal pump becomes the house design of a dynasty that now supplies 70 percent of the grid’s pumping stations. Every unit descends from the same drawing, a 1-inch bore and a 6-inch stroke scaled up by 12, so each stroke moves about 35 gallons, 1,728 times the original 2.6 ounces. The founding family attends every commissioning. The heirs are raised on graph paper at 4 squares to the inch and are discouraged from drawing anything else.' },
+  { band:6, kind:'score', maxS:600, css:'ww11', label:'The First Pump', pump:true,
+    icon:'🏺', desc:'The original prototype, a length of 1-inch PVC with a 6-inch stroke and a plunger wrapped in tape, is kept in a case held at 68°F and 45 percent humidity. It has not been primed in 31 years. Visitors get 90 seconds with it while a docent explains that it moves 2.6 ounces a stroke and could still do so if anyone were allowed to try. Nobody is. The tape is original and the subject of a long restoration debate.' },
+  { band:6, kind:'score', maxS:Infinity, css:'ww11', label:'Hydrologic Map Wars',
+    icon:'🧭', desc:'The last dispute before the heat turns lethal is over the map. Watershed boundaries are redrawn by 3 competing agencies using different elevation models, and they disagree on 11,000 square miles of drainage. A ridge line moved 40 feet on paper shifts 60,000 acre-feet a year from one side to the other. The maps are printed at 1:250,000 and argued over at 1:1.' },
+  { band:6, kind:'floor', test: x => x.T >= 130, css:'ww11', label:'Death Valley Standoff', trigger:'T ≥ 130°F',
+    icon:'☀️', desc:'The air reaches 130°F, near the highest temperature reliably measured on Earth, and the standoff is no longer between factions but between people and the afternoon. A person without water or shade can lose 5 percent of body weight in sweat in about 3 hours, and judgment goes first. Nobody sprays anyone. Both sides stop at the same well, fill every container they have, and wait out the hours from 11 to 6 under whatever roof is closest.' },
+  { band:6, kind:'floor', test: x => x.tw !== null && x.tw >= 33, css:'ww11', label:'Shade Treaty', trigger:'Tw ≥ 33°C',
+    icon:'⛱️', desc:'At this heat shade is the resource, cutting the load on a body in direct sun by the equivalent of 15°F or more. The treaty divides it by the square foot: every person is entitled to at least 20 square feet under cover between 10 in the morning and 7 at night, regardless of faction. Tarps, awnings, and underpasses are pooled. The treaty is 1 page long and has no enforcement clause, because nobody has broken it.' },
+  { band:6, kind:'floor', test: x => x.tw !== null && x.tw >= 34, css:'ww11', label:'Last Cool Water', trigger:'Tw ≥ 34°C',
+    icon:'🫗', desc:'The water in the tank is 71°F, the coolest left for 40 miles, and it is shared by measure: 250 mL every 15 minutes per person, about 1 liter an hour, which is what a body sweats out in this heat. Children and the old drink first. Nobody fills a bottle for later, and nobody spends a drop on throwing. The ledger that has counted every splash since the first flicked fingertip now records only who has had their share.' },
+  { band:6, kind:'floor', test: x => x.tw !== null && x.tw >= 35, css:'ww11', label:'Survivability Line', trigger:'Tw ≥ 35°C',
+    icon:'🌡️', desc:'The wet-bulb temperature reaches 35°C, about 95°F at full saturation, and sweat stops cooling anyone because it can no longer evaporate. Past this line a healthy, unshaded person has roughly 6 hours before core temperature climbs out of control, and for the old and sick the real limit may sit nearer 31°C. There are no factions on either side of it. What remains of the war is a rotation, every 30 minutes, of who sits nearest the fan, the cold floor, and the wet sheet.' },
+  { band:6, kind:'floor', test: x => (x.tw !== null && x.tw >= 36) || (x.hi !== null && x.hi >= 170), css:'ww11', label:'Dhahran Accord', trigger:'Tw ≥ 36°C',
+    icon:'🤝', desc:'Dhahran, Saudi Arabia, July 2003: a dew point of 95°F under 108°F air, and a heat index near 176°F, among the highest ever recorded. The accord drafted at this tier has 3 clauses: water is shared, shade is shared, and no one is left outside. It is signed by everyone still able to hold a pen. It is the last agreement of the water war that anyone keeps on purpose, and above 134°F the next page of the record is no longer history.' },
+  { band:7, kind:'fiction', minT:-Infinity, css:'ww12', label:'Evaporation Front',
+    icon:'🌫️', desc:'The Dhahran Accord holds for 6 days, which is long enough for the thermometer to reach 135°F and make it irrelevant. At this temperature a 2-ounce squirt fired at a target 20 feet away arrives about 10% lighter, and the difference is logged as a tax. Both sides agree that the air is now a third party to the war. The air does not sign anything.' },
+  { band:7, kind:'fiction', minT:140, css:'ww12', label:'Mid-Air Loss',
+    icon:'💨', desc:'At 140°F the tax becomes confiscation. A 3-ounce shot fired across a 30-foot street loses half its mass before the curb and the rest before the target, arriving as a warm breeze of no tactical value. Range tables are revised down to 11 feet. Anything farther than that is filed under weather.' },
+  { band:7, kind:'fiction', minT:150, css:'ww12', label:'Hot Tap Rounds',
+    icon:'🚰', desc:'At 150°F the cold tap and the hot tap run at the same temperature, and the hot tap is slightly faster. Hose rounds now leave the nozzle hot enough to scald on 2 seconds of contact, so targets dodge instead of soaking. For the first time in the war, being missed is the preferred outcome for both sides. Hits drop to 4 per afternoon, all of them apologized for.' },
+  { band:7, kind:'fiction', minT:180, css:'ww12', label:'Steam Rounds',
+    icon:'♨️', desc:'At 180°F a squirted round partly flashes to vapor within 3 feet of the nozzle, and the shooter is usually the first one hit. A 40-shot engagement produces 1 cloud, 0 confirmed hits, and 2 pairs of fogged glasses. Doctrine is amended to require aiming away from one’s own face. It is the first rule the war has written about its own side.' },
+  { band:7, kind:'fiction', minT:212, css:'ww12', label:'Boil-Over',
+    icon:'🫧', desc:'The air reaches 212°F, and every open container of water at sea level begins to boil without help. A 5-gallon bucket left on a porch empties itself in about 40 minutes while 3 people watch. Ammunition can no longer be stored, only observed leaving. Quartermasters start buying lids at $4 apiece.' },
+  { band:7, kind:'fiction', minT:230, css:'ww12', label:'Kettle Artillery',
+    icon:'🫖', desc:'At 230°F the kettle becomes the only vessel that still makes sense, since it was designed for this. Kettles are lobbed by hand over a 6-foot fence to an average range of 14 feet, each loaded with 1.5 quarts, of which about 1 cup arrives. The whistle gives 4 seconds of warning, which is considered sporting. Losses run to 9 kettles a week at $22 each.' },
+  { band:7, kind:'fiction', minT:250, css:'ww12', label:'Pressure Cooker Siege',
+    icon:'🍲', desc:'At 250°F the only liquid water on the block is inside pressure cookers holding 15 psi. Each side has one 6-quart cooker, and neither can open it without losing most of the contents as steam in about 2 seconds. The siege lasts 11 days. It consists of 2 households watching 2 pressure gauges across a lawn.' },
+  { band:7, kind:'fiction', minT:300, css:'ww12', label:'Geyser Farming',
+    icon:'⛲', desc:'At 300°F the war abandons the kitchen and goes after the ground. A large geyser puts out about 8,400 gallons per eruption, roughly 1,680 buckets, on a schedule that can be printed. The water flashes to steam 15 feet up, so neither side collects any of it; they fight over the schedule instead. Eruptions are allotted alternately, 90 minutes apart.' },
+  { band:7, kind:'fiction', minT:400, css:'ww12', label:'Superheated Jets',
+    icon:'🔥', desc:'At 400°F water stays liquid only in lines held above about 250 psi. Jets are fired from sealed pipe, flash to steam 1 inch past the nozzle, and swell about 1,600 times in volume, so a 1-cup shot becomes a 25-gallon cloud. Range is effectively 0 feet. Accuracy, within that range, is total.' },
+  { band:7, kind:'fiction', minT:500, css:'ww12', label:'Oven Doctrine',
+    icon:'🍕', desc:'At 500°F the outdoors is the temperature of a pizza oven, and doctrine is rewritten to match. All water is kept in sealed vessels rated to 680 psi and is never opened. Engagements consist of both sides holding their gauges up across a 40-foot street. The higher reading wins, and the loser’s water is confirmed to be exactly where it was.' },
+  { band:7, kind:'fiction', minT:705, css:'ww12', label:'Supercritical Water',
+    icon:'🧪', desc:'At 705°F and 3,200 psi, water passes its critical point and stops being either liquid or gas. It fills any container evenly, dissolves a little of the container, and cannot be squirted, because there is no longer a difference between the stream and whatever is around it. The rules committee spends 3 weeks on whether a hit is still possible. It rules yes, in principle, and records 0.' },
+  { band:7, kind:'fiction', minT:867, css:'ww12', label:'Venusian Drought',
+    icon:'🟠', desc:'At 867°F the surface of Earth matches Venus, which is thought to have had oceans once and now keeps about 0.002% water vapor in its air. The oceans here begin the same trip, at roughly 1 inch of depth a day. The war is suspended for lack of materiel. Both sides write to Venus for advice, which has had 4 billion years to prepare a reply.' },
+  { band:7, kind:'fiction', minT:1221, css:'ww12', label:'Molten Metal Moratorium',
+    icon:'🥫', desc:'At 1,221°F aluminum melts, taking every canteen, soda can, and soaker frame on the block with it. A moratorium on metal ordnance is declared after an aluminum bucket slumps into a disk 14 inches across during routine resupply. The last 40 gallons of surface water are moved into steel tanks, which have about 1,300°F of margin left. Both sides agree not to throw anything that might drip.' },
+  { band:7, kind:'fiction', minT:2000, css:'ww12', label:'Lava Lake Treaty',
+    icon:'🌋', desc:'At 2,000°F the ground runs as lava, and the only standing liquid on the planet is rock. A treaty is signed on an iron plate 12 feet across, chosen because iron has 800°F of margin left. It establishes that lava is not water and is not eligible to be thrown. It passes 2 to 0, and enforcement is left to the lava.' },
+  { band:7, kind:'fiction', minT:2800, css:'ww12', label:'Pump Ruins', pump:true,
+    icon:'⚙️', desc:'At 2,800°F iron melts, and every descendant of the pump goes with it, from municipal stations to the dynasty’s flagships, all built on the same original drawing. The castings slump thickest-last, and the 6-inch stroke sags into a puddle that once moved 2.6 ounces a pull. The last recognizable thing in each is the 1-inch bore, a round hole that holds its shape for about 9 minutes. Drawn at 4 squares to the inch, it was exactly 4 squares wide.' },
+  { band:7, kind:'fiction', minT:10000, css:'ww13', label:'Plasma Hose',
+    icon:'⚡', desc:'At 10,000°F water molecules come apart into hydrogen and oxygen and then lose their electrons, so a hose fires glowing plasma instead of a stream. A test shot of 1 gallon produces a flash visible 40 miles away and no wetness at any range. Earth’s last 6 gallons of water are spent calibrating it. The planet is now officially dry, and the war begins looking up.' },
+  { band:7, kind:'fiction', minT:50000, css:'ww13', label:'Comet Harvest',
+    icon:'☄️', desc:'With the air at 50,000°F and Earth out of water, the war goes to the comets, which are up to 80% water ice. A comet 1 mile across holds on the order of 100 billion gallons, more than both sides have fired in their whole history combined. 2 claims are filed on the same comet 11 minutes apart. It is divided by a line drawn down the middle in marker, and harvested on the way out, which is the only direction comets go.' },
+  { band:7, kind:'fiction', minT:100000, css:'ww13', label:'Europa Drilling',
+    icon:'🛰️', desc:'Back home the thermometer reads 100,000°F, so the war moves to Europa, whose ocean holds about 2 times Earth’s water under ice roughly 12 miles thick. The first borehole takes 7 years to reach liquid. The first 500 gallons pumped out are fired at the other side’s drill rig, 400 feet away, out of habit. It is the first water war fought in the outer solar system, and it is scored under the old rules.' },
+  { band:7, kind:'fiction', minT:500000, css:'ww13', label:'Ring Ice Barges',
+    icon:'🪐', desc:'At 500,000°F the fight moves to Saturn’s rings, which are about 99% water ice, 170,000 miles wide, and in most places under 100 feet thick. Barges 2 miles long skim them for ammunition of unusual purity. A ruling limits each side to 1 ring at a time. Nobody can agree how many rings there are, and the count ranges from 7 to several thousand depending on who is claiming.' },
+  { band:7, kind:'fiction', minT:1e6, css:'ww13', label:'Oort Cloud Claims',
+    icon:'📜', desc:'At 1,000,000°F everything nearer the Sun is spoken for, so the war files on the Oort cloud: perhaps a trillion icy bodies scattered out to about 1.5 light-years. Claims go out by radio and take up to 18 months to arrive, so every filing is out of date on receipt. The registry reaches 3.8 million pages. Every page is disputed, including the index.' },
+  { band:7, kind:'fiction', minT:2e6, css:'ww13', label:'Hydrogen-Oxygen Synthesis',
+    icon:'⚗️', desc:'At 2,000,000°F harvested ice no longer survives the trip home, so water has to be made on arrival from hydrogen and oxygen, 2 parts to 1. Each ounce takes 3.2 grams of hydrogen, 25.2 grams of oxygen, and a spark, and it comes out hot enough to leave again. Output for the first year is 9 ounces. All 9 are fired.' },
+  { band:7, kind:'fiction', minT:3e6, css:'ww13', label:'Stellar Water Masers',
+    icon:'📡', desc:'At 3 million °F the war turns to water masers: clouds of vapor around distant stars that amplify microwaves at 22 gigahertz. The water cannot be drunk or thrown, but it can be aimed. A beam from a cloud 1,300 light-years away strikes the other side’s receiving dish and warms it by 0.0001 degree. This is scored as a hit, the first in 6 years.' },
+  { band:7, kind:'fiction', minT:3.6e6, css:'ww13', label:'Solar Corona Spray',
+    icon:'☀️', desc:'At 3.6 million °F the neighborhood is as hot as the Sun’s corona, which sheds about 1.5 million tons of solar wind a second. Both sides run collectors into the spray hoping to catch water. The wind turns out to be almost all hydrogen and helium, with oxygen at about 0.1% and never in the right place. Yield is 0 drops, and the spray is reclassified as wind.' },
+  { band:7, kind:'fiction', minT:1e7, css:'ww13', label:'Stellar Nursery Rights',
+    icon:'🌌', desc:'At 10 million °F nothing close by can hold water, so rights are sold in stellar nurseries, cold clouds where water freezes onto dust at about minus 400°F. One nursery alone makes enough to fill Earth’s oceans about 60 times a day. Parcels are auctioned in blocks of 1,000 light-years. Every winning bid is paid in water the bidder does not have.' },
+  { band:7, kind:'fiction', minT:2.7e7, css:'ww13', label:'Primordial Hydrogen',
+    icon:'💫', desc:'At 27 million °F the war reaches the temperature of the Sun’s core, where hydrogen fuses into helium at about 600 million tons a second. Both sides lay claim to the universe’s hydrogen, which is about 74% of ordinary matter and the half of water nobody has to make. The ledger now has 2 columns. One is hydrogen, which everyone has, and the other is oxygen, which everyone needs.' },
+  { band:7, kind:'fiction', minT:1e9, css:'ww13', label:'Last Water Molecule',
+    icon:'💧', desc:'At 1 billion °F oxygen nuclei begin to break apart, and the last water molecule in the region of dispute is found: 3 atoms, 18 daltons, unclaimed. Both sides send envoys. It is held in a magnetic trap for 4 minutes while the terms are read, then comes apart before either side can sign. The war is out of ammunition for the first time since the spray bottle.' },
+  { band:7, kind:'fiction', minT:3.6e12, css:'ww13', label:'Quark Soup',
+    icon:'🍜', desc:'At 3.6 trillion °F protons and neutrons dissolve into a soup of quarks and gluons. There are no atoms, so there is no hydrogen, no oxygen, and nothing that can be wet. A hearing is convened on whether up quarks count as water in principle. The vote is 0 to 0, because the delegates have also dissolved, and the question is tabled for about 13.8 billion years.' },
+  { band:7, kind:'fiction', minT:2.5e32, css:'ww13', label:'Planck Squirt',
+    icon:'🌀', desc:'At about 2.5×10^32°F, the hottest temperature physics can describe, the forces merge and distance runs out of smaller units. A squirt at this temperature lasts 1 Planck time, about 5.4×10^-44 seconds, and travels 1 Planck length before there is nothing left to travel through. It is the shortest engagement on record. The records do not survive it.' },
+  { band:7, kind:'fiction', minT:2.6e32, css:'ww13', label:'Before Water',
+    icon:'🕳️', desc:'At about 2.6×10^32°F there is nothing hotter and nothing earlier: no hydrogen, no oxygen, no graph paper, no weather. Every war ever counted, from the first flicked fingertip to the last molecule, fits in a space smaller than a 1-inch bore, with 0 participants. Nothing is fighting, because nothing is. Then, for the first time, the temperature starts to fall.' },
+  { band:7, kind:'fiction', minT:1e34, css:'ww13', label:'The Next Rain',
+    icon:'🌧️', desc:'The universe cools below about 3,600°F, and water can hold together for the first time since the last war ended. The first molecules form around 200 million years in, in the leftovers of stars that never find out what they were for. 9.1 billion years later, on an unnamed rock 7,900 miles across, it rains: about two miles of it, over roughly a thousand years, which is the longest refill queue ever recorded. Nothing is alive to throw any of it. The ledger resets to No Water Drawn, and 4.4 billion years after that, on graph paper at four squares to the inch, someone draws a pump.' },
+];
+function waterWarTierFor(x) { return ladderTierFor(WATER_WAR_TIERS, x); }
 
 /* ---- Heat Index Mode: alerts and outdoor impact ---- */
 function heatRiskCategory(hi) {
@@ -8141,6 +8619,7 @@ function evaluateHeatCity(entry, lakeTemps, cityOverride) {
   const warmNights = nightLow >= (heatNaive ? 75 : 80);
   const S = heatScore({ hi, hiNorm, days, nightLow, R: res.R, heatNaive });
   const { tier, index } = heatTierFor({ S, T, hi, tw });
+  const waterWar = waterWarTierFor({ S, T, hi, tw });
   const anom = hi === null ? Infinity : hi - hiNorm;
   const alert = heatAlert(db, { hi, T, anom, days, warmNights });
   let inland = null;
@@ -8150,7 +8629,7 @@ function evaluateHeatCity(entry, lakeTemps, cityOverride) {
   }
   return {
     n: entry.n, db, T, Td, dewAssumed, rh, hi, tw, summerHigh: sh, hiNorm, anom,
-    resilience: res, days, nightLow, warmNights, score: S, tier, tierIndex: index,
+    resilience: res, days, nightLow, warmNights, score: S, tier, tierIndex: index, waterWar,
     risk: heatRiskCategory(hi), alert, outdoor: heatOutdoorImpact(hi, res.label),
     lakeNotes: lake.notes, inland
   };
@@ -8283,6 +8762,7 @@ function renderHeatProfile(results) {
       <td>${r.alert.label}<div class="heat-sub">${r.risk}</div></td>
       <td>${r.resilience.icon} ${r.resilience.label}</td>
       <td>${r.outdoor}</td>
+      <td style="min-width:190px"><span class="war-pill war-${r.waterWar.tier.css}">${r.waterWar.tier.icon} ${esc(r.waterWar.tier.label)}</span><span class="war-desc">${esc(r.waterWar.tier.desc)}</span></td>
       <td class="heat-sub">${details}</td>
     </tr>`;
   }).join('');
@@ -8299,12 +8779,33 @@ function renderHeatProfile(results) {
     </div>
     <div class="impact-table-wrap">
     <table class="impact-table">
-      <thead><tr><th>City</th><th>Temp / Dew / HI</th><th>Wet-Bulb</th><th>Impact</th><th>NWS Alert</th><th>Resilience</th><th>School / Outdoor</th><th>Details</th></tr></thead>
+      <thead><tr><th>City</th><th>Temp / Dew / HI</th><th>Wet-Bulb</th><th>Impact</th><th>NWS Alert</th><th>Resilience</th><th>School / Outdoor</th><th>Water War</th><th>Details</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
     </div>
     ${lakeNote}`;
 }
+
+/* ---- Heat Index Mode: Water War Tiers list ---- */
+function renderWaterWarList() {
+  const list = document.getElementById('waterWarList');
+  document.getElementById('waterWarCount').textContent = WATER_WAR_TIERS.length;
+  const temp = v => (v >= 1e6 ? v.toExponential(1).replace('e+', '×10^') : v.toLocaleString('en-US')) + '°F+';
+  list.innerHTML = WATER_WAR_TIERS.map((t, i) => {
+    let chip;
+    if (t.kind === 'score') chip = i === 0 ? 'S = 0' : t.maxS === Infinity ? 'S > 600' : 'S ≤ ' + (+t.maxS.toFixed(2));
+    else if (t.kind === 'floor') chip = t.trigger;
+    else chip = t.minT === -Infinity ? '> 134°F' : temp(t.minT);
+    return `<div class="historic-row war-row">
+      <span class="wt-depth war-${t.css}">${esc(chip)}</span>
+      <span class="wt-body">
+        <span class="wt-label"><span class="wt-icon">${t.icon}</span>${esc(t.label)}</span>
+        <span class="wt-desc">${esc(t.desc)}</span>
+      </span>
+    </div>`;
+  }).join('');
+}
+renderWaterWarList();
 
 /* ======================================================================
    SELFTEST HARNESS
@@ -9315,6 +9816,107 @@ window.__snowTests.push((t) => {
   t('heat run leaves snow cities alone', cities.length === snowBefore);
   t('heat run leaves snow profile alone', profileCard.innerHTML === profileBefore);
   heatEls.profile.innerHTML = '';
+});
+
+// WW1 water war structure, placement, and the ladderTierFor refactor
+window.__snowTests.push((t) => {
+  const W = WATER_WAR_TIERS;
+  t('water war has 222 tiers', W.length === 222);
+  const counts = [1, 2, 3, 4, 5, 6, 7].map(b => W.filter(x => x.band === b).length).join(',');
+  t('band counts 12/25/40/45/40/30/30', counts === '12,25,40,45,40,30,30');
+  t('bands in order', W.every((x, i) => i === 0 || x.band >= W[i - 1].band));
+  t('water war labels unique', new Set(W.map(x => x.label)).size === 222);
+  const score = W.filter(x => x.kind === 'score');
+  t('water war maxS strictly increasing', score.every((x, i) => i === 0 || x.maxS > score[i - 1].maxS));
+  const fic = W.filter(x => x.kind === 'fiction');
+  t('water war minT strictly increasing', fic.every((x, i) => i === 0 || x.minT > fic[i - 1].minT));
+  t('exactly 5 floors', W.filter(x => x.kind === 'floor').length === 5);
+  t('Pump storyline in order', W.filter(x => x.pump).map(x => x.label).join('|') ===
+    'Sketch of a Pump|Pump Specs Drawn|Pump-Action Prototype|Pump Patent Dispute|Municipal Pump Standard|Pump Dynasty|The First Pump|Pump Ruins');
+  t('Oven Doctrine before Supercritical Water',
+    W.findIndex(x => x.label === 'Oven Doctrine') < W.findIndex(x => x.label === 'Supercritical Water'));
+  t('heatTierFor still wraps the shared lookup', heatTierFor({ S: 42.1, T: 96, hi: 107, tw: 27 }).tier.level === 'Sweltering');
+  const ev = (n, temp, dew, days, lakes, ov) => evaluateHeatCity({ n, temp, dew, days }, lakes || {}, ov).waterWar.tier.label;
+  t('Tulsa -> Water Table Seized', ev('Tulsa, OK', 96, 74, 1) === 'Water Table Seized');
+  t('Phoenix routine -> Hose Artillery', ev('Phoenix, AZ', 108, 45, 1) === 'Hose Artillery');
+  t('Seattle -> Public Pool Occupation', ev('Seattle, WA', 108, 60, 1) === 'Public Pool Occupation');
+  t('Phoenix 2023 -> Bottled Water Hoard', ev('Phoenix, AZ', 116, 45, 31) === 'Bottled Water Hoard');
+  t('Portland 2021 -> Great Lakes Compact', ev('Portland, OR', 116, 62, 3) === 'Great Lakes Compact');
+  t('Chicago 1995 -> Pipeline Campaign', ev('Chicago, IL', 104, 78, 5) === 'Pipeline Campaign');
+  t('Dhahran -> Dhahran Accord', ev('Dhahran', 108, 95, 1, {}, { n: 'Dhahran', lat: 26.3, lon: 50.1, r: null, snow: 0 }) === 'Dhahran Accord');
+  t('cool day -> No Water Drawn', ev('Tulsa, OK', 65, 50, 1) === 'No Water Drawn');
+  t('212F -> Boil-Over', ev('Tulsa, OK', 212, 60, 1) === 'Boil-Over');
+  t('1e35F -> The Next Rain', ev('Tulsa, OK', 1e35, 0, 1) === 'The Next Rain');
+  let prev = -1, mono = true;
+  for (let T = 60; T <= 1000; T++) {
+    const i = evaluateHeatCity({ n: 'Tulsa, OK', temp: T, dew: Math.min(T, 70), days: 1 }, {}).waterWar.index;
+    if (i < prev) mono = false;
+    prev = i;
+  }
+  t('water war never drops as temperature rises', mono);
+});
+
+// Validates one band's icons and descriptions against the spec's content rules.
+function waterWarContentProblems(band) {
+  const problems = [];
+  WATER_WAR_TIERS.filter(x => x.band === band).forEach(x => {
+    const numerals = (x.desc.match(/\d[\d,.]*/g) || []).length;
+    const sentences = x.desc.split(/[.!?](?=\s|$)/).filter(s => s.trim()).length;
+    const words = x.desc.split(/\s+/).filter(Boolean).length;
+    if (!x.icon) problems.push(x.label + ': no icon');
+    if (numerals < 2) problems.push(x.label + ': fewer than 2 numbers');
+    if (sentences < 2 || sentences > 5) problems.push(x.label + ': ' + sentences + ' sentences');
+    if (words < 30 || words > 110) problems.push(x.label + ': ' + words + ' words');
+  });
+  return problems;
+}
+
+// WW2 water war display
+window.__snowTests.push((t) => {
+  renderHeatProfile([evaluateHeatCity({ n: 'Tulsa, OK', temp: 96, dew: 74, days: 1 }, {})]);
+  t('Heat Profile has a Water War column', heatEls.profile.innerHTML.includes('<th>Water War</th>'));
+  t('Heat Profile shows the Tulsa water war tier', heatEls.profile.innerHTML.includes('Water Table Seized'));
+  heatEls.profile.innerHTML = '';
+  t('Water War list renders 222 rows', document.querySelectorAll('#waterWarList .war-row').length === 222);
+  t('Water War count shows 222', document.getElementById('waterWarCount').textContent === '222');
+  t('floor chip shows its trigger', document.getElementById('waterWarList').textContent.includes('Tw ≥ 35°C'));
+  t('fiction chip shows its temperature', document.getElementById('waterWarList').textContent.includes('212°F+'));
+});
+
+// WW band 1 content gate
+window.__snowTests.push((t) => {
+  const p = waterWarContentProblems(1);
+  t('water war band 1 content' + (p.length ? ': ' + p.slice(0, 3).join('; ') : ''), p.length === 0);
+});
+// WW band 2 content gate
+window.__snowTests.push((t) => {
+  const p = waterWarContentProblems(2);
+  t('water war band 2 content' + (p.length ? ': ' + p.slice(0, 3).join('; ') : ''), p.length === 0);
+});
+// WW band 3 content gate
+window.__snowTests.push((t) => {
+  const p = waterWarContentProblems(3);
+  t('water war band 3 content' + (p.length ? ': ' + p.slice(0, 3).join('; ') : ''), p.length === 0);
+});
+// WW band 4 content gate
+window.__snowTests.push((t) => {
+  const p = waterWarContentProblems(4);
+  t('water war band 4 content' + (p.length ? ': ' + p.slice(0, 3).join('; ') : ''), p.length === 0);
+});
+// WW band 5 content gate
+window.__snowTests.push((t) => {
+  const p = waterWarContentProblems(5);
+  t('water war band 5 content' + (p.length ? ': ' + p.slice(0, 3).join('; ') : ''), p.length === 0);
+});
+// WW band 6 content gate
+window.__snowTests.push((t) => {
+  const p = waterWarContentProblems(6);
+  t('water war band 6 content' + (p.length ? ': ' + p.slice(0, 3).join('; ') : ''), p.length === 0);
+});
+// WW band 7 content gate
+window.__snowTests.push((t) => {
+  const p = waterWarContentProblems(7);
+  t('water war band 7 content' + (p.length ? ': ' + p.slice(0, 3).join('; ') : ''), p.length === 0);
 });
 
 window.addEventListener('load', () => {
