@@ -8111,29 +8111,29 @@ function heatTierFor(x) { return ladderTierFor(HEAT_TIERS, x); }
 const WATER_WAR_BANDS = ['Too Cool to Get Wet', 'Incidental', 'Backyard', 'Neighborhood', 'Municipal', 'Continental', 'Fiction'];
 const WATER_WAR_TIERS = [
   { band:1, kind:'score', maxS:0, css:'ww0', label:'No Water Drawn',
-    icon:'', desc:'' },
+    icon:'🚫', desc:'It is 68 degrees and nobody wants to be wet. The garden hose stays coiled in 14 loops on its reel, the balloons stay sealed in their bag of 100, and the only water in play is a glass on the porch rail that nobody has touched in 40 minutes. Zero throws attempted, zero completed. The summer opens with the ledger blank.' },
   { band:1, kind:'score', maxS:0.545, css:'ww0', label:'Condensation Ring',
-    icon:'', desc:'' },
+    icon:'💧', desc:'The first moisture of the war is a ring on a patio table, 3 inches across, left by a glass of iced tea. Someone drags a finger through it and flicks roughly 0.05 mL at a sibling from 2 feet away. The sibling reports no contact. The glass is moved to a coaster, and the front goes quiet for the rest of the afternoon.' },
   { band:1, kind:'score', maxS:1.091, css:'ww0', label:'Dewdrop Dare',
-    icon:'', desc:'' },
+    icon:'🌿', desc:'At 7:15 in the morning the lawn carries dew, and someone is dared to cross it barefoot. The crossing is 22 feet, takes 9 seconds, and leaves both feet soaked to the ankle. One party rules it an act of war and the other rules it weather. The dispute outlives the dew, which is gone by 9:40.' },
   { band:1, kind:'score', maxS:1.636, css:'ww0', label:'Flicked Fingertip',
-    icon:'', desc:'' },
+    icon:'👆', desc:'A wet fingertip is flicked at the back of a neck, delivering an estimated 3 drops at point-blank range. The target turns around, finds 4 plausible suspects, and accuses the wrong one. Retaliation follows within 90 seconds, also by fingertip and also at the wrong person. By dinner the kitchen has split into 2 camps over a combined 7 drops.' },
   { band:1, kind:'score', maxS:2.182, css:'ww0', label:'Ice Cube Down the Back',
-    icon:'', desc:'' },
+    icon:'🧊', desc:'The first true projectile is an ice cube: about 1 ounce at 32 degrees, delivered down the back of a shirt rather than thrown. It melts in roughly 4 minutes and leaves a wet stripe 11 inches long. The victim screams at a pitch audible 2 houses away, which the perpetrator logs as a confirmed hit.' },
   { band:1, kind:'score', maxS:2.727, css:'ww0', label:'Fountain Thumb',
-    icon:'', desc:'' },
+    icon:'⛲', desc:'At the park drinking fountain, a thumb over the spout turns a 2-foot drinking arc into a flat spray reaching 6 feet. It hits 3 people waiting in line and 1 who was only walking past. The fountain is declared neutral ground by general agreement, then used again 11 minutes later by the same thumb.' },
   { band:1, kind:'score', maxS:3.273, css:'ww1', label:'Glass Tipped',
-    icon:'', desc:'' },
+    icon:'🥛', desc:'Half a glass of water, about 4 ounces, is tipped over a sibling’s head at the dinner table. The act is premeditated, takes roughly 1.5 seconds, and is witnessed by 2 parents. Both rule against the tipper, and the war’s first sanction is imposed: no dessert for 1 night. The sibling considers this inadequate.' },
   { band:1, kind:'score', maxS:3.818, css:'ww1', label:'Puddle Stomp',
-    icon:'', desc:'' },
+    icon:'🥾', desc:'A leftover sprinkler puddle, 18 inches across and half an inch deep, becomes the first contested ground. One stomp throws water about 3 feet in every direction and soaks 2 pairs of socks, neither belonging to the stomper. The puddle is spent after 5 stomps. Nobody thinks to refill it.' },
   { band:1, kind:'score', maxS:4.364, css:'ww1', label:'Sketch of a Pump', pump:true,
-    icon:'', desc:'' },
+    icon:'✏️', desc:'Nobody is fighting, so someone draws instead: a tube, a plunger, a handle, and an arrow labeled ‘water comes out here.’ At 4 squares to the inch the tube works out to a 1-inch bore with a 6-inch stroke, or 4.7 cubic inches a pull, about 2.6 ounces. Nothing is built. It is the first page of a design record that will outlast the weather.' },
   { band:1, kind:'score', maxS:4.909, css:'ww1', label:'Wet Sponge Rumor',
-    icon:'', desc:'' },
+    icon:'🧽', desc:'Word goes around that someone has a car-wash sponge soaked and ready, holding roughly 8 ounces. The report is repeated 6 times in an hour and grows to 3 sponges and a bucket. No sponge is ever produced. Two people change their route home anyway, adding 400 feet to the walk.' },
   { band:1, kind:'score', maxS:5.455, css:'ww1', label:'Spray Bottle Found',
-    icon:'', desc:'' },
+    icon:'🧴', desc:'A spray bottle turns up under the kitchen sink: 24 ounces, last used on windows. At roughly 0.8 mL a pull it holds about 880 shots, more ammunition than the war has used all month. Its range is 9 feet on the stream setting. It is rinsed twice before anyone agrees to point it at a person.' },
   { band:1, kind:'score', maxS:6, css:'ww1', label:'Spray Bottle Skirmish',
-    icon:'', desc:'' },
+    icon:'💦', desc:'The spray bottle is deployed. Over 20 minutes it fires 140 times, lands 31 hits, and drains by about a sixth. The skirmish ends when the nozzle is twisted to ‘mist’ by accident, cutting range from 9 feet to 3 and the threat to zero. It is the first engagement anyone bothers to count.' },
   { band:2, kind:'score', maxS:6.8, css:'ww2', label:'Mister Fan Duel',
     icon:'', desc:'' },
   { band:2, kind:'score', maxS:7.6, css:'ww2', label:'Cup Toss',
@@ -9881,6 +9881,42 @@ window.__snowTests.push((t) => {
   t('Water War count shows 222', document.getElementById('waterWarCount').textContent === '222');
   t('floor chip shows its trigger', document.getElementById('waterWarList').textContent.includes('Tw ≥ 35°C'));
   t('fiction chip shows its temperature', document.getElementById('waterWarList').textContent.includes('212°F+'));
+});
+
+// WW band 1 content gate
+window.__snowTests.push((t) => {
+  const p = waterWarContentProblems(1);
+  t('water war band 1 content' + (p.length ? ': ' + p.slice(0, 3).join('; ') : ''), p.length === 0);
+});
+// WW band 2 content gate
+window.__snowTests.push((t) => {
+  const p = waterWarContentProblems(2);
+  t('water war band 2 content' + (p.length ? ': ' + p.slice(0, 3).join('; ') : ''), p.length === 0);
+});
+// WW band 3 content gate
+window.__snowTests.push((t) => {
+  const p = waterWarContentProblems(3);
+  t('water war band 3 content' + (p.length ? ': ' + p.slice(0, 3).join('; ') : ''), p.length === 0);
+});
+// WW band 4 content gate
+window.__snowTests.push((t) => {
+  const p = waterWarContentProblems(4);
+  t('water war band 4 content' + (p.length ? ': ' + p.slice(0, 3).join('; ') : ''), p.length === 0);
+});
+// WW band 5 content gate
+window.__snowTests.push((t) => {
+  const p = waterWarContentProblems(5);
+  t('water war band 5 content' + (p.length ? ': ' + p.slice(0, 3).join('; ') : ''), p.length === 0);
+});
+// WW band 6 content gate
+window.__snowTests.push((t) => {
+  const p = waterWarContentProblems(6);
+  t('water war band 6 content' + (p.length ? ': ' + p.slice(0, 3).join('; ') : ''), p.length === 0);
+});
+// WW band 7 content gate
+window.__snowTests.push((t) => {
+  const p = waterWarContentProblems(7);
+  t('water war band 7 content' + (p.length ? ': ' + p.slice(0, 3).join('; ') : ''), p.length === 0);
 });
 
 window.addEventListener('load', () => {
