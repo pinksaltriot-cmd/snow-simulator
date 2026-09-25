@@ -1,6 +1,6 @@
 # Water War Tiers — Draft
 
-**Status:** Draft names, not yet in the app. Heat Index Mode Wave 2a.
+**Status:** Shipped in v3.3.0; the descriptions live in index.html (WATER_WAR_TIERS).
 **Date:** 2026-09-24
 
 The warm-season counterpart to the 286 snow war tiers. **222 tiers**, driven by heat:
