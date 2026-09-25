@@ -946,6 +946,13 @@
     <div class="heat-lakes">
       <label for="heatStartDate">Heat starts <span class="heat-opt">optional &mdash; puts calendar dates on the recovery timeline</span></label>
       <input type="date" id="heatStartDate" style="max-width:220px">
+      <label for="heatSky" style="margin-top:10px">Sky <span class="heat-opt">optional &mdash; sunshine dries the afternoon air and adds to how hot it feels</span></label>
+      <select id="heatSky" style="max-width:220px">
+        <option value="">Not set</option>
+        <option value="sunny">☀️ Sunny</option>
+        <option value="partly">⛅ Partly cloudy</option>
+        <option value="cloudy">☁️ Cloudy</option>
+      </select>
     </div>
     <div id="heatCityList" style="margin-top:12px"></div>
     <button class="btn-generate" id="heatGenerateBtn" disabled>Generate Heat Profile</button>
@@ -8270,8 +8277,43 @@ function heatSummerHigh(city) {
   if ((city.snow || 0) >= 250) f -= 15;                        // mountain / glacier stations
   return { f: Math.round(Math.max(-20, f)), est: true };
 }
-function heatNormHI(city) {
-  const sh = heatSummerHigh(city).f, td = Math.min(sh, heatAssumedDewpoint(city));
+/* Seasonality. Without a date, normals are the warmest month's (as before).
+   With a date, the typical high and the assumed dewpoint follow a cosine year
+   peaking about Jul 20 (Jan 20 in the southern hemisphere). The swing from
+   summer to winter grows with latitude and shrinks for marine and tropical
+   cities: Tulsa 93°F in July falls to about 60°F by mid-November. */
+function heatSeasonFactor(city, date) {
+  if (!date) return 1;
+  const start = new Date(date.getFullYear(), 0, 1);
+  const doy = Math.floor((date - start) / 86400000) + 1;
+  const peak = (city.lat !== null && city.lat !== undefined && city.lat < 0) ? 20 : 201;
+  return Math.cos(2 * Math.PI * (doy - peak) / 365.25);
+}
+function heatSeasonalRange(city) {
+  const a = Math.abs(city.lat === null || city.lat === undefined ? 40 : city.lat);
+  if (a < 23.5) return 6;
+  const base = Math.max(8, 2 * a - 28);
+  return PACIFIC_MARINE.has(city.n) ? Math.max(6, base * 0.35) : base;
+}
+function heatDewRange(city) {
+  const a = Math.abs(city.lat === null || city.lat === undefined ? 40 : city.lat);
+  if (a < 23.5) return 8;
+  if (PACIFIC_MARINE.has(city.n)) return 12;
+  if (city.lon !== null && city.lon !== undefined && city.lon < -105) return 15;
+  return 35;
+}
+function heatNormalHigh(city, date) {
+  const s = heatSeasonFactor(city, date);
+  return heatSummerHigh(city).f - heatSeasonalRange(city) * (1 - s) / 2;
+}
+function heatSeasonalDewpoint(city, date) {
+  const s = heatSeasonFactor(city, date);
+  return heatAssumedDewpoint(city) - heatDewRange(city) * (1 - s) / 2;
+}
+// How far below the air temperature an assumed dewpoint must sit, by sky.
+const HEAT_SKY_DEPRESSION = { sunny: 12, partly: 6, cloudy: 3 };
+function heatNormHI(city, date) {
+  const sh = heatNormalHigh(city, date), td = Math.min(sh - 2, heatSeasonalDewpoint(city, date));
   return heatIndexF(sh, heatRH(sh, td));
 }
 
@@ -8279,7 +8321,8 @@ function heatNormHI(city) {
 const HEAT_LAKES = ['superior', 'michigan', 'huron', 'erie', 'ontario'];
 const LAKE_NAMES = { superior:'Superior', michigan:'Michigan', huron:'Huron', erie:'Erie', ontario:'Ontario' };
 const LAKE_CENTROIDS = { superior:[47.7,-87.5], michigan:[43.8,-87.0], huron:[44.8,-82.4], erie:[42.2,-81.2], ontario:[43.7,-77.9] };
-const LAKE_K = { shore: 1.0, near: 0.67, peninsula: 0.33 };
+// Edge: 25-35 mi inland, where the lake-breeze front usually stalls short of town.
+const LAKE_K = { shore: 1.0, near: 0.67, edge: 0.25, peninsula: 0.33 };
 const LAKE_CITIES = {
   'Duluth, MN':[['superior','shore']], 'Marquette, MI':[['superior','shore']],
   'Copper Harbor, MI':[['superior','shore']], 'Thunder Bay, ON, Canada':[['superior','shore']],
@@ -8287,13 +8330,13 @@ const LAKE_CITIES = {
   'Chicago, IL':[['michigan','shore']], 'Milwaukee, WI':[['michigan','shore']],
   'Green Bay, WI':[['michigan','shore']], 'Muskegon, MI':[['michigan','shore']],
   'Traverse City, MI':[['michigan','shore']],
-  'South Bend, IN':[['michigan','near']], 'Grand Rapids, MI':[['michigan','near']],
+  'South Bend, IN':[['michigan','edge']], 'Grand Rapids, MI':[['michigan','edge']],
   'Saginaw, MI':[['huron','near']],
   'Cleveland, OH':[['erie','shore']], 'Toledo, OH':[['erie','shore']], 'Erie, PA':[['erie','shore']],
   'Buffalo, NY':[['erie','shore'], ['ontario','near']], 'Detroit, MI':[['erie','near']],
   'Rochester, NY':[['ontario','shore']], 'Toronto, ON, Canada':[['ontario','shore']],
   'Hamilton, ON, Canada':[['ontario','shore']],
-  'Watertown, NY':[['ontario','near']], 'Syracuse, NY':[['ontario','near']],
+  'Watertown, NY':[['ontario','near']], 'Syracuse, NY':[['ontario','edge']],
   'Lansing, MI':[['michigan','peninsula'], ['huron','peninsula']], 'Flint, MI':[['huron','peninsula']],
   'Kalamazoo, MI':[['michigan','peninsula']], 'Ann Arbor, MI':[['erie','peninsula']]
 };
@@ -8321,11 +8364,11 @@ function heatApplyLakes(city, T, Td, lakeTemps) {
     const k = LAKE_K[cls] * (i === 0 ? 1 : 0.5), delta = T - tl;
     if (delta >= 5) {
       cool += k * Math.min(0.5 * delta, 15);
-      if (cls !== 'peninsula') tdCap = Math.min(tdCap, tl + 10);
+      if (cls === 'shore' || cls === 'near') tdCap = Math.min(tdCap, tl + 10);
     }
     if (tl >= 75) {
       tdAdd += k * Math.min((tl - 72) * 0.5, 3);
-      nightFloor = Math.max(nightFloor, tl - { shore: 3, near: 6, peninsula: 9 }[cls]);
+      nightFloor = Math.max(nightFloor, tl - { shore: 3, near: 6, edge: 8, peninsula: 9 }[cls]);
     }
     notes.push(`Lake ${LAKE_NAMES[lake]} ${tl}°F (${cls})`);
   });
@@ -8947,18 +8990,22 @@ function heatOutdoorImpact(hi, resilienceLabel) {
 
 /* ---- Heat Index Mode: per-city pipeline ---- */
 // entry: { n, temp, dew (or null), days }, lakeTemps: { lake: °F }.
-function evaluateHeatCity(entry, lakeTemps, cityOverride) {
+function evaluateHeatCity(entry, lakeTemps, cityOverride, opts) {
+  const o = opts || {};
   const db = cityOverride || CITY_DB.find(c => c.n.toLowerCase() === entry.n.toLowerCase())
     || { n: entry.n, lat: null, lon: null, r: null, snow: null };
   const dewAssumed = entry.dew === null || entry.dew === undefined;
-  const tdIn = dewAssumed ? Math.min(entry.temp, heatAssumedDewpoint(db)) : entry.dew;
+  // An assumed dewpoint is the season's typical value, kept a sky-dependent
+  // margin below the air temperature: a crisp sunny day is not 100% humid.
+  const depression = o.sky ? HEAT_SKY_DEPRESSION[o.sky] : (o.date ? 6 : 0);
+  const tdIn = dewAssumed ? Math.min(entry.temp - depression, heatSeasonalDewpoint(db, o.date)) : entry.dew;
   const lake = heatApplyLakes(db, entry.temp, tdIn, lakeTemps || {});
   const T = lake.T, Td = lake.Td;
   const rh = heatRH(T, Td);
   const hi = heatIndexF(T, rh);
   const tw = heatWetBulbC(T, rh);
   const sh = heatSummerHigh(db);
-  const hiNorm = heatNormHI(db);
+  const hiNorm = heatNormHI(db, o.date);
   const res = heatResilience(db);
   const heatNaive = ['Heat-Wary', 'Heat-Naive', 'Cool-Summer'].includes(res.label);
   const days = entry.days || 1;
@@ -8977,8 +9024,10 @@ function evaluateHeatCity(entry, lakeTemps, cityOverride) {
   return {
     n: entry.n, db, T, Td, dewAssumed, rh, hi, tw, summerHigh: sh, hiNorm, anom,
     resilience: res, days, nightLow, warmNights, score: S, tier, tierIndex: index, waterWar,
-    risk: heatRiskCategory(hi), alert, outdoor: heatOutdoorImpact(hi, res.label),
-    lakeNotes: lake.notes, inland
+    risk: heatRiskCategory(hi), alert,
+    outdoor: heatOutdoorImpact(hi, res.label) + (o.sky === 'sunny' && hi !== null && hi >= 90 ? ' In full sun it can feel up to 15\u00b0F hotter than the heat index.' : ''),
+    lakeNotes: lake.notes, inland, date: o.date || null, sky: o.sky || null,
+    normalHigh: Math.round(heatNormalHigh(db, o.date))
   };
 }
 
@@ -8997,7 +9046,8 @@ function heatTierAtLeast(r, level) {
 }
 function heatRecovery(r) {
   if (r.tier.kind === 'fiction') return { never: true, breaks: Infinity, nights: Infinity, grid: Infinity, cooling: Infinity, er: Infinity };
-  if (!heatTierAtLeast(r, 'Balmy')) return { none: true };
+  // Only a heat event needs recovering from: at least Hot, and above normal.
+  if (!heatTierAtLeast(r, 'Hot') || !(r.anom > 0)) return { none: true };
   const naive = ['Heat-Wary', 'Heat-Naive', 'Cool-Summer'].includes(r.resilience.label);
   const breaks = r.days;
   const nights = breaks + 1 + (r.warmNights ? 2 : 0) + (naive ? 1 : 0);
@@ -9037,17 +9087,35 @@ function estimateHeatForCity(candidate, anchors) {
     if (a.db.n === candidate.n) return { n: candidate.n, temp: inT, dew: a.dewAssumed ? null : inTd, days: a.days, nearest: a.n, dist: 0 };
     const w = 1 / Math.pow(Math.max(d, 10), 2);
     wSum += w;
-    aT += w * (inT - heatSummerHigh(a.db).f);
-    aTd += w * (inTd - heatAssumedDewpoint(a.db));
+    aT += w * (inT - heatNormalHigh(a.db, a.date));
+    aTd += w * (inTd - heatSeasonalDewpoint(a.db, a.date));
     aDays += w * a.days;
     if (d < minD) { minD = d; nearest = a.n; }
   }
   if (minD > HEAT_GAP_REACH_MI) return null;
   const fall = minD <= HEAT_GAP_FULL_MI ? 1 : 1 - (minD - HEAT_GAP_FULL_MI) / (HEAT_GAP_REACH_MI - HEAT_GAP_FULL_MI);
-  const temp = Math.round((heatSummerHigh(candidate).f + (aT / wSum) * fall) * 10) / 10;
-  const dew = Math.min(temp, Math.round((heatAssumedDewpoint(candidate) + (aTd / wSum) * fall) * 10) / 10);
   const days = Math.max(1, Math.round((aDays / wSum) * fall));
-  return { n: candidate.n, temp, dew, days, nearest, dist: Math.round(minD) };
+  // An estimate never outranks the cities it is estimated from: a mild Tulsa
+  // anomaly must not make Houston the storm's worst city. Scale the carried
+  // anomaly down until the estimate's heat score is at most the strongest input's.
+  const maxScore = Math.max(...pts.map(a => a.score));
+  const date = pts[0].date || null;
+  const make = k => {
+    const temp = Math.round(heatNormalHigh(candidate, date) + (aT / wSum) * fall * k);
+    const dew = Math.min(temp - 1, Math.round(heatSeasonalDewpoint(candidate, date) + (aTd / wSum) * fall * k));
+    return { n: candidate.n, temp, dew, days, nearest, dist: Math.round(minD) };
+  };
+  let est = make(1);
+  if (evaluateHeatCity(est, {}, candidate, { date }).score > maxScore) {
+    let lo = 0, hi = 1;
+    for (let i = 0; i < 12; i++) {
+      const mid = (lo + hi) / 2;
+      if (evaluateHeatCity(make(mid), {}, candidate, { date }).score > maxScore) hi = mid; else lo = mid;
+    }
+    est = make(lo);
+    est.capped = true;
+  }
+  return est;
 }
 
 /* ---- Heat Index Mode: Regional Heat Index (RHI) ----
@@ -9089,7 +9157,7 @@ function getRHICategory(v) {
   for (let i = RHI_CATEGORIES.length - 1; i >= 0; i--) if (v >= RHI_CATEGORIES[i].min) return RHI_CATEGORIES[i];
   return RHI_CATEGORIES[0];
 }
-function calculateRHI(results) {
+function calculateRHI(results, date) {
   const groups = {};
   let outside = 0;
   results.forEach(r => {
@@ -9115,7 +9183,17 @@ function calculateRHI(results) {
     total += value;
   }
   regions.sort((a, b) => b.value - a.value);
-  return { total, regions, outside, category: getRHICategory(total) };
+  let category = getRHICategory(total);
+  // "Routine Summer" only in summer: outside the warm season the calm end of the
+  // scale is just routine weather.
+  const when = date || (results[0] && results[0].date);
+  if (category.cat === 0 && when) {
+    const m = when.getMonth();
+    const south = results[0] && results[0].db && results[0].db.lat < 0;
+    const warm = south ? (m >= 10 || m <= 2) : (m >= 4 && m <= 8);
+    if (!warm) category = Object.assign({}, category, { label: 'Routine Weather' });
+  }
+  return { total, regions, outside, category };
 }
 
 /* ---- Heat Index Mode: UI ---- */
@@ -9207,7 +9285,8 @@ function heatGenerate() {
   const lakes = heatReadLakes();
   const lakeError = heatValidateLakes(lakes);
   if (lakeError) { heatEls.err.textContent = lakeError; return; }
-  const results = heatCities.map(c => evaluateHeatCity(c, lakes));
+  const opts = heatRunOpts();
+  const results = heatCities.map(c => evaluateHeatCity(c, lakes, null, opts));
   renderHeatProfile(results);
   heatRenderExtras(results);
   heatEls.profile.style.display = '';
@@ -9296,6 +9375,11 @@ let heatLastResults = [];
 let heatGapResults = [];
 const HEAT_EXTRA_CARDS = ['heatRecoveryCard', 'heatRhiCard', 'heatGapCard'];
 
+// Run-level options: the start date drives seasonal normals; the sky drives the
+// assumed dewpoint and the full-sun note.
+function heatRunOpts() {
+  return { date: heatStartDate(), sky: document.getElementById('heatSky').value || null };
+}
 function heatStartDate() {
   const v = document.getElementById('heatStartDate').value;
   if (!v) return null;
@@ -9353,7 +9437,7 @@ function heatGapEstimate(candidates) {
     if (heatCities.some(h => h.n === c.n)) return;
     const entry = estimateHeatForCity(c, heatLastResults);
     if (!entry) { out.push({ n: c.n, outside: true }); return; }
-    out.push({ entry, r: evaluateHeatCity(entry, lakes) });
+    out.push({ entry, r: evaluateHeatCity(entry, lakes, null, heatRunOpts()) });
   });
   return out;
 }
