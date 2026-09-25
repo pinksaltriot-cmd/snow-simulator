@@ -7836,6 +7836,65 @@ function heatNormHI(city) {
   return heatIndexF(sh, heatRH(sh, td));
 }
 
+/* ---- Heat Index Mode: Great Lakes modifier ---- */
+const HEAT_LAKES = ['superior', 'michigan', 'huron', 'erie', 'ontario'];
+const LAKE_NAMES = { superior:'Superior', michigan:'Michigan', huron:'Huron', erie:'Erie', ontario:'Ontario' };
+const LAKE_CENTROIDS = { superior:[47.7,-87.5], michigan:[43.8,-87.0], huron:[44.8,-82.4], erie:[42.2,-81.2], ontario:[43.7,-77.9] };
+const LAKE_K = { shore: 1.0, near: 0.67, peninsula: 0.33 };
+const LAKE_CITIES = {
+  'Duluth, MN':[['superior','shore']], 'Marquette, MI':[['superior','shore']],
+  'Copper Harbor, MI':[['superior','shore']], 'Thunder Bay, ON, Canada':[['superior','shore']],
+  'Sault Ste. Marie, ON, Canada':[['superior','near']],
+  'Chicago, IL':[['michigan','shore']], 'Milwaukee, WI':[['michigan','shore']],
+  'Green Bay, WI':[['michigan','shore']], 'Muskegon, MI':[['michigan','shore']],
+  'Traverse City, MI':[['michigan','shore']],
+  'South Bend, IN':[['michigan','near']], 'Grand Rapids, MI':[['michigan','near']],
+  'Saginaw, MI':[['huron','near']],
+  'Cleveland, OH':[['erie','shore']], 'Toledo, OH':[['erie','shore']], 'Erie, PA':[['erie','shore']],
+  'Buffalo, NY':[['erie','shore'], ['ontario','near']], 'Detroit, MI':[['erie','near']],
+  'Rochester, NY':[['ontario','shore']], 'Toronto, ON, Canada':[['ontario','shore']],
+  'Hamilton, ON, Canada':[['ontario','shore']],
+  'Watertown, NY':[['ontario','near']], 'Syracuse, NY':[['ontario','near']],
+  'Lansing, MI':[['michigan','peninsula'], ['huron','peninsula']], 'Flint, MI':[['huron','peninsula']],
+  'Kalamazoo, MI':[['michigan','peninsula']], 'Ann Arbor, MI':[['erie','peninsula']]
+};
+// Every Michigan city is lake-affected: unlisted ones get Peninsula on the nearest lake.
+function heatLakesFor(city) {
+  if (LAKE_CITIES[city.n]) return LAKE_CITIES[city.n];
+  if (/,\s*MI$/.test(city.n) && city.lat !== null && city.lat !== undefined) {
+    let best = null, bestD = Infinity;
+    for (const k of HEAT_LAKES) {
+      const [la, lo] = LAKE_CENTROIDS[k], d = (la - city.lat) ** 2 + (lo - city.lon) ** 2;
+      if (d < bestD) { bestD = d; best = k; }
+    }
+    return [[best, 'peninsula']];
+  }
+  return [];
+}
+// lakeTemps: { superior: 52, ... } with blanks omitted. Returns adjusted T/Td plus a
+// night-low floor and human-readable notes. First listed lake at full k, others at half.
+function heatApplyLakes(city, T, Td, lakeTemps) {
+  let cool = 0, tdCap = Infinity, tdAdd = 0, nightFloor = -Infinity;
+  const notes = [];
+  heatLakesFor(city).forEach(([lake, cls], i) => {
+    const tl = lakeTemps[lake];
+    if (tl === null || tl === undefined || isNaN(tl)) return;
+    const k = LAKE_K[cls] * (i === 0 ? 1 : 0.5), delta = T - tl;
+    if (delta >= 5) {
+      cool += k * Math.min(0.5 * delta, 15);
+      if (cls !== 'peninsula') tdCap = Math.min(tdCap, tl + 10);
+    }
+    if (tl >= 75) {
+      tdAdd += k * Math.min((tl - 72) * 0.5, 3);
+      nightFloor = Math.max(nightFloor, tl - { shore: 3, near: 6, peninsula: 9 }[cls]);
+    }
+    notes.push(`Lake ${LAKE_NAMES[lake]} ${tl}°F (${cls})`);
+  });
+  const T2 = T - Math.min(cool, 15);
+  const Td2 = Math.min(T2, Math.min(Td, tdCap) + tdAdd);
+  return { T: T2, Td: Td2, nightFloor, notes, affected: notes.length > 0 };
+}
+
 /* ======================================================================
    SELFTEST HARNESS
    Browser-run tests. Load index.html?selftest=1 and read the console.
