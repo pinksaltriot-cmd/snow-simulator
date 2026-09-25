@@ -696,6 +696,21 @@
   .impact-h15 { background: #ea580c; color: #fff7ed; }
   .impact-h16 { background: #fde68a; color: #78350f; }
   .impact-h17 { background: #ffffff; color: #6d28d9; }
+  /* Water War */
+  .war-ww0  { background: #0f1c24; color: #5b7a8a; }
+  .war-ww1  { background: #102530; color: #7fb4c8; }
+  .war-ww2  { background: #0e2e3a; color: #8fd3e8; }
+  .war-ww3  { background: #0c3444; color: #a5e4f5; }
+  .war-ww4  { background: #083b52; color: #7dd3fc; }
+  .war-ww5  { background: #07405e; color: #38bdf8; }
+  .war-ww6  { background: #064e5c; color: #5eead4; }
+  .war-ww7  { background: #065e66; color: #2dd4bf; }
+  .war-ww8  { background: #0b3a6e; color: #60a5fa; }
+  .war-ww9  { background: #0a2f5c; color: #93c5fd; }
+  .war-ww10 { background: #0a1f44; color: #bfdbfe; }
+  .war-ww11 { background: #111827; color: #e0f2fe; box-shadow: inset 0 0 0 1px rgba(224,242,254,0.3); }
+  .war-ww12 { background: #e5e7eb; color: #334155; }
+  .war-ww13 { background: #2e1065; color: #ddd6fe; }
 </style>
 </head>
 <body>
@@ -873,6 +888,7 @@
       <button type="button" class="mode-btn" data-mode="replay">Historic Replay</button>
       <button type="button" class="mode-btn" data-mode="snowwar">Snow War Tiers</button>
       <button type="button" class="mode-btn" data-mode="heat">Heat Index</button>
+      <button type="button" class="mode-btn" data-mode="waterwar">Water War Tiers</button>
     </div>
   </div>
 
@@ -921,6 +937,11 @@
     <button class="btn-generate" id="heatGenerateBtn" disabled>Generate Heat Profile</button>
   </div>
   <div class="card" id="heatProfileCard" style="display:none"></div>
+  <div class="card" id="waterWarCard" style="display:none">
+    <h2>Water War Tiers</h2>
+    <p class="paragraph-hint">All <span id="waterWarCount">&mdash;</span> water war tiers, ordered by the heat that reaches them &mdash; from a condensation ring on a glass to the first rain of the next universe. Heat alone decides the tier: the heat score through the realistic range, the deadliest wet-bulb readings at the top of Continental, and air temperature alone past 134&deg;F.</p>
+    <div class="historic-list" id="waterWarList"></div>
+  </div>
 
   <div class="card" id="historicReplayCard" style="display:none">
     <h2>Replay Historic Storm</h2>
@@ -7047,6 +7068,7 @@ function setInputMode(mode) {
   document.getElementById('heatCard').style.display = (mode === 'heat') ? '' : 'none';
   const heatProfile = document.getElementById('heatProfileCard');
   heatProfile.style.display = (mode === 'heat' && heatProfile.innerHTML.trim()) ? '' : 'none';
+  document.getElementById('waterWarCard').style.display = (mode === 'waterwar') ? '' : 'none';
 }
 document.querySelectorAll('.mode-btn').forEach(b => {
   b.addEventListener('click', () => setInputMode(b.dataset.mode));
@@ -8067,17 +8089,473 @@ const HEAT_TIERS = [
   { kind:'fiction', minT: 2.6e32,  level:'Big Bang Recurrence', css:'h17' }
 ];
 // x: { S, T, hi, tw }. Returns { tier, index }.
-function heatTierFor(x) {
+// Shared lookup for the heat impact ladder and the water war ladder.
+function ladderTierFor(ladder, x) {
   const fiction = x.T > 134 || (x.tw !== null && x.tw >= 37);
   if (fiction) {
     let idx = -1;
-    HEAT_TIERS.forEach((t, i) => { if (t.kind === 'fiction' && x.T >= t.minT) idx = i; });
-    return { tier: HEAT_TIERS[idx], index: idx };
+    ladder.forEach((t, i) => { if (t.kind === 'fiction' && x.T >= t.minT) idx = i; });
+    return { tier: ladder[idx], index: idx };
   }
-  let idx = HEAT_TIERS.findIndex(t => t.kind === 'score' && x.S <= t.maxS);
-  HEAT_TIERS.forEach((t, i) => { if (t.kind === 'floor' && t.test(x) && i > idx) idx = i; });
-  return { tier: HEAT_TIERS[idx], index: idx };
+  let idx = ladder.findIndex(t => t.kind === 'score' && x.S <= t.maxS);
+  ladder.forEach((t, i) => { if (t.kind === 'floor' && t.test(x) && i > idx) idx = i; });
+  return { tier: ladder[idx], index: idx };
 }
+function heatTierFor(x) { return ladderTierFor(HEAT_TIERS, x); }
+
+/* ---- Heat Index Mode: water war ----
+   222 tiers, driven by heat alone (the Wave 1 heat score, then physical floors, then
+   air temperature past 134°F). Bands: 1 Too Cool to Get Wet, 2 Incidental, 3 Backyard,
+   4 Neighborhood, 5 Municipal, 6 Continental, 7 Fiction. pump:true marks the Pump
+   storyline. Thresholds are literal so they can be hand-edited. */
+const WATER_WAR_BANDS = ['Too Cool to Get Wet', 'Incidental', 'Backyard', 'Neighborhood', 'Municipal', 'Continental', 'Fiction'];
+const WATER_WAR_TIERS = [
+  { band:1, kind:'score', maxS:0, css:'ww0', label:'No Water Drawn',
+    icon:'', desc:'' },
+  { band:1, kind:'score', maxS:0.545, css:'ww0', label:'Condensation Ring',
+    icon:'', desc:'' },
+  { band:1, kind:'score', maxS:1.091, css:'ww0', label:'Dewdrop Dare',
+    icon:'', desc:'' },
+  { band:1, kind:'score', maxS:1.636, css:'ww0', label:'Flicked Fingertip',
+    icon:'', desc:'' },
+  { band:1, kind:'score', maxS:2.182, css:'ww0', label:'Ice Cube Down the Back',
+    icon:'', desc:'' },
+  { band:1, kind:'score', maxS:2.727, css:'ww0', label:'Fountain Thumb',
+    icon:'', desc:'' },
+  { band:1, kind:'score', maxS:3.273, css:'ww1', label:'Glass Tipped',
+    icon:'', desc:'' },
+  { band:1, kind:'score', maxS:3.818, css:'ww1', label:'Puddle Stomp',
+    icon:'', desc:'' },
+  { band:1, kind:'score', maxS:4.364, css:'ww1', label:'Sketch of a Pump', pump:true,
+    icon:'', desc:'' },
+  { band:1, kind:'score', maxS:4.909, css:'ww1', label:'Wet Sponge Rumor',
+    icon:'', desc:'' },
+  { band:1, kind:'score', maxS:5.455, css:'ww1', label:'Spray Bottle Found',
+    icon:'', desc:'' },
+  { band:1, kind:'score', maxS:6, css:'ww1', label:'Spray Bottle Skirmish',
+    icon:'', desc:'' },
+  { band:2, kind:'score', maxS:6.8, css:'ww2', label:'Mister Fan Duel',
+    icon:'', desc:'' },
+  { band:2, kind:'score', maxS:7.6, css:'ww2', label:'Cup Toss',
+    icon:'', desc:'' },
+  { band:2, kind:'score', maxS:8.4, css:'ww2', label:'Dixie Cup Volley',
+    icon:'', desc:'' },
+  { band:2, kind:'score', maxS:9.2, css:'ww2', label:'Water Bottle Squeeze',
+    icon:'', desc:'' },
+  { band:2, kind:'score', maxS:10, css:'ww2', label:'Sports Bottle Squirt',
+    icon:'', desc:'' },
+  { band:2, kind:'score', maxS:10.8, css:'ww2', label:'Garden Hose Left On',
+    icon:'', desc:'' },
+  { band:2, kind:'score', maxS:11.6, css:'ww2', label:'Hose Kink Ambush',
+    icon:'', desc:'' },
+  { band:2, kind:'score', maxS:12.4, css:'ww2', label:'Thumb-over-Hose Fan',
+    icon:'', desc:'' },
+  { band:2, kind:'score', maxS:13.2, css:'ww2', label:'Sprinkler Dash',
+    icon:'', desc:'' },
+  { band:2, kind:'score', maxS:14, css:'ww2', label:'Car Wash Crossfire',
+    icon:'', desc:'' },
+  { band:2, kind:'score', maxS:14.8, css:'ww2', label:'Dog Bowl Incident',
+    icon:'', desc:'' },
+  { band:2, kind:'score', maxS:15.6, css:'ww2', label:'Kiddie Pool Splash',
+    icon:'', desc:'' },
+  { band:2, kind:'score', maxS:16.4, css:'ww2', label:'Pump Specs Drawn', pump:true,
+    icon:'', desc:'' },
+  { band:2, kind:'score', maxS:17.2, css:'ww3', label:'Bucket Rumor',
+    icon:'', desc:'' },
+  { band:2, kind:'score', maxS:18, css:'ww3', label:'Dollar-Store Squirt Gun',
+    icon:'', desc:'' },
+  { band:2, kind:'score', maxS:18.8, css:'ww3', label:'Leaky Trigger',
+    icon:'', desc:'' },
+  { band:2, kind:'score', maxS:19.6, css:'ww3', label:'First Water Balloon',
+    icon:'', desc:'' },
+  { band:2, kind:'score', maxS:20.4, css:'ww3', label:'Burst in Hand',
+    icon:'', desc:'' },
+  { band:2, kind:'score', maxS:21.2, css:'ww3', label:'Knot-Tying Bottleneck',
+    icon:'', desc:'' },
+  { band:2, kind:'score', maxS:22, css:'ww3', label:'Refill Queue',
+    icon:'', desc:'' },
+  { band:2, kind:'score', maxS:22.8, css:'ww3', label:'Truce at the Spigot',
+    icon:'', desc:'' },
+  { band:2, kind:'score', maxS:23.6, css:'ww3', label:'Faucet Adapter',
+    icon:'', desc:'' },
+  { band:2, kind:'score', maxS:24.4, css:'ww3', label:'Wet Shirt Surrender',
+    icon:'', desc:'' },
+  { band:2, kind:'score', maxS:25.2, css:'ww3', label:'Towel Neutrality',
+    icon:'', desc:'' },
+  { band:2, kind:'score', maxS:26, css:'ww3', label:'Balloon Bucket',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:27, css:'ww4', label:'Balloon Brigade',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:28, css:'ww4', label:'Sprinkler Fort',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:29, css:'ww4', label:'Kiddie Pool Keep',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:30, css:'ww4', label:'Slip \'n Slide Front',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:31, css:'ww4', label:'Tarp Slide',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:32, css:'ww4', label:'Hose Artillery',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:33, css:'ww4', label:'Nozzle Settings Treaty',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:34, css:'ww4', label:'Squirt Pistol Pair',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:35, css:'ww4', label:'Pump-Action Prototype', pump:true,
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:36, css:'ww4', label:'Pressure Chamber Debate',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:37, css:'ww4', label:'Backpack Tank',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:38, css:'ww4', label:'Ice Water Escalation',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:39, css:'ww4', label:'Three-Person Balloon Launcher',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:40, css:'ww4', label:'Trampoline Sprinkler',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:41, css:'ww4', label:'Fence Line Ambush',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:42, css:'ww4', label:'Two-Yard War',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:43, css:'ww4', label:'Water Table Seized',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:44, css:'ww4', label:'Rain Barrel Claimed',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:45, css:'ww4', label:'Garage Armory',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:46, css:'ww4', label:'Bucket Brigade',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:47, css:'ww5', label:'Five-Gallon Dump',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:48, css:'ww5', label:'Cooler Raid',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:49, css:'ww5', label:'Popsicle Ceasefire',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:50, css:'ww5', label:'No-Faces Rule',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:51, css:'ww5', label:'Sunscreen Truce',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:52, css:'ww5', label:'Screen Door Neutral Zone',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:53, css:'ww5', label:'Wet Towel Ban',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:54, css:'ww5', label:'Chlorine Tag',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:55, css:'ww5', label:'Cannonball Contest',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:56, css:'ww5', label:'Diving Board Command',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:57, css:'ww5', label:'Pool Noodle Cannon',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:58, css:'ww5', label:'Water Blob',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:59, css:'ww5', label:'Splash Radius',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:60, css:'ww5', label:'Dripping Retreat',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:61, css:'ww5', label:'Kitchen Sink Supply Line',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:62, css:'ww5', label:'Soaker Showroom',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:63, css:'ww5', label:'Refill Station',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:64, css:'ww5', label:'Sprinkler Timer Sabotage',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:65, css:'ww5', label:'Dunk Tank Tribunal',
+    icon:'', desc:'' },
+  { band:3, kind:'score', maxS:66, css:'ww5', label:'Backyard Hegemony',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:66.8, css:'ww6', label:'Super Soakers Arrive',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:67.6, css:'ww6', label:'Pressure Wars',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:68.4, css:'ww6', label:'Tank Capacity Race',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:69.2, css:'ww6', label:'Cul-de-Sac Front',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:70, css:'ww6', label:'Block Alliance',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:70.8, css:'ww6', label:'Sidewalk No-Man\'s-Land',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:71.6, css:'ww6', label:'Garden Hose Network',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:72.4, css:'ww6', label:'Splitter Manifold',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:73.2, css:'ww6', label:'Balloon Factory',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:74, css:'ww6', label:'Rapid-Fill Clusters',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:74.8, css:'ww6', label:'Bike Couriers',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:75.6, css:'ww6', label:'Wagon Convoys',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:76.4, css:'ww6', label:'Ice Chest Logistics',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:77.2, css:'ww6', label:'Popsicle Economy',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:78, css:'ww6', label:'Lemonade Stand Treasury',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:78.8, css:'ww6', label:'Treehouse Water Tower',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:79.6, css:'ww6', label:'Gutter Aqueduct',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:80.4, css:'ww6', label:'Driveway Moat',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:81.2, css:'ww6', label:'Sprinkler Minefield',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:82, css:'ww6', label:'Hose Reel Artillery',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:82.8, css:'ww6', label:'Pump Patent Dispute', pump:true,
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:83.6, css:'ww6', label:'Two-Stage Pressure',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:84.4, css:'ww6', label:'Elastic-Bladder Soakers',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:85.2, css:'ww7', label:'Constant-Pressure Chamber',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:86, css:'ww7', label:'Neighbor\'s Pool Treaty',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:86.8, css:'ww7', label:'Pool Party Summit',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:87.6, css:'ww7', label:'Chlorine Diplomacy',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:88.4, css:'ww7', label:'Water Bill Crisis',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:89.2, css:'ww7', label:'Parental Intervention',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:90, css:'ww7', label:'Spigot Map',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:90.8, css:'ww7', label:'Spigot Key Black Market',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:91.6, css:'ww7', label:'Night Raid',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:92.4, css:'ww7', label:'Glow-Stick Balloons',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:93.2, css:'ww7', label:'Summer Camp Raid',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:94, css:'ww7', label:'Garden Collateral',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:94.8, css:'ww7', label:'HOA Complaint',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:95.6, css:'ww7', label:'Neighborhood Watch Recruited',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:96.4, css:'ww7', label:'Ice Cream Truck Ceasefire',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:97.2, css:'ww7', label:'Hydrant Diplomacy',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:98, css:'ww7', label:'Sprinkler-Cap Hydrant',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:98.8, css:'ww7', label:'Fire Department Visit',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:99.6, css:'ww7', label:'Hydrant Cap Treaty',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:100.4, css:'ww7', label:'Block Party Armistice',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:101.2, css:'ww7', label:'Neighborhood Hegemony',
+    icon:'', desc:'' },
+  { band:4, kind:'score', maxS:102, css:'ww7', label:'The Long Summer',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:103.7, css:'ww8', label:'Splash Pad Seized',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:105.4, css:'ww8', label:'Public Pool Occupation',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:107.1, css:'ww8', label:'Lifeguard Neutrality',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:108.8, css:'ww8', label:'Cooling Center Sanctuary',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:110.5, css:'ww8', label:'Open Hydrant Summer',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:112.2, css:'ww8', label:'Hydrant Wrench Guild',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:113.9, css:'ww8', label:'Street-Wide Mist',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:115.6, css:'ww8', label:'Water Main Pressure Drop',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:117.3, css:'ww8', label:'Fire Engine Deluge',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:119, css:'ww8', label:'Deck Gun Diplomacy',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:120.7, css:'ww8', label:'Ladder Truck Rain',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:122.4, css:'ww8', label:'Fountain Occupation',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:124.1, css:'ww8', label:'Reflecting Pool Front',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:125.8, css:'ww8', label:'River Beach Landing',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:127.5, css:'ww8', label:'Fireboat Salute',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:129.2, css:'ww8', label:'Water Tower Siege',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:130.9, css:'ww8', label:'Utility Board Hearings',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:132.6, css:'ww8', label:'Watering Restrictions',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:134.3, css:'ww8', label:'Odd-Even Days',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:136, css:'ww8', label:'Pressure Rationing',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:137.7, css:'ww9', label:'Bottled Water Hoard',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:139.4, css:'ww9', label:'Ice Shortage',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:141.1, css:'ww9', label:'Swamp Cooler Bargain',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:142.8, css:'ww9', label:'Grid Truce',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:144.5, css:'ww9', label:'Pump Station Garrison',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:146.2, css:'ww9', label:'Canal Front',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:147.9, css:'ww9', label:'Drainage Ditch Trenches',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:149.6, css:'ww9', label:'Stormwater Tunnels',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:151.3, css:'ww9', label:'Center-Pivot Artillery',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:153, css:'ww9', label:'Crop Duster Air Raid',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:154.7, css:'ww9', label:'Snowmaking Guns Recalled',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:156.4, css:'ww9', label:'Water Cannon Trucks',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:158.1, css:'ww9', label:'City Council Arbitration',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:159.8, css:'ww9', label:'Municipal Pump Standard', pump:true,
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:161.5, css:'ww9', label:'Pump Works',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:163.2, css:'ww9', label:'Reservoir Rumors',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:164.9, css:'ww9', label:'Regional Compact',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:166.6, css:'ww9', label:'Water Rights Court',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:168.3, css:'ww9', label:'Metro Hegemony',
+    icon:'', desc:'' },
+  { band:5, kind:'score', maxS:170, css:'ww9', label:'The Hot Summer',
+    icon:'', desc:'' },
+  { band:6, kind:'score', maxS:179.17, css:'ww10', label:'Aqueduct Seizure',
+    icon:'', desc:'' },
+  { band:6, kind:'score', maxS:188.84, css:'ww10', label:'River Diversion',
+    icon:'', desc:'' },
+  { band:6, kind:'score', maxS:199.03, css:'ww10', label:'Dam Occupation',
+    icon:'', desc:'' },
+  { band:6, kind:'score', maxS:209.76, css:'ww10', label:'Great Lakes Compact',
+    icon:'', desc:'' },
+  { band:6, kind:'score', maxS:221.08, css:'ww10', label:'Colorado River Treaty',
+    icon:'', desc:'' },
+  { band:6, kind:'score', maxS:233.01, css:'ww10', label:'Aquifer Drilling Race',
+    icon:'', desc:'' },
+  { band:6, kind:'score', maxS:245.58, css:'ww10', label:'Pipeline Campaign',
+    icon:'', desc:'' },
+  { band:6, kind:'score', maxS:258.83, css:'ww10', label:'Tanker Convoys',
+    icon:'', desc:'' },
+  { band:6, kind:'score', maxS:272.8, css:'ww10', label:'Water Barons',
+    icon:'', desc:'' },
+  { band:6, kind:'score', maxS:287.51, css:'ww10', label:'Canal Empire',
+    icon:'', desc:'' },
+  { band:6, kind:'score', maxS:303.03, css:'ww10', label:'Aquifer Fortress',
+    icon:'', desc:'' },
+  { band:6, kind:'score', maxS:319.37, css:'ww10', label:'Reservoir Kingdom',
+    icon:'', desc:'' },
+  { band:6, kind:'score', maxS:336.61, css:'ww10', label:'Cloud Seeding Arms Race',
+    icon:'', desc:'' },
+  { band:6, kind:'score', maxS:354.77, css:'ww10', label:'Silver Iodide Embargo',
+    icon:'', desc:'' },
+  { band:6, kind:'score', maxS:373.91, css:'ww10', label:'Iceberg Towing',
+    icon:'', desc:'' },
+  { band:6, kind:'score', maxS:394.08, css:'ww11', label:'Desalination Coast',
+    icon:'', desc:'' },
+  { band:6, kind:'score', maxS:415.34, css:'ww11', label:'Fog Harvesting Frontier',
+    icon:'', desc:'' },
+  { band:6, kind:'score', maxS:437.75, css:'ww11', label:'Dew Collectors Guild',
+    icon:'', desc:'' },
+  { band:6, kind:'score', maxS:461.37, css:'ww11', label:'Atmospheric Water Mines',
+    icon:'', desc:'' },
+  { band:6, kind:'score', maxS:486.26, css:'ww11', label:'Monsoon Capture',
+    icon:'', desc:'' },
+  { band:6, kind:'score', maxS:512.49, css:'ww11', label:'Hurricane Harvest',
+    icon:'', desc:'' },
+  { band:6, kind:'score', maxS:540.14, css:'ww11', label:'Continental Soak Grid',
+    icon:'', desc:'' },
+  { band:6, kind:'score', maxS:569.29, css:'ww11', label:'Pump Dynasty', pump:true,
+    icon:'', desc:'' },
+  { band:6, kind:'score', maxS:600, css:'ww11', label:'The First Pump', pump:true,
+    icon:'', desc:'' },
+  { band:6, kind:'score', maxS:Infinity, css:'ww11', label:'Hydrologic Map Wars',
+    icon:'', desc:'' },
+  { band:6, kind:'floor', test: x => x.T >= 130, css:'ww11', label:'Death Valley Standoff', trigger:'T ≥ 130°F',
+    icon:'', desc:'' },
+  { band:6, kind:'floor', test: x => x.tw !== null && x.tw >= 33, css:'ww11', label:'Shade Treaty', trigger:'Tw ≥ 33°C',
+    icon:'', desc:'' },
+  { band:6, kind:'floor', test: x => x.tw !== null && x.tw >= 34, css:'ww11', label:'Last Cool Water', trigger:'Tw ≥ 34°C',
+    icon:'', desc:'' },
+  { band:6, kind:'floor', test: x => x.tw !== null && x.tw >= 35, css:'ww11', label:'Survivability Line', trigger:'Tw ≥ 35°C',
+    icon:'', desc:'' },
+  { band:6, kind:'floor', test: x => (x.tw !== null && x.tw >= 36) || (x.hi !== null && x.hi >= 170), css:'ww11', label:'Dhahran Accord', trigger:'Tw ≥ 36°C',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:-Infinity, css:'ww12', label:'Evaporation Front',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:140, css:'ww12', label:'Mid-Air Loss',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:150, css:'ww12', label:'Hot Tap Rounds',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:180, css:'ww12', label:'Steam Rounds',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:212, css:'ww12', label:'Boil-Over',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:230, css:'ww12', label:'Kettle Artillery',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:250, css:'ww12', label:'Pressure Cooker Siege',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:300, css:'ww12', label:'Geyser Farming',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:400, css:'ww12', label:'Superheated Jets',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:500, css:'ww12', label:'Oven Doctrine',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:705, css:'ww12', label:'Supercritical Water',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:867, css:'ww12', label:'Venusian Drought',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:1221, css:'ww12', label:'Molten Metal Moratorium',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:2000, css:'ww12', label:'Lava Lake Treaty',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:2800, css:'ww12', label:'Pump Ruins', pump:true,
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:10000, css:'ww13', label:'Plasma Hose',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:50000, css:'ww13', label:'Comet Harvest',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:100000, css:'ww13', label:'Europa Drilling',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:500000, css:'ww13', label:'Ring Ice Barges',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:1e6, css:'ww13', label:'Oort Cloud Claims',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:2e6, css:'ww13', label:'Hydrogen-Oxygen Synthesis',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:3e6, css:'ww13', label:'Stellar Water Masers',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:3.6e6, css:'ww13', label:'Solar Corona Spray',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:1e7, css:'ww13', label:'Stellar Nursery Rights',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:2.7e7, css:'ww13', label:'Primordial Hydrogen',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:1e9, css:'ww13', label:'Last Water Molecule',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:3.6e12, css:'ww13', label:'Quark Soup',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:2.5e32, css:'ww13', label:'Planck Squirt',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:2.6e32, css:'ww13', label:'Before Water',
+    icon:'', desc:'' },
+  { band:7, kind:'fiction', minT:1e34, css:'ww13', label:'The Next Rain',
+    icon:'🌧️', desc:'The universe cools below about 3,600°F, and water can hold together for the first time since the last war ended. The first molecules form around 200 million years in, in the leftovers of stars that never find out what they were for. 9.1 billion years later, on an unnamed rock 7,900 miles across, it rains: about two miles of it, over roughly a thousand years, which is the longest refill queue ever recorded. Nothing is alive to throw any of it. The ledger resets to No Water Drawn, and 4.4 billion years after that, on graph paper at four squares to the inch, someone draws a pump.' },
+];
+function waterWarTierFor(x) { return ladderTierFor(WATER_WAR_TIERS, x); }
 
 /* ---- Heat Index Mode: alerts and outdoor impact ---- */
 function heatRiskCategory(hi) {
@@ -8141,6 +8619,7 @@ function evaluateHeatCity(entry, lakeTemps, cityOverride) {
   const warmNights = nightLow >= (heatNaive ? 75 : 80);
   const S = heatScore({ hi, hiNorm, days, nightLow, R: res.R, heatNaive });
   const { tier, index } = heatTierFor({ S, T, hi, tw });
+  const waterWar = waterWarTierFor({ S, T, hi, tw });
   const anom = hi === null ? Infinity : hi - hiNorm;
   const alert = heatAlert(db, { hi, T, anom, days, warmNights });
   let inland = null;
@@ -8150,7 +8629,7 @@ function evaluateHeatCity(entry, lakeTemps, cityOverride) {
   }
   return {
     n: entry.n, db, T, Td, dewAssumed, rh, hi, tw, summerHigh: sh, hiNorm, anom,
-    resilience: res, days, nightLow, warmNights, score: S, tier, tierIndex: index,
+    resilience: res, days, nightLow, warmNights, score: S, tier, tierIndex: index, waterWar,
     risk: heatRiskCategory(hi), alert, outdoor: heatOutdoorImpact(hi, res.label),
     lakeNotes: lake.notes, inland
   };
@@ -8283,6 +8762,7 @@ function renderHeatProfile(results) {
       <td>${r.alert.label}<div class="heat-sub">${r.risk}</div></td>
       <td>${r.resilience.icon} ${r.resilience.label}</td>
       <td>${r.outdoor}</td>
+      <td style="min-width:190px"><span class="war-pill war-${r.waterWar.tier.css}">${r.waterWar.tier.icon} ${esc(r.waterWar.tier.label)}</span><span class="war-desc">${esc(r.waterWar.tier.desc)}</span></td>
       <td class="heat-sub">${details}</td>
     </tr>`;
   }).join('');
@@ -8299,12 +8779,33 @@ function renderHeatProfile(results) {
     </div>
     <div class="impact-table-wrap">
     <table class="impact-table">
-      <thead><tr><th>City</th><th>Temp / Dew / HI</th><th>Wet-Bulb</th><th>Impact</th><th>NWS Alert</th><th>Resilience</th><th>School / Outdoor</th><th>Details</th></tr></thead>
+      <thead><tr><th>City</th><th>Temp / Dew / HI</th><th>Wet-Bulb</th><th>Impact</th><th>NWS Alert</th><th>Resilience</th><th>School / Outdoor</th><th>Water War</th><th>Details</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
     </div>
     ${lakeNote}`;
 }
+
+/* ---- Heat Index Mode: Water War Tiers list ---- */
+function renderWaterWarList() {
+  const list = document.getElementById('waterWarList');
+  document.getElementById('waterWarCount').textContent = WATER_WAR_TIERS.length;
+  const temp = v => (v >= 1e6 ? v.toExponential(1).replace('e+', '×10^') : v.toLocaleString('en-US')) + '°F+';
+  list.innerHTML = WATER_WAR_TIERS.map((t, i) => {
+    let chip;
+    if (t.kind === 'score') chip = i === 0 ? 'S = 0' : t.maxS === Infinity ? 'S > 600' : 'S ≤ ' + (+t.maxS.toFixed(2));
+    else if (t.kind === 'floor') chip = t.trigger;
+    else chip = t.minT === -Infinity ? '> 134°F' : temp(t.minT);
+    return `<div class="historic-row war-row">
+      <span class="wt-depth war-${t.css}">${esc(chip)}</span>
+      <span class="wt-body">
+        <span class="wt-label"><span class="wt-icon">${t.icon}</span>${esc(t.label)}</span>
+        <span class="wt-desc">${esc(t.desc)}</span>
+      </span>
+    </div>`;
+  }).join('');
+}
+renderWaterWarList();
 
 /* ======================================================================
    SELFTEST HARNESS
@@ -9315,6 +9816,71 @@ window.__snowTests.push((t) => {
   t('heat run leaves snow cities alone', cities.length === snowBefore);
   t('heat run leaves snow profile alone', profileCard.innerHTML === profileBefore);
   heatEls.profile.innerHTML = '';
+});
+
+// WW1 water war structure, placement, and the ladderTierFor refactor
+window.__snowTests.push((t) => {
+  const W = WATER_WAR_TIERS;
+  t('water war has 222 tiers', W.length === 222);
+  const counts = [1, 2, 3, 4, 5, 6, 7].map(b => W.filter(x => x.band === b).length).join(',');
+  t('band counts 12/25/40/45/40/30/30', counts === '12,25,40,45,40,30,30');
+  t('bands in order', W.every((x, i) => i === 0 || x.band >= W[i - 1].band));
+  t('water war labels unique', new Set(W.map(x => x.label)).size === 222);
+  const score = W.filter(x => x.kind === 'score');
+  t('water war maxS strictly increasing', score.every((x, i) => i === 0 || x.maxS > score[i - 1].maxS));
+  const fic = W.filter(x => x.kind === 'fiction');
+  t('water war minT strictly increasing', fic.every((x, i) => i === 0 || x.minT > fic[i - 1].minT));
+  t('exactly 5 floors', W.filter(x => x.kind === 'floor').length === 5);
+  t('Pump storyline in order', W.filter(x => x.pump).map(x => x.label).join('|') ===
+    'Sketch of a Pump|Pump Specs Drawn|Pump-Action Prototype|Pump Patent Dispute|Municipal Pump Standard|Pump Dynasty|The First Pump|Pump Ruins');
+  t('Oven Doctrine before Supercritical Water',
+    W.findIndex(x => x.label === 'Oven Doctrine') < W.findIndex(x => x.label === 'Supercritical Water'));
+  t('heatTierFor still wraps the shared lookup', heatTierFor({ S: 42.1, T: 96, hi: 107, tw: 27 }).tier.level === 'Sweltering');
+  const ev = (n, temp, dew, days, lakes, ov) => evaluateHeatCity({ n, temp, dew, days }, lakes || {}, ov).waterWar.tier.label;
+  t('Tulsa -> Water Table Seized', ev('Tulsa, OK', 96, 74, 1) === 'Water Table Seized');
+  t('Phoenix routine -> Hose Artillery', ev('Phoenix, AZ', 108, 45, 1) === 'Hose Artillery');
+  t('Seattle -> Public Pool Occupation', ev('Seattle, WA', 108, 60, 1) === 'Public Pool Occupation');
+  t('Phoenix 2023 -> Bottled Water Hoard', ev('Phoenix, AZ', 116, 45, 31) === 'Bottled Water Hoard');
+  t('Portland 2021 -> Great Lakes Compact', ev('Portland, OR', 116, 62, 3) === 'Great Lakes Compact');
+  t('Chicago 1995 -> Pipeline Campaign', ev('Chicago, IL', 104, 78, 5) === 'Pipeline Campaign');
+  t('Dhahran -> Dhahran Accord', ev('Dhahran', 108, 95, 1, {}, { n: 'Dhahran', lat: 26.3, lon: 50.1, r: null, snow: 0 }) === 'Dhahran Accord');
+  t('cool day -> No Water Drawn', ev('Tulsa, OK', 65, 50, 1) === 'No Water Drawn');
+  t('212F -> Boil-Over', ev('Tulsa, OK', 212, 60, 1) === 'Boil-Over');
+  t('1e35F -> The Next Rain', ev('Tulsa, OK', 1e35, 0, 1) === 'The Next Rain');
+  let prev = -1, mono = true;
+  for (let T = 60; T <= 1000; T++) {
+    const i = evaluateHeatCity({ n: 'Tulsa, OK', temp: T, dew: Math.min(T, 70), days: 1 }, {}).waterWar.index;
+    if (i < prev) mono = false;
+    prev = i;
+  }
+  t('water war never drops as temperature rises', mono);
+});
+
+// Validates one band's icons and descriptions against the spec's content rules.
+function waterWarContentProblems(band) {
+  const problems = [];
+  WATER_WAR_TIERS.filter(x => x.band === band).forEach(x => {
+    const numerals = (x.desc.match(/\d[\d,.]*/g) || []).length;
+    const sentences = x.desc.split(/[.!?](?=\s|$)/).filter(s => s.trim()).length;
+    const words = x.desc.split(/\s+/).filter(Boolean).length;
+    if (!x.icon) problems.push(x.label + ': no icon');
+    if (numerals < 2) problems.push(x.label + ': fewer than 2 numbers');
+    if (sentences < 2 || sentences > 5) problems.push(x.label + ': ' + sentences + ' sentences');
+    if (words < 30 || words > 110) problems.push(x.label + ': ' + words + ' words');
+  });
+  return problems;
+}
+
+// WW2 water war display
+window.__snowTests.push((t) => {
+  renderHeatProfile([evaluateHeatCity({ n: 'Tulsa, OK', temp: 96, dew: 74, days: 1 }, {})]);
+  t('Heat Profile has a Water War column', heatEls.profile.innerHTML.includes('<th>Water War</th>'));
+  t('Heat Profile shows the Tulsa water war tier', heatEls.profile.innerHTML.includes('Water Table Seized'));
+  heatEls.profile.innerHTML = '';
+  t('Water War list renders 222 rows', document.querySelectorAll('#waterWarList .war-row').length === 222);
+  t('Water War count shows 222', document.getElementById('waterWarCount').textContent === '222');
+  t('floor chip shows its trigger', document.getElementById('waterWarList').textContent.includes('Tw ≥ 35°C'));
+  t('fiction chip shows its temperature', document.getElementById('waterWarList').textContent.includes('212°F+'));
 });
 
 window.addEventListener('load', () => {
