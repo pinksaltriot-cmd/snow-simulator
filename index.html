@@ -7895,6 +7895,120 @@ function heatApplyLakes(city, T, Td, lakeTemps) {
   return { T: T2, Td: Td2, nightFloor, notes, affected: notes.length > 0 };
 }
 
+/* ---- Heat Index Mode: resilience ---- */
+const HEAT_RESILIENCE = [
+  { min: 104, label:'Furnace-Forged',  R:0.70, icon:'\u{1F525}\u{1F525}\u{1F525}' },
+  { min: 100, label:'Desert-Hardened', R:0.78, icon:'\u{1F525}\u{1F525}+' },
+  { min:  95, label:'Sun-Belt',        R:0.86, icon:'\u{1F525}\u{1F525}' },
+  { min:  92, label:'Heat-Seasoned',   R:0.93, icon:'\u{1F525}+' },
+  { min:  89, label:'Warm-Adapted',    R:1.00, icon:'\u{1F525}' },
+  { min:  85, label:'Temperate',       R:1.08, icon:'☀️' },
+  { min:  81, label:'Mild-Summer',     R:1.16, icon:'⛅' },
+  { min:  77, label:'Heat-Wary',       R:1.24, icon:'⚠' },
+  { min:  72, label:'Heat-Naive',      R:1.32, icon:'⚠⚠' },
+  { min: -Infinity, label:'Cool-Summer', R:1.40, icon:'❄️' }
+];
+// Low air-conditioning places sit one notch less resilient than their climate implies.
+function heatLowAC(city) {
+  if (PACIFIC_MARINE.has(city.n)) return true;
+  if (heatIsUS(city.n)) {
+    if (city.r === 'NE' || city.r === 'UM') return true;
+    return heatLakesFor(city).some(([, cls]) => cls === 'shore');
+  }
+  return city.lat !== null && city.lat !== undefined && Math.abs(city.lat) >= 35;
+}
+function heatResilience(city) {
+  const sh = heatSummerHigh(city).f;
+  let i = HEAT_RESILIENCE.findIndex(r => sh >= r.min);
+  if (heatLowAC(city)) i = Math.min(HEAT_RESILIENCE.length - 1, i + 1);
+  return HEAT_RESILIENCE[i];
+}
+
+/* ---- Heat Index Mode: overnight low and severity ---- */
+function heatNightLow(T, Td, summerHigh, floor) {
+  const range = 20 + 0.3 * Math.max(0, 60 - Td) + 0.6 * Math.max(0, T - summerHigh);
+  return Math.max(Td + 2, T - range, floor === undefined ? -Infinity : floor);
+}
+const HEAT_DUR_A = 0.25, HEAT_NIGHT_B = 0.28;
+function heatScore({ hi, hiNorm, days, nightLow, R, heatNaive }) {
+  if (hi === null) return Infinity;
+  const base = Math.max(0, hi - 70) + Math.max(0, hi - hiNorm);
+  const warm = nightLow >= (heatNaive ? 75 : 80) ? days : 0;
+  const D = 1 + HEAT_DUR_A * Math.sqrt(Math.max(0, days - 1)) + HEAT_NIGHT_B * Math.sqrt(warm);
+  return base * D * R;
+}
+
+/* ---- Heat Index Mode: impact ladder ----
+   Score tiers are realistic. Physical floors mark real-world extremes. Fiction starts
+   only past anything observed on Earth (wet-bulb ≥ 37°C or air > 134°F), keyed on air temp. */
+const HEAT_TIERS = [
+  // score regime: maxS is the inclusive upper bound of the score
+  { kind:'score', maxS: 0,    level:'None',          css:'h0' },
+  { kind:'score', maxS: 3,    level:'Pleasant',      css:'h1' },
+  { kind:'score', maxS: 6,    level:'Warm',          css:'h1' },
+  { kind:'score', maxS: 10,   level:'Balmy',         css:'h2' },
+  { kind:'score', maxS: 14,   level:'Summery',       css:'h2' },
+  { kind:'score', maxS: 18,   level:'Sticky',        css:'h3' },
+  { kind:'score', maxS: 22,   level:'Muggy',         css:'h3' },
+  { kind:'score', maxS: 26,   level:'Sultry',        css:'h3' },
+  { kind:'score', maxS: 30,   level:'Steamy',        css:'h4' },
+  { kind:'score', maxS: 35,   level:'Hot',           css:'h4' },
+  { kind:'score', maxS: 46,   level:'Sweltering',    css:'h5' },
+  { kind:'score', maxS: 56,   level:'Oppressive',    css:'h5' },
+  { kind:'score', maxS: 66,   level:'Scorcher',      css:'h6' },
+  { kind:'score', maxS: 75,   level:'Blistering',    css:'h6' },
+  { kind:'score', maxS: 84,   level:'Searing',       css:'h6' },
+  { kind:'score', maxS: 92,   level:'Heat Wave',     css:'h7' },
+  { kind:'score', maxS: 102,  level:'Dangerous Heat',css:'h7' },
+  { kind:'score', maxS: 110,  level:'Heat Emergency',css:'h7' },
+  { kind:'score', maxS: 117,  level:'Grid Strain',   css:'h8' },
+  { kind:'score', maxS: 123,  level:'Rolling Blackouts', css:'h8' },
+  { kind:'score', maxS: 129.999, level:'Mass-Casualty Heat', css:'h8' },
+  { kind:'score', maxS: 169.999, level:'2023 Phoenix–Class', css:'h9' },
+  { kind:'score', maxS: 189.999, level:'1980 Heat Wave–Class', css:'h9' },
+  { kind:'score', maxS: 209.999, level:'2021 Heat Dome–Class', css:'h9' },
+  { kind:'score', maxS: 249.999, level:'1995 Chicago–Class', css:'h10' },
+  { kind:'score', maxS: 319.999, level:'1936 Dust Bowl–Class', css:'h10' },
+  { kind:'score', maxS: Infinity, level:'2003 Europe–Class', css:'h10' },
+  // physical floors (realistic extremes)
+  { kind:'floor', level:'Death Valley–Class',  css:'h11', test: x => x.T >= 130 },
+  { kind:'floor', level:'Persian Gulf–Class',  css:'h11', test: x => x.tw !== null && x.tw >= 33 },
+  { kind:'floor', level:'Survivability Limit',      css:'h11', test: x => x.tw !== null && x.tw >= 35 },
+  { kind:'floor', level:'Dhahran-Class',            css:'h11', test: x => (x.tw !== null && x.tw >= 36) || (x.hi !== null && x.hi >= 170) },
+  // fiction: minT is the air temperature that reaches the tier
+  { kind:'fiction', minT: -Infinity, level:'Beyond Record',     css:'h12' },
+  { kind:'fiction', minT: 150,     level:'Uninhabitable',       css:'h12' },
+  { kind:'fiction', minT: 160,     level:'Asphalt Soup',        css:'h12' },
+  { kind:'fiction', minT: 212,     level:'Boiling Point',       css:'h13' },
+  { kind:'fiction', minT: 350,     level:'Oven-Class',          css:'h13' },
+  { kind:'fiction', minT: 451,     level:'Fahrenheit 451',      css:'h13' },
+  { kind:'fiction', minT: 621,     level:'Lead Melts',          css:'h14' },
+  { kind:'fiction', minT: 867,     level:'Venusian',            css:'h14' },
+  { kind:'fiction', minT: 1221,    level:'Aluminum Melts',      css:'h14' },
+  { kind:'fiction', minT: 2000,    level:'Lava Flow',           css:'h15' },
+  { kind:'fiction', minT: 2800,    level:'Iron Melts',          css:'h15' },
+  { kind:'fiction', minT: 6192,    level:'Tungsten Melts',      css:'h15' },
+  { kind:'fiction', minT: 10000,   level:'Solar Surface',       css:'h16' },
+  { kind:'fiction', minT: 3.6e6,   level:'Solar Corona',        css:'h16' },
+  { kind:'fiction', minT: 2.7e7,   level:'Stellar Core',        css:'h16' },
+  { kind:'fiction', minT: 1.8e11,  level:'Supernova',           css:'h17' },
+  { kind:'fiction', minT: 3.6e12,  level:'Quark-Gluon Plasma',  css:'h17' },
+  { kind:'fiction', minT: 2.5e32,  level:'Planck Temperature',  css:'h17' },
+  { kind:'fiction', minT: 2.6e32,  level:'Big Bang Recurrence', css:'h17' }
+];
+// x: { S, T, hi, tw }. Returns { tier, index }.
+function heatTierFor(x) {
+  const fiction = x.T > 134 || (x.tw !== null && x.tw >= 37);
+  if (fiction) {
+    let idx = -1;
+    HEAT_TIERS.forEach((t, i) => { if (t.kind === 'fiction' && x.T >= t.minT) idx = i; });
+    return { tier: HEAT_TIERS[idx], index: idx };
+  }
+  let idx = HEAT_TIERS.findIndex(t => t.kind === 'score' && x.S <= t.maxS);
+  HEAT_TIERS.forEach((t, i) => { if (t.kind === 'floor' && t.test(x) && i > idx) idx = i; });
+  return { tier: HEAT_TIERS[idx], index: idx };
+}
+
 /* ======================================================================
    SELFTEST HARNESS
    Browser-run tests. Load index.html?selftest=1 and read the console.
