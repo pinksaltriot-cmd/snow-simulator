@@ -711,6 +711,16 @@
   .war-ww11 { background: #111827; color: #e0f2fe; box-shadow: inset 0 0 0 1px rgba(224,242,254,0.3); }
   .war-ww12 { background: #e5e7eb; color: #334155; }
   .war-ww13 { background: #2e1065; color: #ddd6fe; }
+  /* Heat Wave 2b */
+  input[type="date"] {
+    width: 100%; padding: 10px 14px; border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px; background: rgba(0,0,0,0.25); color: #fff; font-size: 0.95rem;
+    color-scheme: dark;
+  }
+  .rhi0 { background: #334155; } .rhi1 { background: #a16207; } .rhi2 { background: #c2410c; }
+  .rhi3 { background: #dc2626; } .rhi4 { background: #b91c1c; } .rhi5 { background: #7f1d1d; }
+  .rhi6 { background: #9d174d; } .rhi7 { background: #6b21a8; } .rhi8 { background: #4c1d95; }
+  .rhi9 { background: #fef3c7; color: #7c2d12; }
 </style>
 </head>
 <body>
@@ -869,8 +879,8 @@
 </aside>
 
 <div class="container">
-  <h1>Snow Event Profile Maker 3.3.0</h1>
-  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">9938 lines of code</p>
+  <h1>Snow Event Profile Maker 3.4.0</h1>
+  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">10315 lines of code</p>
   <p class="subtitle">Powered by real NOAA RSI methodology with location-based impact scaling</p>
 
   <div class="card">
@@ -933,6 +943,10 @@
         <div><label for="lake_ontario">Ontario</label><input type="number" id="lake_ontario" placeholder="&mdash;"></div>
       </div>
     </div>
+    <div class="heat-lakes">
+      <label for="heatStartDate">Heat starts <span class="heat-opt">optional &mdash; puts calendar dates on the recovery timeline</span></label>
+      <input type="date" id="heatStartDate" style="max-width:220px">
+    </div>
     <div id="heatCityList" style="margin-top:12px"></div>
     <button class="btn-generate" id="heatGenerateBtn" disabled>Generate Heat Profile</button>
   </div>
@@ -941,6 +955,27 @@
     <h2>Water War Tiers</h2>
     <p class="paragraph-hint">All <span id="waterWarCount">&mdash;</span> water war tiers, ordered by the heat that reaches them &mdash; from a condensation ring on a glass to the first rain of the next universe. Heat alone decides the tier: the heat score through the realistic range, the deadliest wet-bulb readings at the top of Continental, and air temperature alone past 134&deg;F.</p>
     <div class="historic-list" id="waterWarList"></div>
+  </div>
+  <div class="card" id="heatRecoveryCard" style="display:none"></div>
+  <div class="card" id="heatRhiCard" style="display:none"></div>
+  <div class="card" id="heatGapCard" style="display:none">
+    <h2>Fill In The Gaps &mdash; Heat</h2>
+    <p style="font-size:0.82rem;opacity:0.55;margin-bottom:12px">
+      Estimate any city not in the run. The simulator carries over how far above normal the heat is &mdash;
+      not the raw temperature &mdash; weighted toward the nearest entered cities, and fades it out beyond
+      500 miles. Past 1,200 miles a city is outside the heat event.
+    </p>
+    <div class="gap-fill-row">
+      <div class="gap-fill-field">
+        <input type="text" id="heatGapInput" placeholder="Search any city&hellip; e.g. Boise, ID" autocomplete="off">
+        <div class="autocomplete-list" id="heatGapAcList"></div>
+      </div>
+      <button type="button" class="btn-add" id="heatGapBtn" style="margin:0">Estimate</button>
+      <button type="button" class="btn-add" id="heatGapAllBtn" style="margin:0">Compute All</button>
+      <button type="button" class="btn-add" id="heatGapAddAllBtn" style="margin:0" disabled>Add All to Run</button>
+    </div>
+    <div class="error-msg" id="heatGapError"></div>
+    <div id="heatGapResults" style="margin-top:10px"></div>
   </div>
 
   <div class="card" id="historicReplayCard" style="display:none">
@@ -7069,6 +7104,7 @@ function setInputMode(mode) {
   const heatProfile = document.getElementById('heatProfileCard');
   heatProfile.style.display = (mode === 'heat' && heatProfile.innerHTML.trim()) ? '' : 'none';
   document.getElementById('waterWarCard').style.display = (mode === 'waterwar') ? '' : 'none';
+  HEAT_EXTRA_CARDS.forEach(id => { document.getElementById(id).style.display = (mode === 'heat' && heatLastResults.length) ? '' : 'none'; });
 }
 document.querySelectorAll('.mode-btn').forEach(b => {
   b.addEventListener('click', () => setInputMode(b.dataset.mode));
@@ -8635,6 +8671,142 @@ function evaluateHeatCity(entry, lakeTemps, cityOverride) {
   };
 }
 
+/* ---- Heat Index Mode: recovery timeline ----
+   Heat's answer to Melt & Recovery: five milestones in the order a place recovers,
+   each floored by the one before. Values are days after the heat starts. */
+const HEAT_RECOVERY_MILESTONES = [
+  { key: 'breaks',  icon: '\u{1F321}️', label: 'Heat breaks' },
+  { key: 'nights',  icon: '\u{1F319}',       label: 'Nights back to normal' },
+  { key: 'grid',    icon: '⚡',          label: 'Grid back to normal' },
+  { key: 'cooling', icon: '\u{1F3EB}',       label: 'Cooling centers close' },
+  { key: 'er',      icon: '\u{1F3E5}',       label: 'ER visits back to normal' }
+];
+function heatTierAtLeast(r, level) {
+  return r.tierIndex >= HEAT_TIERS.findIndex(t => t.level === level);
+}
+function heatRecovery(r) {
+  if (r.tier.kind === 'fiction') return { never: true, breaks: Infinity, nights: Infinity, grid: Infinity, cooling: Infinity, er: Infinity };
+  if (!heatTierAtLeast(r, 'Balmy')) return { none: true };
+  const naive = ['Heat-Wary', 'Heat-Naive', 'Cool-Summer'].includes(r.resilience.label);
+  const breaks = r.days;
+  const nights = breaks + 1 + (r.warmNights ? 2 : 0) + (naive ? 1 : 0);
+  const gridLag = heatTierAtLeast(r, 'Rolling Blackouts') ? 4 : heatTierAtLeast(r, 'Grid Strain') ? 2 : 1;
+  const grid = Math.max(nights, breaks + gridLag);
+  const cooling = Math.max(grid, nights + 1);
+  const erLag = 2
+    + (heatTierAtLeast(r, 'Heat Emergency') ? 1 : 0)
+    + (heatTierAtLeast(r, 'Mass-Casualty Heat') ? 2 : 0)
+    + (heatTierAtLeast(r, '2023 Phoenix–Class') ? 3 : 0)
+    + (heatTierAtLeast(r, 'Death Valley–Class') ? 4 : 0);
+  const er = Math.max(cooling, breaks + erLag);
+  return { breaks, nights, grid, cooling, er };
+}
+// "Day 5" without a start date; "Sun Jul 5" with one; "Never" for fiction.
+function heatFormatDay(start, day) {
+  if (!isFinite(day)) return 'Never';
+  if (!start) return 'Day ' + day;
+  const d = new Date(start.getTime());
+  d.setDate(d.getDate() + day);
+  return DAYS[d.getDay()] + ' ' + MONTH_ABBR[d.getMonth()] + ' ' + d.getDate();
+}
+
+/* ---- Heat Index Mode: Fill In The Gaps ----
+   Interpolates the departure from normal, not the raw temperature: a city near a
+   heat dome gets the dome's anomaly on top of its own typical summer high. */
+const HEAT_GAP_FULL_MI = 500, HEAT_GAP_REACH_MI = 1200;
+// anchors: evaluateHeatCity results. Returns an entry for evaluateHeatCity, or null
+// when the candidate is outside the heat event.
+function estimateHeatForCity(candidate, anchors) {
+  const pts = anchors.filter(a => a.db.lat !== null && a.db.lat !== undefined);
+  if (!pts.length || candidate.lat === null || candidate.lat === undefined) return null;
+  let wSum = 0, aT = 0, aTd = 0, aDays = 0, minD = Infinity, nearest = null;
+  for (const a of pts) {
+    const d = milesBetween(candidate.lat, candidate.lon, a.db.lat, a.db.lon);
+    const inT = a.inland ? a.inland.T : a.T, inTd = a.inland ? a.inland.Td : a.Td;
+    if (a.db.n === candidate.n) return { n: candidate.n, temp: inT, dew: a.dewAssumed ? null : inTd, days: a.days, nearest: a.n, dist: 0 };
+    const w = 1 / Math.pow(Math.max(d, 10), 2);
+    wSum += w;
+    aT += w * (inT - heatSummerHigh(a.db).f);
+    aTd += w * (inTd - heatAssumedDewpoint(a.db));
+    aDays += w * a.days;
+    if (d < minD) { minD = d; nearest = a.n; }
+  }
+  if (minD > HEAT_GAP_REACH_MI) return null;
+  const fall = minD <= HEAT_GAP_FULL_MI ? 1 : 1 - (minD - HEAT_GAP_FULL_MI) / (HEAT_GAP_REACH_MI - HEAT_GAP_FULL_MI);
+  const temp = Math.round((heatSummerHigh(candidate).f + (aT / wSum) * fall) * 10) / 10;
+  const dew = Math.min(temp, Math.round((heatAssumedDewpoint(candidate) + (aTd / wSum) * fall) * 10) / 10);
+  const days = Math.max(1, Math.round((aDays / wSum) * fall));
+  return { n: candidate.n, temp, dew, days, nearest, dist: Math.round(minD) };
+}
+
+/* ---- Heat Index Mode: Regional Heat Index (RHI) ----
+   Simulator-only (NOAA publishes no regional heat index). Built like the RSI:
+   population and metro area exposed at four heat-score thresholds, normalized by
+   each region's RSI means, then scaled by RHI_SCALE. The West has no RSI means, so its
+   are fitted to match the Ohio Valley's single-city-to-outbreak ratio. Calibrated so a
+   1995-style Midwest heat wave and the 2021 Pacific Northwest heat dome land in
+   Category 4, Phoenix 2023 in Category 3, and one big western city alone in Category 2. */
+const RHI_SCALE = 0.55;
+const RHI_THRESHOLDS = [
+  { S: 35,  label: 'Hot' },
+  { S: 56,  label: 'Oppressive' },
+  { S: 102, label: 'Dangerous Heat' },
+  { S: 170, label: 'Historic-class' }
+];
+const RHI_REGIONS = Object.assign({}, RSI_REGIONS, {
+  W: { name: 'West', meanArea: [27000, 11700, 3300, 2000], meanPop: [1350000, 670000, 330000, 330000] }
+});
+const RHI_WEST_STATES = ['WA', 'OR', 'CA', 'NV', 'AZ', 'UT', 'ID', 'CO', 'NM'];
+function heatRegionFor(db) {
+  if (db.r) return db.r;
+  const m = String(db.n).match(/,\s*([A-Z]{2})$/);
+  return m && RHI_WEST_STATES.includes(m[1]) ? 'W' : null;
+}
+const RHI_CATEGORIES = [
+  { min: 0,   cat: 0,     label: 'Routine Summer',        css: 'rhi0' },
+  { min: 1,   cat: 1,     label: 'Notable Heat',          css: 'rhi1' },
+  { min: 3,   cat: 2,     label: 'Significant Heat Wave', css: 'rhi2' },
+  { min: 6,   cat: 3,     label: 'Major Heat Wave',       css: 'rhi3' },
+  { min: 10,  cat: 4,     label: 'Crippling Heat Wave',   css: 'rhi4' },
+  { min: 18,  cat: 5,     label: 'Extreme Heat Wave',     css: 'rhi5' },
+  { min: 30,  cat: '5+',  label: 'Generational Heat',     css: 'rhi6' },
+  { min: 45,  cat: '5++', label: 'Unprecedented Heat',    css: 'rhi7' },
+  { min: 70,  cat: 6,     label: 'Continental Furnace',   css: 'rhi8' },
+  { min: 110, cat: 7,     label: 'Uninhabitable Summer',  css: 'rhi9' }
+];
+function getRHICategory(v) {
+  for (let i = RHI_CATEGORIES.length - 1; i >= 0; i--) if (v >= RHI_CATEGORIES[i].min) return RHI_CATEGORIES[i];
+  return RHI_CATEGORIES[0];
+}
+function calculateRHI(results) {
+  const groups = {};
+  let outside = 0;
+  results.forEach(r => {
+    const rc = heatRegionFor(r.db);
+    if (!rc) { outside++; return; }
+    (groups[rc] = groups[rc] || []).push(r);
+  });
+  let total = 0;
+  const regions = [];
+  for (const [rc, rs] of Object.entries(groups)) {
+    const reg = RHI_REGIONS[rc];
+    let value = 0;
+    const terms = RHI_THRESHOLDS.map((th, t) => {
+      const above = rs.filter(r => r.score >= th.S);
+      if (!above.length) return { label: th.label, term: 0 };
+      const pop = above.reduce((s, r) => s + (r.db.pop || 0) * 1000, 0);
+      const area = Math.min(above.reduce((s, r) => s + estimateMetroArea(r.db.pop), 0), reg.meanArea[t] * MAX_AREA_FACTOR);
+      const term = RHI_SCALE * (pop / reg.meanPop[t] + area / reg.meanArea[t]);
+      value += term;
+      return { label: th.label, term };
+    });
+    if (value > 0) regions.push({ code: rc, name: reg.name, value, terms, cityCount: rs.length });
+    total += value;
+  }
+  regions.sort((a, b) => b.value - a.value);
+  return { total, regions, outside, category: getRHICategory(total) };
+}
+
 /* ---- Heat Index Mode: UI ---- */
 const heatCities = [];
 const heatEls = {
@@ -8726,6 +8898,7 @@ function heatGenerate() {
   if (lakeError) { heatEls.err.textContent = lakeError; return; }
   const results = heatCities.map(c => evaluateHeatCity(c, lakes));
   renderHeatProfile(results);
+  heatRenderExtras(results);
   heatEls.profile.style.display = '';
   heatEls.profile.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -8806,6 +8979,133 @@ function renderWaterWarList() {
   }).join('');
 }
 renderWaterWarList();
+
+/* ---- Heat Index Mode: recovery, RHI, and gap-fill cards ---- */
+let heatLastResults = [];
+let heatGapResults = [];
+const HEAT_EXTRA_CARDS = ['heatRecoveryCard', 'heatRhiCard', 'heatGapCard'];
+
+function heatStartDate() {
+  const v = document.getElementById('heatStartDate').value;
+  if (!v) return null;
+  const [y, m, d] = v.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+function heatRenderExtras(results) {
+  heatLastResults = results;
+  renderHeatRecovery(results, heatStartDate());
+  renderHeatRHI(results);
+  heatGapResults = [];
+  renderHeatGap();
+  HEAT_EXTRA_CARDS.forEach(id => { document.getElementById(id).style.display = ''; });
+}
+
+function renderHeatRecovery(results, start) {
+  const head = HEAT_RECOVERY_MILESTONES.map(m => `<th>${m.icon} ${m.label}</th>`).join('');
+  const rows = results.map(r => {
+    const rec = heatRecovery(r);
+    const cells = rec.none
+      ? `<td colspan="${HEAT_RECOVERY_MILESTONES.length}" class="heat-sub">No heat stress &mdash; nothing to recover from.</td>`
+      : HEAT_RECOVERY_MILESTONES.map(m => `<td>${heatFormatDay(start, rec[m.key])}</td>`).join('');
+    return `<tr><td><strong>${esc(r.n)}</strong><div class="heat-sub">${esc(r.tier.level)}</div></td>${cells}</tr>`;
+  }).join('');
+  document.getElementById('heatRecoveryCard').innerHTML = `<h2>Heat Recovery</h2>
+    <p class="heat-sub" style="margin-bottom:8px">${start ? 'Dated from the start date you entered.' : 'Days counted from the start of the heat. Enter a start date above to see calendar dates.'} Each milestone waits for the one before it.</p>
+    <div class="impact-table-wrap"><table class="impact-table" style="min-width:720px"><thead><tr><th>City</th>${head}</tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+
+function renderHeatRHI(results) {
+  const rhi = calculateRHI(results);
+  const pct = Math.min(100, (rhi.total / 45) * 100);
+  const val = rhi.total < 1 ? rhi.total.toFixed(2) : rhi.total.toFixed(1);
+  const regs = rhi.regions.map(g => `<div class="region-line"><span><strong>${g.name}</strong> (${g.cityCount} ${g.cityCount === 1 ? 'city' : 'cities'})</span><span style="font-weight:600">${g.value.toFixed(2)}</span></div>
+    <div style="font-size:0.72rem;opacity:0.4;margin-bottom:4px;padding-left:8px">Thresholds: ${g.terms.filter(x => x.term > 0).map(x => x.label + ': ' + x.term.toFixed(2)).join(', ') || 'none exceeded'}</div>`).join('');
+  const outside = rhi.outside
+    ? `<p style="margin-top:10px;font-size:0.78rem;opacity:0.5">${rhi.outside} ${rhi.outside === 1 ? 'city is' : 'cities are'} outside the U.S. RHI regions and not counted.</p>` : '';
+  document.getElementById('heatRhiCard').innerHTML = `<h2>Regional Heat Index (RHI)</h2>
+    <p style="font-size:0.82rem;opacity:0.5;margin-bottom:14px">A simulator-only index &mdash; NOAA publishes no regional heat index. Built like the Regional Snowfall Index: the population and metro area exposed at four heat-score levels (Hot, Oppressive, Dangerous Heat, Historic-class), across the six RSI regions plus the West.</p>
+    <div class="rsi-section">
+      <div class="rsi-meter-wrap"><div class="rsi-meter-fill ${rhi.category.css}" style="width:${Math.max(8, pct)}%">${val}</div></div>
+      <div class="rsi-meter-labels"><span>0</span><span>Cat 1</span><span>Cat 2</span><span>Cat 3</span><span>Cat 4</span><span>Cat 5</span><span>5+ &rarr; &infin;</span></div>
+      <div style="margin-top:10px"><span class="rsi-cat-badge ${rhi.category.css}">Category ${rhi.category.cat}: ${rhi.category.label}</span></div>
+    </div>
+    <div class="rsi-breakdown"><h3 style="font-size:0.8rem;text-transform:uppercase;letter-spacing:1px;opacity:0.5;margin:14px 0 8px">Breakdown by Region</h3>${regs || '<p style="opacity:0.4">No cities in RHI regions.</p>'}</div>
+    ${outside}`;
+}
+
+// Estimates candidates against the last generated run; skips cities already in it.
+function heatGapEstimate(candidates) {
+  const lakes = heatReadLakes();
+  const out = [];
+  candidates.forEach(c => {
+    if (heatCities.some(h => h.n === c.n)) return;
+    const entry = estimateHeatForCity(c, heatLastResults);
+    if (!entry) { out.push({ n: c.n, outside: true }); return; }
+    out.push({ entry, r: evaluateHeatCity(entry, lakes) });
+  });
+  return out;
+}
+function heatGapOne() {
+  const err = document.getElementById('heatGapError');
+  err.textContent = '';
+  const name = document.getElementById('heatGapInput').value.trim();
+  const c = CITY_DB.find(x => x.n.toLowerCase() === name.toLowerCase());
+  if (!c) { err.textContent = 'Pick a city from the list.'; return; }
+  if (heatCities.some(h => h.n === c.n)) { err.textContent = c.n + ' is already in the run.'; return; }
+  heatGapResults = heatGapEstimate([c]).concat(heatGapResults.filter(g => (g.entry ? g.entry.n : g.n) !== c.n));
+  renderHeatGap();
+}
+function heatGapAll() {
+  document.getElementById('heatGapError').textContent = '';
+  heatGapResults = heatGapEstimate(CITY_DB).filter(g => !g.outside)
+    .sort((a, b) => b.r.score - a.r.score).slice(0, 30);
+  renderHeatGap();
+}
+function heatGapAdd(list) {
+  list.forEach(g => {
+    if (g.entry && !heatCities.some(h => h.n === g.entry.n))
+      heatCities.push({ n: g.entry.n, temp: g.entry.temp, dew: g.entry.dew, days: g.entry.days });
+  });
+  heatRenderList();
+  heatGenerate();
+}
+function renderHeatGap() {
+  document.getElementById('heatGapAddAllBtn').disabled = !heatGapResults.some(g => g.entry);
+  const rows = heatGapResults.map((g, i) => g.outside
+    ? `<tr><td><strong>${esc(g.n)}</strong></td><td colspan="5" class="heat-sub">Outside the heat event: more than ${HEAT_GAP_REACH_MI.toLocaleString()} miles from every entered city.</td></tr>`
+    : `<tr><td><strong>${esc(g.entry.n)}</strong></td>
+        <td>${heatFmt(g.r.T, '°')} / ${heatFmt(g.r.Td, '°')} / <strong>HI ${heatFmt(g.r.hi, '°F')}</strong>${g.entry.days > 1 ? '<div class="heat-sub">' + g.entry.days + ' days</div>' : ''}</td>
+        <td><span class="impact-pill impact-${g.r.tier.css}">${g.r.tier.level}</span></td>
+        <td>${g.r.waterWar.tier.icon} ${esc(g.r.waterWar.tier.label)}</td>
+        <td class="heat-sub">from ${esc(g.entry.nearest)}, ${g.entry.dist} mi</td>
+        <td><button type="button" class="btn-add" style="margin:0;padding:4px 10px" data-gap="${i}">Add</button></td></tr>`).join('');
+  document.getElementById('heatGapResults').innerHTML = rows
+    ? `<div class="impact-table-wrap"><table class="impact-table" style="min-width:680px"><thead><tr><th>City</th><th>Estimated Temp / Dew / HI</th><th>Impact</th><th>Water War</th><th>Nearest</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`
+    : '';
+}
+document.getElementById('heatGapResults').addEventListener('click', e => {
+  const b = e.target.closest('[data-gap]');
+  if (b) heatGapAdd([heatGapResults[+b.dataset.gap]]);
+});
+document.getElementById('heatGapBtn').addEventListener('click', heatGapOne);
+document.getElementById('heatGapAllBtn').addEventListener('click', heatGapAll);
+document.getElementById('heatGapAddAllBtn').addEventListener('click', () => heatGapAdd(heatGapResults.filter(g => g.entry)));
+
+const heatGapInput = document.getElementById('heatGapInput'), heatGapAc = document.getElementById('heatGapAcList');
+heatGapInput.addEventListener('input', () => {
+  const q = heatGapInput.value.trim().toLowerCase();
+  const m = q.length < 2 ? [] : CITY_DB.filter(c => c.n.toLowerCase().includes(q)).slice(0, 8);
+  heatGapAc.innerHTML = m.map(c => `<div class="ac-item" data-name="${esc(c.n)}"><span>${esc(c.n)}</span></div>`).join('');
+  heatGapAc.classList.toggle('open', m.length > 0);
+});
+heatGapAc.addEventListener('click', e => {
+  const item = e.target.closest('.ac-item');
+  if (!item) return;
+  heatGapInput.value = item.dataset.name;
+  heatGapAc.classList.remove('open');
+});
+document.addEventListener('click', e => { if (!e.target.closest('#heatGapCard .gap-fill-field')) heatGapAc.classList.remove('open'); });
 
 /* ======================================================================
    SELFTEST HARNESS
@@ -9917,6 +10217,83 @@ window.__snowTests.push((t) => {
 window.__snowTests.push((t) => {
   const p = waterWarContentProblems(7);
   t('water war band 7 content' + (p.length ? ': ' + p.slice(0, 3).join('; ') : ''), p.length === 0);
+});
+
+// W2B-1 recovery timeline
+window.__snowTests.push((t) => {
+  const ev = (n, temp, dew, days) => evaluateHeatCity({ n, temp, dew, days }, {});
+  const tulsa = heatRecovery(ev('Tulsa, OK', 96, 74, 1));
+  t('Tulsa recovery breaks day 1', tulsa.breaks === 1);
+  t('Tulsa recovery ER day 3', tulsa.er === 3);
+  const chi = heatRecovery(ev('Chicago, IL', 104, 78, 5));
+  t('Chicago 1995 breaks day 5', chi.breaks === 5);
+  t('Chicago 1995 nights day 9', chi.nights === 9);
+  t('Chicago 1995 ER day 13', chi.er === 13);
+  const order = ['breaks', 'nights', 'grid', 'cooling', 'er'];
+  t('milestones never go backwards', [tulsa, chi, heatRecovery(ev('Portland, OR', 116, 62, 3))]
+    .every(r => order.every((k, i) => i === 0 || r[k] >= r[order[i - 1]])));
+  t('fiction never recovers', heatRecovery(ev('Tulsa, OK', 500, 60, 1)).never === true);
+  t('cool day needs no recovery', heatRecovery(ev('Tulsa, OK', 70, 55, 1)).none === true);
+  t('day format without date', heatFormatDay(null, 3) === 'Day 3');
+  t('day format with date', heatFormatDay(new Date(2026, 6, 4), 1) === 'Sun Jul 5');
+  t('day format never', heatFormatDay(new Date(2026, 6, 4), Infinity) === 'Never');
+});
+// W2B-2 Fill In The Gaps (heat)
+window.__snowTests.push((t, approx) => {
+  const city = n => CITY_DB.find(c => c.n === n);
+  const portland = evaluateHeatCity({ n: 'Portland, OR', temp: 116, dew: 62, days: 3 }, {});
+  const self = estimateHeatForCity(city('Portland, OR'), [portland]);
+  t('gap fill returns an anchor as itself', self.temp === 116 && self.dew === 62 && self.days === 3);
+  const sea = estimateHeatForCity(city('Seattle, WA'), [portland]);
+  t('Seattle inherits Portland anomaly (+35)', approx(sea.temp, 111, 0.05));
+  t('Seattle inherits duration', sea.days === 3);
+  t('gap dewpoint never exceeds temp', sea.dew <= sea.temp);
+  t('Miami is outside a Portland heat event', estimateHeatForCity(city('Miami, FL'), [portland]) === null);
+  const boise = estimateHeatForCity(city('Boise, ID'), [portland]);
+  t('Boise within reach', boise !== null && boise.nearest === 'Portland, OR');
+  const far = estimateHeatForCity(city('Denver, CO'), [portland]);
+  t('anomaly fades with distance', far === null || far.temp - heatSummerHigh(city('Denver, CO')).f < 35);
+});
+// W2B-3 Regional Heat Index
+window.__snowTests.push((t) => {
+  const city = n => CITY_DB.find(c => c.n === n);
+  t('Phoenix in West', heatRegionFor(city('Phoenix, AZ')) === 'W');
+  t('Tulsa in South', heatRegionFor(city('Tulsa, OK')) === 'SO');
+  t('Toronto outside RHI', heatRegionFor(city('Toronto, ON, Canada')) === null);
+  t('Anchorage outside RHI', heatRegionFor(city('Anchorage, AK')) === null);
+  const ev = (n, temp, dew, days) => evaluateHeatCity({ n, temp, dew, days }, {});
+  const one = calculateRHI([ev('Chicago, IL', 104, 78, 5)]);
+  t('Chicago 1995 alone scores in Ohio Valley', one.regions.length === 1 && one.regions[0].code === 'OV' && one.total > 0);
+  const two = calculateRHI([ev('Chicago, IL', 104, 78, 5), ev('St. Louis, MO', 105, 75, 5)]);
+  t('adding a hot city never lowers RHI', two.total >= one.total);
+  t('cool run scores zero', calculateRHI([ev('Tulsa, OK', 70, 55, 1)]).total === 0);
+  t('RHI category 0', getRHICategory(0.5).label === 'Routine Summer');
+  t('RHI category 3', getRHICategory(7).label === 'Major Heat Wave');
+  t('RHI counts cities outside regions', calculateRHI([ev('Toronto, ON, Canada', 95, 70, 1)]).outside === 1);
+  const run = list => calculateRHI(list.map(([n, temp, dew, days]) => ev(n, temp, dew, days))).category.cat;
+  t('RHI: 1995-style Midwest heat wave is Cat 4', run([['Chicago, IL',104,78,5],['St. Louis, MO',105,75,5],['Indianapolis, IN',100,76,5],['Detroit, MI',99,74,4],['Kansas City, MO',104,72,5],['Milwaukee, WI',100,76,4],['Cincinnati, OH',99,74,4],['Columbus, OH',98,74,4]]) === 4);
+  t('RHI: 2021 Pacific NW heat dome is Cat 4', run([['Portland, OR',116,62,3],['Seattle, WA',108,60,3],['Olympia, WA',110,58,3],['Eugene, OR',111,58,3],['Spokane, WA',109,50,4],['Yakima, WA',112,50,4]]) === 4);
+  t('RHI: Phoenix 2023 is Cat 3', run([['Phoenix, AZ',116,45,31],['Tucson, AZ',110,50,20],['Las Vegas, NV',112,40,15]]) === 3);
+  t('RHI: Tulsa July 4 alone is Cat 0', run([['Tulsa, OK',96,74,1]]) === 0);
+  t('RHI: Portland 2021 alone is Cat 2', run([['Portland, OR',116,62,3]]) === 2);
+});
+
+// W2B-4 heat extra cards
+window.__snowTests.push((t) => {
+  const rs = [evaluateHeatCity({ n: 'Portland, OR', temp: 116, dew: 62, days: 3 }, {})];
+  const snowBefore = cities.length;
+  renderHeatRecovery(rs, new Date(2026, 5, 26));
+  t('recovery card dates milestones', document.getElementById('heatRecoveryCard').textContent.includes('Mon Jun 29'));
+  renderHeatRHI(rs);
+  t('RHI card shows the West', document.getElementById('heatRhiCard').textContent.includes('West'));
+  heatLastResults = rs;
+  heatGapResults = heatGapEstimate([CITY_DB.find(c => c.n === 'Seattle, WA')]);
+  renderHeatGap();
+  t('gap card lists Seattle', document.getElementById('heatGapResults').textContent.includes('Seattle, WA'));
+  t('heat extras leave snow cities alone', cities.length === snowBefore);
+  document.getElementById('heatRecoveryCard').innerHTML = '';
+  document.getElementById('heatRhiCard').innerHTML = '';
+  heatLastResults = []; heatGapResults = []; renderHeatGap();
 });
 
 window.addEventListener('load', () => {
