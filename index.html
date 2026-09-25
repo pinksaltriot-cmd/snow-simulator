@@ -1083,6 +1083,27 @@
         <span class="help-text">Sea-level. Normal ~1013 mb. Lower = stronger storm = higher impact. Bomb cyclones &lt;980 mb. Hurricanes &lt;960 mb.</span>
       </div>
     </div>
+    <div class="pressure-row">
+      <div class="pressure-field">
+        <div>
+          <label for="peakRateInput">Peak rate</label>
+          <input type="number" id="peakRateInput" placeholder="e.g. 2" step="0.1" min="0">
+        </div>
+        <span class="unit">in/hr</span>
+      </div>
+      <div class="pressure-field">
+        <div>
+          <label for="skyInput">Sky after the storm</label>
+          <select id="skyInput">
+            <option value="">Not set</option>
+            <option value="sunny">☀️ Sunny</option>
+            <option value="partly">⛅ Partly cloudy</option>
+            <option value="cloudy">☁️ Cloudy</option>
+          </select>
+        </div>
+        <span class="help-text">Optional. Peak rate drives whiteouts; sunshine speeds the melt. Leave every precipitation phase out to run a dry, windy or cold day.</span>
+      </div>
+    </div>
     <div id="inputError" class="error-msg"></div>
     <button class="btn-add" id="addBtn">+ Add City</button>
     <div class="city-list" id="cityList"></div>
@@ -2218,6 +2239,23 @@ function tornadoEquiv(mph) {
   return 3 * Math.exp((w - 65) / 30);
 }
 
+// Enhanced Fujita rating, typical damage, and a realistic time on the ground.
+const EF_SCALE = [
+  { ef: 'Sub-EF0', min: 0,   minutes: 2,  damage: 'Gustnado or landspout: loose objects tossed, a few limbs down.' },
+  { ef: 'EF0',     min: 65,  minutes: 5,  damage: 'Shingles, gutters and siding peeled; large branches broken; shallow-rooted trees pushed over.' },
+  { ef: 'EF1',     min: 86,  minutes: 8,  damage: 'Roofs badly stripped; mobile homes overturned; windows and doors blown in.' },
+  { ef: 'EF2',     min: 111, minutes: 14, damage: 'Roofs torn off frame houses; mobile homes destroyed; large trees snapped or uprooted.' },
+  { ef: 'EF3',     min: 136, minutes: 22, damage: 'Entire stories of well-built houses destroyed; trains overturned; heavy cars lifted and thrown.' },
+  { ef: 'EF4',     min: 166, minutes: 32, damage: 'Well-built houses leveled; cars thrown; small missiles generated.' },
+  { ef: 'EF5',     min: 201, minutes: 45, damage: 'Strong frame houses swept clean from foundations; high-rise buildings deformed.' },
+  { ef: 'Beyond EF5', min: 322, minutes: 60, damage: 'Beyond any measured tornado: nothing above ground survives the core.' }
+];
+function tornadoAssessment(mph) {
+  let r = EF_SCALE[0];
+  EF_SCALE.forEach(x => { if (mph >= x.min) r = x; });
+  return r;
+}
+
 // Types scored on the rain (flood) impact scale rather than the snow impact
 // scale. A city whose phases are entirely these types is routed through
 // getRainImpact(). Snow Grains and Thundersnow stay on the snow scale.
@@ -2234,7 +2272,7 @@ function isRainScaleType(type) { return RAIN_SCALE_TYPES.includes(type) || type 
 
 // Convert a rain-scale phase into inches of rain-equivalent for getRainImpact().
 function rainEquivInches(type, amount) {
-  if (type === 'tornado')          return tornadoEquiv(amount);   // amount is mph
+  if (type === 'tornado')          return 0;   // a tornado is wind damage, not water: see tornadoAssessment()
   if (type in RAIN_SCALE_FIXED)    return RAIN_SCALE_FIXED[type];
   if (type in RAIN_SCALE_PER_INCH) return (amount || 0) * RAIN_SCALE_PER_INCH[type];
   return 0;
@@ -2254,6 +2292,9 @@ const SEQUENCE_MODIFIERS = [
   { prev: 'ice',  next: SNOW_VARIETIES,              target: 'next', factor: 1.1 },
 ];
 
+const NON_FROZEN_TYPES = ['rain', 'drizzle', 'thunderstorm', 'fog', 'haze', 'mist', 'tornado'];
+const LIQUID_PRECIP_TYPES = ['rain', 'drizzle', 'thunderstorm'];
+
 function computeDerivedPrecip(phases) {
   if (!phases || !phases.length) return { snow: 0, snowEquivalent: 0, phaseImpacts: [] };
 
@@ -2262,7 +2303,9 @@ function computeDerivedPrecip(phases) {
   const phaseImpacts = phases.map(p => ({
     type: p.type,
     amount: p.amount,
-    rawImpact: p.type === 'tornado' ? tornadoEquiv(p.amount) : p.amount * PRECIP_MULTIPLIERS[p.type],
+    // A tornado's damage is reported on its own EF scale (tornadoAssessment), not
+    // folded into snow or flood depth: 75 mph once turned 0.4" of rain into evacuations.
+    rawImpact: p.type === 'tornado' ? 0 : p.amount * PRECIP_MULTIPLIERS[p.type],
     modifiers: []
   }));
 
@@ -2291,9 +2334,10 @@ function computeDerivedPrecip(phases) {
 
   // Step 3: Sum totals
   const snowEquivalent = phaseImpacts.reduce((s, p) => s + p.rawImpact, 0);
-  // Frozen accumulation in inches — exclude rain and tornado (tornado's "amount"
-  // is a wind speed in mph, not inches, so it must not inflate snow depth).
-  const frozenTotal = phases.filter(p => p.type !== 'rain' && p.type !== 'tornado').reduce((s, p) => s + p.amount, 0);
+  // Frozen accumulation in inches — exclude everything that falls as liquid or
+  // does not accumulate (thunderstorm and drizzle are rain; fog/haze/mist are
+  // not precipitation depths; tornado's "amount" is a wind speed in mph).
+  const frozenTotal = phases.filter(p => !NON_FROZEN_TYPES.includes(p.type)).reduce((s, p) => s + p.amount, 0);
 
   return {
     snow: roundPrecip(frozenTotal),
@@ -2331,7 +2375,10 @@ const PACKABILITY = {
 // its material holds a shape.
 function packableInches(phases) {
   if (!phases || !phases.length) return 0;
-  return phases.reduce((s, p) => s + (p.amount || 0) * (PACKABILITY[p.type] || 0), 0);
+  // Ice armors a rampart built of something else; a glaze alone gives nothing
+  // to pack or build with.
+  const hasBody = phases.some(p => p.type !== 'ice' && (PACKABILITY[p.type] || 0) > 0 && p.amount > 0);
+  return phases.reduce((s, p) => s + (p.type === 'ice' && !hasBody ? 0 : (p.amount || 0) * (PACKABILITY[p.type] || 0)), 0);
 }
 
 // Activity grows with the square of packable depth. Doubling the good snow
@@ -3024,8 +3071,8 @@ function getWindMultiplier(windSpeed, gustSpeed) {
   else if (ws >= 180)   windMult = 3.2;   // Cat 5 Catastrophic
   else if (ws >= 140)   windMult = 2.8;   // Cat 4 Devastating
   else if (ws >= 110)   windMult = 2.4;   // Cat 3 Major Hurricane
-  else if (ws >= 80)    windMult = 2.15;  // Cat 1-2 Hurricane
-  else if (ws >= 60)    windMult = 2.0;   // Hurricane-force minimum
+  else if (ws >= 80)    windMult = 2.15;  // Cat 1 hurricane-force and up
+  else if (ws >= 60)    windMult = 2.0;   // Storm-force (hurricane force starts at 74)
   else if (ws >= 45)    windMult = 1.7;   // Violent: whiteout, impossible travel
   else if (ws >= 35)    windMult = 1.5;   // Blizzard criteria: near-zero visibility with snow
   else if (ws >= 25)    windMult = 1.3;   // High wind: significant drifting
@@ -3066,14 +3113,17 @@ function getWindLabel(windSpeed, gustSpeed) {
   if (ws >= 360)   return { label: 'F5+ Embedded',            icon: '\u{1F32A}\uFE0F\u{1F32A}\uFE0F\u{1F32A}\uFE0F' };
   if (ws >= 280)   return { label: 'EF5 Tornado-Scale',       icon: '\u{1F32A}\uFE0F\u{1F4A5}' };
   if (ws >= 220)   return { label: 'Super Cyclone',           icon: '\u{1F30A}\u{1F32A}\uFE0F' };
-  if (ws >= 180)   return { label: 'Cat 5 Catastrophic',      icon: '\u{1F32A}\uFE0F\u{1F32A}\uFE0F\u{1F32A}\uFE0F' };
-  if (ws >= 140)   return { label: 'Cat 4 Devastating',       icon: '\u{1F32A}\uFE0F\u{1F32A}\uFE0F\u{1F4A5}' };
-  if (ws >= 110)   return { label: 'Cat 3 Major Hurricane',   icon: '\u{1F32A}\uFE0F\u{1F32A}\uFE0F' };
-  if (ws >= 80)    return { label: 'Cat 1-2 Hurricane',       icon: '\u{1F32A}\uFE0F' };
-  if (ws >= 60)    return { label: 'Hurricane-Force',         icon: '\u{1F32A}\uFE0F' };
-  if (ws >= 45)    return { label: 'Violent',                 icon: '\u{1F4A8}\u{1F4A8}\u{1F4A8}' };
+  // Real-scale labels below the fictional tail: Saffir-Simpson categories for
+  // hurricane-force wind (74+), NWS High Wind (40+) and blizzard (35+) criteria.
+  if (ws >= 157)   return { label: 'Cat 5 Hurricane-Force',   icon: '\u{1F32A}\uFE0F\u{1F32A}\uFE0F\u{1F32A}\uFE0F' };
+  if (ws >= 130)   return { label: 'Cat 4 Hurricane-Force',   icon: '\u{1F32A}\uFE0F\u{1F32A}\uFE0F\u{1F4A5}' };
+  if (ws >= 111)   return { label: 'Cat 3 Hurricane-Force',   icon: '\u{1F32A}\uFE0F\u{1F32A}\uFE0F' };
+  if (ws >= 96)    return { label: 'Cat 2 Hurricane-Force',   icon: '\u{1F32A}\uFE0F' };
+  if (ws >= 74)    return { label: 'Cat 1 Hurricane-Force',   icon: '\u{1F32A}\uFE0F' };
+  if (ws >= 55)    return { label: 'Storm-Force',             icon: '\u{1F4A8}\u{1F4A8}\u{1F4A8}' };
+  if (ws >= 40)    return { label: 'High Wind',               icon: '\u{1F4A8}\u{1F4A8}' };
   if (ws >= 35)    return { label: 'Blizzard-Force',          icon: '\u{1F4A8}\u{1F4A8}' };
-  if (ws >= 25)    return { label: 'High Wind',               icon: '\u{1F4A8}' };
+  if (ws >= 25)    return { label: 'Windy',                   icon: '\u{1F4A8}' };
   if (ws >= 15)    return { label: 'Breezy',                  icon: '\u{1F343}' };
   if (ws >= 10)    return { label: 'Light Wind',              icon: '~' };
   if (gs >= 30)    return { label: 'Gusty',                   icon: '\u{1F4A8}' };
@@ -3147,7 +3197,33 @@ function getPressureLabel(pressure) {
   return                       { label: 'Omega Pressure Singularity', icon: '\u{1F300}\u{1F300}\u{1F300}' };
 }
 
-function getImpact(snow, annualSnow, hasStormTemp, stormTemp, snowEquivalent, windSpeed, gustSpeed, lat, pressure, persistenceMult) {
+/* Multiplier stack cap. Cold, wind, pressure and persistence used to multiply
+   freely, so a real record blizzard (1978 Muskegon: x3.68) was relaunched into the
+   fiction tiers. For physically plausible inputs the stack is left alone up to
+   x1.4, then grows at 40% of the excess and stops at x2.0. Inputs beyond anything
+   observed on Earth keep the raw stack, so the fiction tiers stay reachable. */
+const STACK_KNEE = 1.4, STACK_SLOPE = 0.4, STACK_MAX = 2.0;
+function impactInputsPlausible(stormTemp, windSpeed, gustSpeed, pressure) {
+  if (pressure !== null && pressure !== undefined && !isNaN(pressure) && pressure < 870) return false;
+  if ((windSpeed || 0) > 200 || (gustSpeed || 0) > 260) return false;
+  if (stormTemp !== null && stormTemp !== undefined && !isNaN(stormTemp) && stormTemp < -90) return false;
+  return true;
+}
+// Snowfall rate: 2"/hr outruns plows, 3"/hr is thundersnow, 5"+/hr is a
+// near-record burst with zero visibility.
+function getPeakRateMultiplier(rate) {
+  if (!rate || rate < 2) return 1.0;
+  if (rate >= 5) return 1.2;
+  if (rate >= 4) return 1.15;
+  if (rate >= 3) return 1.1;
+  return 1.05;
+}
+function capMultiplierStack(m, plausible) {
+  if (!plausible || m <= STACK_KNEE) return m;
+  return Math.min(STACK_MAX, STACK_KNEE + (m - STACK_KNEE) * STACK_SLOPE);
+}
+
+function getImpact(snow, annualSnow, hasStormTemp, stormTemp, snowEquivalent, windSpeed, gustSpeed, lat, pressure, persistenceMult, peakRate) {
   const persistMult = (persistenceMult === undefined || persistenceMult === null) ? 1.0 : persistenceMult;
   const factor = getResilienceFactor(annualSnow, lat);
   const coldMult = hasStormTemp ? getColdMultiplier(stormTemp) : 1.0;
@@ -3166,7 +3242,10 @@ function getImpact(snow, annualSnow, hasStormTemp, stormTemp, snowEquivalent, wi
     coldBaseline = rawCold / factor;
   }
 
-  const snowEffective = (effectiveSnow / factor) * coldMult * windMult * pressureMult * persistMult;
+  const rateMult = getPeakRateMultiplier(peakRate);
+  const stackMult = capMultiplierStack(coldMult * windMult * pressureMult * persistMult * rateMult,
+    impactInputsPlausible(stormTemp, windSpeed, gustSpeed, pressure));
+  const snowEffective = (effectiveSnow / factor) * stackMult;
   const effective = Math.max(snowEffective, coldBaseline * pressureMult);  // Whichever is worse
 
   let result;
@@ -3190,30 +3269,30 @@ function getImpact(snow, annualSnow, hasStormTemp, stormTemp, snowEquivalent, wi
   else if (effective < 15)      result = { level:'Major',             css:'major',               desc:'Travel shutdown; widespread closures; power outages possible.', alerts:'Blizzard Warning; regional State of Emergency; travel ban.',                       school:'2\u20133 snow days.' };
   else if (effective < 17.5)    result = { level:'Dire',              css:'dire',                desc:'Stranded vehicles; roof loads concerning; emergency services overwhelmed.', alerts:'Blizzard Warning; Civil Emergency Message; travel banned.',          school:'3\u20134 snow days.' };
   else if (effective < 20)      result = { level:'Crippling',         css:'crippling',           desc:'Region-wide shutdowns; emergency conditions; military/guard may deploy.', alerts:'Blizzard Warning; statewide State of Emergency; National Guard alerted.',             school:'3\u20135 snow days.' };
-  else if (effective < 25)      result = { level:'Devastating',       css:'devastating',         desc:'National Guard activated; power grid failures; roof collapses reported.', alerts:'Blizzard Warning; Federal Emergency Declaration; National Guard deployed.',             school:'4\u20136 snow days.' };
-  else if (effective < 30)      result = { level:'Extreme',           css:'extreme',             desc:'Life-threatening; complete transportation halt; roofs stressed.', alerts:'Blizzard Warning + Extreme Cold Warning; Presidential Disaster Declaration.',                     school:'5\u20137 snow days.' };
-  else if (effective < 36)      result = { level:'Cataclysmic',       css:'cataclysmic',         desc:'Regional disaster declaration; supply lines broken; hospitals on backup power.', alerts:'Regional Disaster Declaration; all winter warnings maxed; Emergency Alert System active.',      school:'7\u201310 snow days; some buildings condemned.' };
-  else if (effective < 42)      result = { level:'Catastrophic',      css:'catastrophic',        desc:'Infrastructure collapse; structural damage; days-long paralysis.', alerts:'Federal Disaster Declaration; continuous Emergency Alert System broadcast.',                    school:'10\u201314 snow days.' };
-  else if (effective < 50)      result = { level:'Calamitous',        css:'calamitous',          desc:'Federal disaster; widespread roof collapses; fatalities mounting.', alerts:'Federal Disaster Declaration; EAS broadcast; mass-shelter orders.',                   school:'14\u201318 snow days; many buildings unusable.' };
-  else if (effective < 60)      result = { level:'City Paralysis',    css:'paralysis',           desc:'City completely buried; historic accumulation; week-long recovery.', alerts:'Maximum NWS warnings; FEMA regional activation.',                  school:'18\u201325 snow days; schools serve as shelters.' };
-  else if (effective < 70)      result = { level:'Historic',          css:'historic-impact',     desc:'Generational event; entire neighborhoods inaccessible; heavy machinery required.', alerts:'FEMA national activation; continuous EAS broadcast.',    school:'25\u201335 snow days; calendar irrecoverable.' };
-  else if (effective < 80)      result = { level:'Apocalyptic',       css:'apocalyptic',         desc:'Beyond any recorded event; survival conditions; month-long recovery.', alerts:'Beyond NWS alert scales; national emergency; continuous EAS.',                school:'35\u201360 snow days; semester lost.' };
-  else if (effective < 90)      result = { level:'Dystopian',         css:'dystopian',           desc:'Urban areas unreachable for weeks; supply drops by helicopter; mass evacuations.', alerts:'National emergency; military airlift; alert systems saturated.',    school:'60\u2013120 snow days; no classes for months.' };
-  else if (effective < 100)     result = { level:'Civilization Ender', css:'civilization-ender', desc:'Society stops functioning; National Guard overwhelmed; mass evacuations impossible.', alerts:'Global emergency broadcast; governments coordinating evacuation.',  school:'120\u2013180 snow days; full school year canceled.' };
-  else if (effective < 125)     result = { level:'Post-Civilization', css:'post-civilization',   desc:'Cities functionally erased; survivors cluster near heated infrastructure.', alerts:'Alert infrastructure failing; last broadcasts urge the highlands.',           school:'180\u2013365 snow days; survival schools only.' };
-  else if (effective < 150)     result = { level:'Ice Age Onset',     css:'ice-age',             desc:'Record-shattering; multi-week digging out; structural collapses widespread.', alerts:'No functioning alert authority remains.',         school:'365\u2013730 snow days; buildings condemned.' };
-  else if (effective < 175)     result = { level:'Glacial Epoch',     css:'glacial-epoch',       desc:'Snowpack resembles a glacier; cities entombed; no thaw expected this season.', alerts:'No alerts — no one left to issue them.',        school:'730\u20133,650 snow days; schools buried entirely.' };
-  else if (effective < 200)     result = { level:'Extinction Event',  css:'extinction',          desc:'Theoretically impossible; every building buried; survival mode for months.', alerts:'Alert systems silent.',          school:'3,650\u201336,500 snow days; no reopening foreseen.' };
-  else if (effective < 250)     result = { level:'World-Ender',       css:'world-ender',         desc:'Regional biomes rewritten; permafrost layer forming; migration impossible.', alerts:'No alerts; civilization gone.',          school:'36,500\u2013365,000 snow days; education globally disrupted.' };
-  else if (effective < 300)     result = { level:'Planet Killer',     css:'planet-killer',       desc:'Fantasy-level snowfall exceeding any physical model; entire regions uninhabitable.', alerts:'No alerts; planetary scale.',  school:'365,000\u20133,650,000 snow days; regional education ends.' };
-  else if (effective < 400)     result = { level:'Planetary Cryogenesis', css:'cryogenesis',     desc:'Continent-scale freeze-in; terrain unrecognizable; atmosphere too cold to hold water vapor.', alerts:'No alerts; the atmosphere itself is failing.', school:'3,650,000\u201336,500,000 snow days; humanity shelters underground.' };
-  else if (effective < 500)     result = { level:'Biblical',          css:'biblical',            desc:'Noah\'s Ark but frozen; entire landscape unrecognizable for months.', alerts:'No alerts; mythic scale.',                 school:'36,500,000\u2013365,000,000 snow days; concept of school lost.' };
-  else if (effective < 700)     result = { level:'Mythic Deluge',     css:'mythic-deluge',       desc:'Mountain ranges exceeded; entire climate zones displaced; legends written anew.', alerts:'No alerts; legend only.',     school:'365,000,000\u20133,650,000,000 snow days; only oral histories remain.' };
-  else if (effective < 1000)    result = { level:'Snowpocalypse Omega', css:'omega',             desc:'Beyond any conceivable scenario; multiple stories of snow everywhere.', alerts:'No alerts; reality unraveling.',               school:'3,650,000,000+ snow days; permanent winter.' };
-  else if (effective < 1500)    result = { level:'Heat Death of Snow', css:'heat-death',         desc:'The mathematical limit; snow ceases to have meaning as a unit of measure.', alerts:'No alerts; units of measure are meaningless.',           school:'10\u00b9\u2070\u207a snow days; society no longer exists.' };
-  else if (effective < 2500)    result = { level:'Big Freeze Singularity', css:'singularity',    desc:'Spacetime itself appears to curve around the snowpack; gravity anomalies reported.', alerts:'No alerts; spacetime is curved.',   school:'10\u00b2\u2070\u207a snow days; no observers remain.' };
-  else if (effective < 5000)    result = { level:'Cosmic Snow Entropy', css:'cosmic-entropy',    desc:'Entropy reversed; snowflakes assemble from nothing; laws of thermodynamics violated.', alerts:'No alerts; causality is optional.',school:'10\u2075\u2070\u207a snow days; causality is optional.' };
-  else if (effective < 10000)   result = { level:'The White Void',    css:'white-void',          desc:'All matter converted to snow; light does not escape; time is silent.', alerts:'No alerts; light cannot escape.',                school:'10\u00b9\u2070\u2070\u207a snow days; nothing remembers school.' };
+  else if (effective < 26)      result = { level:'Devastating',       css:'devastating',         desc:'National Guard activated; power grid failures; roof collapses reported.', alerts:'Blizzard Warning; Federal Emergency Declaration; National Guard deployed.',             school:'4\u20136 snow days.' };
+  else if (effective < 34)      result = { level:'Extreme',           css:'extreme',             desc:'Life-threatening; complete transportation halt; roofs stressed.', alerts:'Blizzard Warning + Extreme Cold Warning; Presidential Disaster Declaration.',                     school:'5\u20137 snow days.' };
+  else if (effective < 44)      result = { level:'Cataclysmic',       css:'cataclysmic',         desc:'Regional disaster declaration; supply lines broken; hospitals on backup power.', alerts:'Regional Disaster Declaration; all winter warnings maxed; Emergency Alert System active.',      school:'7\u201310 snow days; some buildings condemned.' };
+  else if (effective < 56)      result = { level:'Catastrophic',      css:'catastrophic',        desc:'Infrastructure collapse; structural damage; days-long paralysis.', alerts:'Federal Disaster Declaration; continuous Emergency Alert System broadcast.',                    school:'10\u201314 snow days.' };
+  else if (effective < 70)      result = { level:'Calamitous',        css:'calamitous',          desc:'Federal disaster; widespread roof collapses; fatalities mounting.', alerts:'Federal Disaster Declaration; EAS broadcast; mass-shelter orders.',                   school:'14\u201318 snow days; many buildings unusable.' };
+  else if (effective < 88)      result = { level:'City Paralysis',    css:'paralysis',           desc:'City completely buried; historic accumulation; week-long recovery.', alerts:'Maximum NWS warnings; FEMA regional activation.',                  school:'18\u201325 snow days; schools serve as shelters.' };
+  else if (effective < 120)      result = { level:'Historic',          css:'historic-impact',     desc:'Generational event; entire neighborhoods inaccessible; heavy machinery required.', alerts:'FEMA national activation; continuous EAS broadcast.',    school:'25\u201335 snow days; calendar irrecoverable.' };
+  else if (effective < 150)      result = { level:'Apocalyptic',       css:'apocalyptic',         desc:'Beyond any recorded event; survival conditions; month-long recovery.', alerts:'Beyond NWS alert scales; national emergency; continuous EAS.',                school:'35\u201360 snow days; semester lost.' };
+  else if (effective < 180)      result = { level:'Dystopian',         css:'dystopian',           desc:'Urban areas unreachable for weeks; supply drops by helicopter; mass evacuations.', alerts:'National emergency; military airlift; alert systems saturated.',    school:'60\u2013120 snow days; no classes for months.' };
+  else if (effective < 215)     result = { level:'Civilization Ender', css:'civilization-ender', desc:'Society stops functioning; National Guard overwhelmed; mass evacuations impossible.', alerts:'Global emergency broadcast; governments coordinating evacuation.',  school:'120\u2013180 snow days; full school year canceled.' };
+  else if (effective < 260)     result = { level:'Post-Civilization', css:'post-civilization',   desc:'Cities functionally erased; survivors cluster near heated infrastructure.', alerts:'Alert infrastructure failing; last broadcasts urge the highlands.',           school:'180\u2013365 snow days; survival schools only.' };
+  else if (effective < 320)     result = { level:'Ice Age Onset',     css:'ice-age',             desc:'Record-shattering; multi-week digging out; structural collapses widespread.', alerts:'No functioning alert authority remains.',         school:'365\u2013730 snow days; buildings condemned.' };
+  else if (effective < 400)     result = { level:'Glacial Epoch',     css:'glacial-epoch',       desc:'Snowpack resembles a glacier; cities entombed; no thaw expected this season.', alerts:'No alerts — no one left to issue them.',        school:'730\u20133,650 snow days; schools buried entirely.' };
+  else if (effective < 500)     result = { level:'Extinction Event',  css:'extinction',          desc:'Theoretically impossible; every building buried; survival mode for months.', alerts:'Alert systems silent.',          school:'3,650\u201336,500 snow days; no reopening foreseen.' };
+  else if (effective < 650)     result = { level:'World-Ender',       css:'world-ender',         desc:'Regional biomes rewritten; permafrost layer forming; migration impossible.', alerts:'No alerts; civilization gone.',          school:'36,500\u2013365,000 snow days; education globally disrupted.' };
+  else if (effective < 850)     result = { level:'Planet Killer',     css:'planet-killer',       desc:'Fantasy-level snowfall exceeding any physical model; entire regions uninhabitable.', alerts:'No alerts; planetary scale.',  school:'365,000\u20133,650,000 snow days; regional education ends.' };
+  else if (effective < 1100)     result = { level:'Planetary Cryogenesis', css:'cryogenesis',     desc:'Continent-scale freeze-in; terrain unrecognizable; atmosphere too cold to hold water vapor.', alerts:'No alerts; the atmosphere itself is failing.', school:'3,650,000\u201336,500,000 snow days; humanity shelters underground.' };
+  else if (effective < 1400)     result = { level:'Biblical',          css:'biblical',            desc:'Noah\'s Ark but frozen; entire landscape unrecognizable for months.', alerts:'No alerts; mythic scale.',                 school:'36,500,000\u2013365,000,000 snow days; concept of school lost.' };
+  else if (effective < 1800)     result = { level:'Mythic Deluge',     css:'mythic-deluge',       desc:'Mountain ranges exceeded; entire climate zones displaced; legends written anew.', alerts:'No alerts; legend only.',     school:'365,000,000\u20133,650,000,000 snow days; only oral histories remain.' };
+  else if (effective < 2400)    result = { level:'Snowpocalypse Omega', css:'omega',             desc:'Beyond any conceivable scenario; multiple stories of snow everywhere.', alerts:'No alerts; reality unraveling.',               school:'3,650,000,000+ snow days; permanent winter.' };
+  else if (effective < 3200)    result = { level:'Heat Death of Snow', css:'heat-death',         desc:'The mathematical limit; snow ceases to have meaning as a unit of measure.', alerts:'No alerts; units of measure are meaningless.',           school:'10\u00b9\u2070\u207a snow days; society no longer exists.' };
+  else if (effective < 4500)    result = { level:'Big Freeze Singularity', css:'singularity',    desc:'Spacetime itself appears to curve around the snowpack; gravity anomalies reported.', alerts:'No alerts; spacetime is curved.',   school:'10\u00b2\u2070\u207a snow days; no observers remain.' };
+  else if (effective < 7000)    result = { level:'Cosmic Snow Entropy', css:'cosmic-entropy',    desc:'Entropy reversed; snowflakes assemble from nothing; laws of thermodynamics violated.', alerts:'No alerts; causality is optional.',school:'10\u2075\u2070\u207a snow days; causality is optional.' };
+  else if (effective < 12000)   result = { level:'The White Void',    css:'white-void',          desc:'All matter converted to snow; light does not escape; time is silent.', alerts:'No alerts; light cannot escape.',                school:'10\u00b9\u2070\u2070\u207a snow days; nothing remembers school.' };
   else                          result = { level:'Omega Point Frost', css:'omega-point',         desc:'Final unified snow state; universe achieves maximal crystallinity; no further events possible.', alerts:'No alerts; end of all narrative.', school:'\u221E snow days; end of all narrative.' };
 
   result.effective = effective;
@@ -3222,6 +3301,7 @@ function getImpact(snow, annualSnow, hasStormTemp, stormTemp, snowEquivalent, wi
   result.windMult = windMult;
   result.pressureMult = pressureMult;
   result.persistenceMult = persistMult;
+  result.rateMult = rateMult;
   result.coldDriven = coldBaseline > 0 && coldBaseline >= snowEffective;
   return result;
 }
@@ -3459,6 +3539,8 @@ const warmLong = document.getElementById('warmLong');
 const windInput = document.getElementById('windInput');
 const gustInput = document.getElementById('gustInput');
 const pressureInput = document.getElementById('pressureInput');
+const peakRateInput = document.getElementById('peakRateInput');
+const skyInput = document.getElementById('skyInput');
 const addBtn = document.getElementById('addBtn');
 const phaseBuilder = document.getElementById('phaseBuilder');
 const phasesEmpty = document.getElementById('phasesEmpty');
@@ -3583,6 +3665,11 @@ function renderPhaseRows() {
           </label>
           <input type="text" class="tornado-mph" data-idx="${i}" value="${torn.mphStr || ''}" placeholder="mph" ${torn.on ? '' : 'disabled'}>
           <span class="companion-unit">mph</span>
+        </span>
+        <span class="companion-item" title="Optional: how long this phase lasts. Leave blank to estimate from the amount.">
+          <span class="phase-with-label">over</span>
+          <input type="text" class="phase-hours" data-idx="${i}" value="${phase.hoursStr || ''}" placeholder="auto">
+          <span class="companion-unit">hrs</span>
         </span>`;
       cRow.innerHTML = html;
       phaseBuilder.appendChild(cRow);
@@ -3637,6 +3724,17 @@ function syncPhaseInputs() {
     const idx = parseInt(inp.dataset.idx);
     if (inputPhases[idx]) { ensureTornado(inputPhases[idx]); inputPhases[idx].tornado.mphStr = inp.value; }
   });
+  phaseBuilder.querySelectorAll('.phase-hours').forEach(inp => {
+    const idx = parseInt(inp.dataset.idx);
+    if (inputPhases[idx]) inputPhases[idx].hoursStr = inp.value;
+  });
+}
+
+// Optional phase duration: blank means "estimate it"; otherwise hours > 0.
+function parsePhaseHours(str) {
+  if (str === undefined || str === null || String(str).trim() === '') return null;
+  const h = parseFloat(str);
+  return (isFinite(h) && h > 0) ? h : NaN;
 }
 
 function getPhases() {
@@ -3646,7 +3744,9 @@ function getPhases() {
   for (const p of inputPhases) {
     const amount = parsePhaseAmount(p.type, p.amountStr);
     if (amount === null) return null; // invalid
-    result.push({ type: p.type, amount });
+    const hours = parsePhaseHours(p.hoursStr);
+    if (Number.isNaN(hours)) return null; // a duration was entered but isn't a positive number
+    result.push(hours ? { type: p.type, amount, hours } : { type: p.type, amount });
     // Expand any checked hail companions into their own concurrent phases.
     if (p.type === 'hail' && p.companions) {
       for (const ct of HAIL_COMPANIONS) {
@@ -3760,9 +3860,15 @@ function addCity() {
   inputError.textContent = '';
   const name = cityInput.value.trim();
   if (!name) { inputError.textContent = 'Please enter a city name.'; return; }
-  const phases = getPhases();
-  if (!phases) { inputError.textContent = 'Add at least one precipitation phase with a valid amount (number, "Trace", or "Half a Trace").'; return; }
-  if (!phases.length) { inputError.textContent = 'Add at least one precipitation phase.'; return; }
+  // A day with no precipitation phases is allowed when it has a storm temp or
+  // wind to report: a dry, cold or windy day (wind chill, wind impact).
+  const dryDay = !inputPhases.length && (coldCheck.checked || windInput.value || gustInput.value);
+  const phases = dryDay ? [] : getPhases();
+  if (!phases) { inputError.textContent = 'Add at least one precipitation phase with a valid amount (number, "Trace", or "Half a Trace") and, optionally, a duration in hours. For a dry day, leave out every phase and enter a storm temp or wind.'; return; }
+  if (!phases.length && !dryDay) { inputError.textContent = 'Add at least one precipitation phase, or a storm temp or wind for a dry day.'; return; }
+  const peakRate = peakRateInput.value ? parseFloat(peakRateInput.value) : null;
+  if (peakRate !== null && (isNaN(peakRate) || peakRate < 0)) { inputError.textContent = 'Enter a valid peak rate (inches per hour).'; return; }
+  const sky = skyInput.value || null;
   const db = lookupCity(name);
   const hasStormTemp = coldCheck.checked;
   const stormTemp = hasStormTemp ? parseFloat(coldInput.value) : null;
@@ -3781,9 +3887,9 @@ function addCity() {
     hasStormTemp, stormTemp,
     warming: { short: warmShort.value, medium: warmMedium.value, long: warmLong.value },
     windSpeed, gustSpeed: gustSpeedVal,
-    pressure
+    pressure, peakRate, sky
   });
-  cityInput.value = ''; clearPhaseBuilder(); coldCheck.checked = false; coldField.classList.remove('visible'); coldInput.value = ''; windInput.value = ''; gustInput.value = ''; pressureInput.value = ''; cityInput.focus();
+  cityInput.value = ''; clearPhaseBuilder(); coldCheck.checked = false; coldField.classList.remove('visible'); coldInput.value = ''; windInput.value = ''; gustInput.value = ''; pressureInput.value = ''; peakRateInput.value = ''; skyInput.value = ''; cityInput.focus();
   warmShort.value = 'auto'; warmMedium.value = 'auto'; warmLong.value = 'auto';
   acList.classList.remove('open');
   renderCityList();
@@ -3894,6 +4000,8 @@ function getStormClass(maxSnow) {
 /* ---- Auto-classify Storm Type ---- */
 function classifyStormType(cityList) {
   if (!cityList.length) return null;
+  // A dry day is not a storm type.
+  if (cityList.every(c => !(c.phases || []).some(p => p.amount > 0 && p.type !== 'tornado'))) return null;
 
   // Gather stats from entered cities
   const regions = {};
@@ -3913,16 +4021,40 @@ function classifyStormType(cityList) {
       if (p.type === 'ice') totalIceAmt += p.amount;
       else if (SNOW_VARIETIES.includes(p.type)) totalSnowAmt += p.amount;
       else if (p.type === 'sleet') totalSleetAmt += p.amount;
-      else if (p.type === 'rain') totalRainAmt += p.amount;
+      else if (LIQUID_PRECIP_TYPES.includes(p.type)) totalRainAmt += p.amount;
     });
   });
+  // Liquid depth per city, for fitting rain templates on the right amount.
+  const maxRain = Math.max(0, ...cityList.map(c => (c.phases || [])
+    .filter(p => LIQUID_PRECIP_TYPES.includes(p.type)).reduce((s, p) => s + p.amount, 0)));
   const totalPrecip = totalIceAmt + totalSnowAmt + totalSleetAmt + totalRainAmt;
   const iceFrac = totalPrecip > 0 ? (totalIceAmt + totalSleetAmt) / totalPrecip : 0;
   const snowFrac = totalPrecip > 0 ? totalSnowAmt / totalPrecip : 1;
+  const rainFrac = totalPrecip > 0 ? totalRainAmt / totalPrecip : 0;
+  // A template's liquid share, from its weighted precip mixes.
+  const templateRainness = tmpl => {
+    if (!tmpl.precipMix) return 0;
+    let r = 0, w = 0;
+    tmpl.precipMix.forEach(mix => {
+      r += mix.phases.filter(p => LIQUID_PRECIP_TYPES.includes(p.type)).reduce((s, p) => s + p.pct, 0) * mix.weight;
+      w += mix.weight;
+    });
+    return w > 0 ? r / w : 0;
+  };
 
   // Score each template
   const scores = STORM_TEMPLATES.map(tmpl => {
     let score = 0;
+    // Rain templates are fitted on liquid depth, snow templates on frozen depth,
+    // and a template whose liquid share is far from the storm's is heavily
+    // penalized — a Tulsa snowfall is never a flash flood, and vice versa.
+    const tmplRainy = templateRainness(tmpl) >= 0.5;
+    const amt = tmplRainy ? maxRain : maxSnow;
+    // Mixed templates (rain with some sleet, say) are not penalized for a small
+    // mismatch; a snowfall scored against a pure-rain template is.
+    score -= Math.max(0, Math.abs(rainFrac - templateRainness(tmpl)) - 0.3) * 90;
+    // A glaze or an ice storm is never a flurry or sprinkle dud.
+    if (tmpl.regions === 'weighted-single' && iceFrac >= 0.5) score -= 60;
 
     // --- Region match ---
     if (tmpl.regions === 'all-continental') {
@@ -3934,10 +4066,10 @@ function classifyStormType(cityList) {
       else if (maxSnow >= 50) score += 15;
       else score -= 30;
     } else if (tmpl.regions === 'weighted-single') {
-      // Flurry Dud: very low snow, few cities
-      if (maxSnow <= 2 && totalCities <= 4) score += 30;
+      // Flurry Dud / Sprinkle Dud: very little precipitation, few cities
+      if (amt <= (tmplRainy ? 0.3 : 2) && totalCities <= 4) score += 30;
       else score -= 20;
-      if (avgSnow <= 1) score += 15;
+      if (amt <= (tmplRainy ? 0.15 : 1)) score += 15;
     } else {
       // Normal region matching: what fraction of entered cities are in the template's regions?
       const matchCount = cityList.filter(c => tmpl.regions.includes(c.region)).length;
@@ -3954,19 +4086,23 @@ function classifyStormType(cityList) {
     tmpl.severities.forEach(sev => {
       const centerMid = (sev.centerSnow[0] + sev.centerSnow[1]) / 2;
       const centerRange = sev.centerSnow[1] - sev.centerSnow[0];
-      // How close is maxSnow to the center range?
+      // How close is the storm's amount to the center range?
       let fit = 0;
-      if (maxSnow >= sev.centerSnow[0] && maxSnow <= sev.centerSnow[1]) {
+      if (amt >= sev.centerSnow[0] && amt <= sev.centerSnow[1]) {
         fit = 20; // perfect fit
       } else {
-        const dist = maxSnow < sev.centerSnow[0]
-          ? sev.centerSnow[0] - maxSnow
-          : maxSnow - sev.centerSnow[1];
+        const dist = amt < sev.centerSnow[0]
+          ? sev.centerSnow[0] - amt
+          : amt - sev.centerSnow[1];
         fit = Math.max(0, 20 - dist * 1.5);
       }
       bestSevFit = Math.max(bestSevFit, fit);
     });
     score += bestSevFit;
+    // A storm well below a template's smallest severity band is not that kind of
+    // storm at all: 0.6" of rain is not a flash-flood emergency.
+    const floorAmt = Math.min(...tmpl.severities.map(sv => sv.centerSnow[0]));
+    if (floorAmt > 0 && amt < floorAmt) score -= ((floorAmt - amt) / floorAmt) * 30;
 
     // --- Precipitation type match ---
     // Calculate the template's dominant precip character from its weighted mixes
@@ -4023,14 +4159,15 @@ function classifyStormType(cityList) {
   let bestSevLabel = '';
   if (bestTmpl) {
     let bestFit = -Infinity;
+    const bestAmt = templateRainness(bestTmpl) >= 0.5 ? maxRain : maxSnow;
     bestTmpl.severities.forEach(sev => {
       let fit = 0;
-      if (maxSnow >= sev.centerSnow[0] && maxSnow <= sev.centerSnow[1]) {
+      if (bestAmt >= sev.centerSnow[0] && bestAmt <= sev.centerSnow[1]) {
         fit = 10;
       } else {
-        const dist = maxSnow < sev.centerSnow[0]
-          ? sev.centerSnow[0] - maxSnow
-          : maxSnow - sev.centerSnow[1];
+        const dist = bestAmt < sev.centerSnow[0]
+          ? sev.centerSnow[0] - bestAmt
+          : bestAmt - sev.centerSnow[1];
         fit = 10 - dist;
       }
       if (fit > bestFit) { bestFit = fit; bestSevLabel = sev.label; }
@@ -4043,6 +4180,130 @@ function classifyStormType(cityList) {
     score: scores[0].score,
     runners: scores.slice(1, 3).map(s => s.type)
   };
+}
+
+/* ---- Hazard products, ice wording, wind chill, dry days ----
+   The impact ladders describe snow and flood depth. These helpers attach the
+   products and wording that follow the precipitation *type*: a glaze is black ice,
+   not a coating kids play in; a tornado gets a Tornado Warning, not a flood watch;
+   a Blizzard Warning needs blizzard wind. */
+function phaseSum(phases, types) {
+  return (phases || []).filter(p => types.includes(p.type)).reduce((s, p) => s + (p.amount || 0), 0);
+}
+// NWS wind chill (valid at or below 50°F with wind of at least 3 mph).
+function windChillF(T, mph) {
+  if (T === null || T === undefined || isNaN(T) || !mph || mph < 3 || T > 50) return null;
+  const v = Math.pow(mph, 0.16);
+  return 35.74 + 0.6215 * T - 35.75 * v + 0.4275 * T * v;
+}
+// Cold products (renamed by NWS in 2024: Cold Weather Advisory, Extreme Cold
+// Warning). Criteria vary by office; these follow the broad regional pattern.
+function coldProduct(wc, region, lat) {
+  if (wc === null) return null;
+  const hasLat = lat !== null && lat !== undefined;
+  const north = region === 'NE' || region === 'UM' || region === 'NR' || (hasLat && lat >= 41);
+  const deepSouth = region === 'SE' || (region === 'SO' && hasLat && lat < 33);
+  const [adv, warn] = north ? [-20, -35] : deepSouth ? [0, -15] : [-10, -25];
+  if (wc <= warn) return 'Extreme Cold Warning';
+  if (wc <= adv) return 'Cold Weather Advisory';
+  return null;
+}
+function iceDescription(c) {
+  const ice = phaseSum(c.phases, ['ice']);
+  const sleet = phaseSum(c.phases, ['sleet']);
+  const snowy = phaseSum(c.phases, SNOW_VARIETIES);
+  if (ice <= 0 || snowy > ice * 4) return null;
+  let d;
+  if (ice < 0.05)      d = 'Thin glaze: bridges, overpasses and untreated roads turn to black ice; crashes and falls spike even though roads look merely wet.';
+  else if (ice < 0.1)  d = 'Light glaze on roads, trees and cars; walkways treacherous; scattered crashes until roads are treated.';
+  else if (ice < 0.25) d = 'Ice accretion on trees and power lines; scattered outages; roads icy until treated or above freezing.';
+  else if (ice < 0.5)  d = 'Ice storm: limbs and power lines down; numerous outages; travel dangerous.';
+  else if (ice < 1)    d = 'Crippling ice storm: widespread tree damage; outages lasting days.';
+  else                 d = 'Catastrophic ice storm: transmission lines and towers down; outages lasting weeks.';
+  if (sleet >= 1) d += ' Sleet packs into a concrete-like crust that plows barely move.';
+  return d;
+}
+function hazardAlerts(c, imp) {
+  const phases = c.phases || [];
+  const ws = c.windSpeed || 0, gs = c.gustSpeed || 0, peakWind = Math.max(ws, gs);
+  const ice = phaseSum(phases, ['ice']);
+  const snowy = phaseSum(phases, [...SNOW_VARIETIES, 'snowgrains']);
+  const hail = phaseSum(phases, ['hail']);
+  const convective = phases.some(p => ['thunderstorm', 'hail', 'thundersnow'].includes(p.type));
+  const tornado = phases.some(p => p.type === 'tornado');
+  const blizzardWind = ws >= 35 || gs >= 35;
+  const iceEvent = ice > 0 && snowy <= ice * 4;
+  const products = [];
+  if (tornado) products.push('Tornado Warning');
+  if (convective && (peakWind >= 58 || hail >= 1)) products.push('Severe Thunderstorm Warning');
+  if (snowy > 0 && blizzardWind) products.push('Blizzard Warning');
+  if (ice >= 0.25) products.push('Ice Storm Warning');
+  else if (iceEvent) products.push('Winter Weather Advisory for freezing rain');
+  if (!convective && !(snowy > 0 && blizzardWind)) {
+    if (ws >= 40 || gs >= 58) products.push('High Wind Warning');
+    else if (ws >= 30 || gs >= 45) products.push('Wind Advisory');
+  }
+  const cold = coldProduct(windChillF(c.hasStormTemp ? c.stormTemp : null, ws), c.region, c.lat);
+  if (cold) products.push(cold);
+  // Keep the ladder's own products unless they contradict the type: no Blizzard
+  // Warning without blizzard wind, no snow products for an ice event, and no
+  // flood watch for a short thunderstorm burst.
+  let base = imp.alerts || '';
+  if (!blizzardWind) base = base.replace(/Blizzard Warning if winds are high/g, '').replace(/Blizzard Warning/g, snowy > 0 ? 'Winter Storm Warning' : '');
+  if (iceEvent) base = base.replace(/Winter Storm Warning|Winter Weather Advisory|Special Weather Statement|localized /g, '');
+  if (!phases.length) base = base.replace(/No alerts in effect\.?/g, '');
+  const liquid = phaseSum(phases, LIQUID_PRECIP_TYPES);
+  if (convective && liquid < 1) base = base.replace(/Flash Flood Watch|Flood Watch/g, '').replace(/Flood Advisory possible for low-lying areas/g, 'Flood Advisory possible (urban ponding)');
+  const parts = [...products, ...base.split(/;\s*/)].map(x => x.replace(/^[\s.;]+|[\s.;]+$/g, '')).filter(Boolean);
+  const seen = new Set();
+  return parts.filter(x => { const k = x.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; }).join('; ') || 'No alerts in effect.';
+}
+// Duration-aware rain: when a phase's duration is entered, a slow soaking rain
+// counts for less than the same total in a burst (about 0.5"/hr is the pivot).
+function totalRainInchesRated(phases) {
+  if (!phases || !phases.length) return 0;
+  return phases.filter(p => isRainScaleType(p.type)).reduce((s, p) => {
+    const base = rainEquivInches(p.type, p.amount);
+    if (!(p.hours > 0) || !(p.amount > 0)) return s + base;
+    const f = Math.min(1, Math.max(0.5, Math.sqrt((p.amount / p.hours) / 0.5)));
+    return s + base * f;
+  }, 0);
+}
+// Badge for events with no frozen accumulation, and for ice-dominant events.
+function eventBadge(cityList, snowBadge) {
+  const all = cityList.flatMap(c => c.phases || []);
+  const frozenSnow = phaseSum(all, [...SNOW_VARIETIES, 'snowgrains', 'sleet', 'hail']);
+  const maxIce = Math.max(0, ...cityList.map(c => phaseSum(c.phases, ['ice'])));
+  if (maxIce > 0 && frozenSnow <= maxIce * 4) {
+    if (maxIce >= 0.5) return { label: 'Major Ice Storm', css: 'major' };
+    if (maxIce >= 0.25) return { label: 'Ice Storm', css: 'warning' };
+    if (maxIce >= 0.1) return { label: 'Freezing Rain Event', css: 'advisory' };
+    return { label: 'Light Glaze', css: 'advisory' };
+  }
+  if (frozenSnow > 0 || maxIce > 0) return snowBadge;
+  if (all.some(p => p.type === 'tornado')) return { label: 'Tornadic Storm', css: 'major' };
+  if (all.some(p => p.type === 'thunderstorm' || p.type === 'hail')) return { label: 'Thunderstorm Event', css: 'warning' };
+  if (phaseSum(all, LIQUID_PRECIP_TYPES) > 0) return { label: 'Rain Event', css: 'light' };
+  if (!all.length) return { label: 'Dry Weather Day', css: 'none' };
+  return snowBadge;
+}
+// Keep the snow-days text consistent with the physical recovery card: if the
+// ladder's flavor count is far from when the recovery model reopens schools,
+// report the modeled reopening instead.
+function schoolTextFor(c, imp) {
+  const text = imp.school || '';
+  if (!c.melt) return text;
+  const ms = meltMilestones(c.melt, { ...c, lat: c.meltLat, annualSnow: c.meltSnow }).find(m => m.key === 'school');
+  if (!ms || !isFinite(ms.day)) return text;
+  const nums = (text.match(/[\d,]+(?=\s*(?:–[\d,]+\s*)?snow days?)|[\d,]+(?=–[\d,]+\s*snow day)/g) || [])
+    .map(x => parseFloat(x.replace(/,/g, ''))).filter(isFinite);
+  const range = text.match(/([\d,]+)–([\d,]+)\s*snow day/);
+  if (range) nums.push(parseFloat(range[1].replace(/,/g, '')), parseFloat(range[2].replace(/,/g, '')));
+  if (!nums.length) return text;
+  const hi = Math.max(...nums), lo = Math.min(...nums), days = ms.day;
+  if (hi <= Math.max(2, days * 2 + 1) && lo >= days / 2 - 1) return text;
+  const n = Math.max(1, Math.round(days));
+  return `About ${n} snow day${n === 1 ? '' : 's'}; schools reopen ${formatMeltMoment(ms.date, ms.day)}.`;
 }
 
 /* ---- Generate ---- */
@@ -4085,7 +4346,7 @@ function generateProfile(rsiOverride) {
   const maxSnow = sorted[0].snow;
   const maxSnowEquiv = Math.max(...sorted.map(c => c.snowEquivalent || c.snow));
   const avgSnow = cities.reduce((s,c) => s+c.snow, 0) / cities.length;
-  const storm = getStormClass(maxSnowEquiv);
+  const storm = eventBadge(cities, getStormClass(maxSnowEquiv));
   const coldCities = cities.filter(c => c.hasStormTemp);
   const coldestTemp = coldCities.length ? Math.min(...coldCities.map(c => c.stormTemp)) : null;
   const stormName = document.getElementById('stormName').value.trim();
@@ -4127,8 +4388,8 @@ function generateProfile(rsiOverride) {
   const rows = sorted.map(c => {
     const rainOnly = isRainOnly(c.phases);
     const imp = rainOnly
-      ? getRainImpact(totalRainInches(c.phases), c.lat, c.windSpeed, c.gustSpeed, c.pressure)
-      : getImpact(c.snow, c.annualSnow, c.hasStormTemp, c.stormTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure, c.persistenceMult);
+      ? getRainImpact(totalRainInchesRated(c.phases), c.lat, c.windSpeed, c.gustSpeed, c.pressure)
+      : getImpact(c.snow, c.annualSnow, c.hasStormTemp, c.stormTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure, c.persistenceMult, c.peakRate);
     const res = rainOnly
       ? getRainResilienceLabel(estimateAnnualRain(c.lat, c.lon, c.region), c.lat)
       : getResilienceLabel(c.annualSnow, c.lat);
@@ -4147,13 +4408,22 @@ function generateProfile(rsiOverride) {
       const p = c.phases && c.phases[0];
       const icon = p ? PRECIP_ICONS[p.type] : '\u2744\uFE0F';
       // Tornado-only cities have no snow depth \u2014 show the wind speed instead.
-      const amtText = p ? formatAmt(p) : formatSnow(c.snow);
+      const amtText = p ? formatAmt(p) : (c.phases && !c.phases.length ? 'Dry' : formatSnow(c.snow));
       precipCell = `<td style="font-weight:600">${icon} ${amtText}</td>`;
     }
 
     // Build detail text
-    let detail = imp.desc;
-    if (imp.alerts) detail += ` <span class="impact-alerts">⚠️ ${imp.alerts}</span>`;
+    let detail = iceDescription(c) || (c.phases && !c.phases.length ? 'No precipitation.' : imp.desc);
+    const alertsText = hazardAlerts(c, imp);
+    if (!/Flood Watch/.test(alertsText)) detail = detail.replace(/;?\s*first flood watches issued/, '');
+    detail += ` <span class="impact-alerts">⚠️ ${alertsText}</span>`;
+    (c.phases || []).filter(p => p.type === 'tornado').forEach(p => {
+      const ef = tornadoAssessment(p.amount);
+      detail += ` <em style="color:#fca5a5">🌪️ ${ef.ef} tornado (${p.amount} mph), on the ground about ${ef.minutes} minutes: ${ef.damage}</em>`;
+    });
+    const wc = windChillF(c.hasStormTemp ? c.stormTemp : null, c.windSpeed);
+    if (wc !== null && wc < c.stormTemp - 1) detail += ` <em style="color:#93c5fd">🥶 Wind chill ${Math.round(wc)}°F</em>`;
+    if (imp.rateMult && imp.rateMult > 1) detail += ` <em style="color:#e0e7ff">❄️ Peak rate of ${c.peakRate}″/hr: whiteout bursts outrun the plows (×${imp.rateMult.toFixed(2)})</em>`;
     if (rainOnly) {
       if (imp.latMult > 1.0) {
         const why = imp.latMult >= 1.15 ? 'tropical/arid region rarely sees soaking rain' : 'subtropical region with limited drainage';
@@ -4170,6 +4440,9 @@ function generateProfile(rsiOverride) {
         const pl = getPressureLabel(c.pressure);
         detail += ` <em style="color:#fbbf24">\u{1F32A}\ufe0f ${pl.label} (${c.pressure} mb) deepens the storm \u2014 surge, gradient winds, and drainage stress amplify impact (\u00d7${imp.pressureMult.toFixed(2)})</em>`;
       }
+    } else if (c.phases && !c.phases.length) {
+      // A dry day: nothing fell, so snow-handling and precipitation multipliers
+      // have nothing to act on. Wind chill and products are reported above.
     } else {
       if (c.annualSnow !== null && imp.factor !== 1.0) {
         if (imp.factor <= 0.3) detail += ` <em style="opacity:0.6">(Massively amplified \u2014 this area almost never sees snow)</em>`;
@@ -4239,7 +4512,7 @@ function generateProfile(rsiOverride) {
       ${meltCell}
       <td><span class="res-pill res-${res.css}">${res.icon} ${res.label}</span></td>
       <td><span class="impact-pill impact-${imp.css}">${imp.level}</span></td>
-      <td style="font-size:0.82rem">\u{1F3EB} ${imp.school}</td>
+      <td style="font-size:0.82rem">\u{1F3EB} ${schoolTextFor(c, imp)}</td>
       <td style="min-width:190px"><span class="war-pill war-${war.css}">${war.icon} ${war.label}</span><span class="war-desc">${war.desc}</span></td>
       <td style="opacity:0.7;font-size:0.78rem">${detail}</td>
     </tr>`;
@@ -4248,8 +4521,8 @@ function generateProfile(rsiOverride) {
   // Peak impact across all cities (drives record-shattering fun facts)
   const peakCity = sorted.reduce((best, c) => {
     const imp = isRainOnly(c.phases)
-      ? getRainImpact(totalRainInches(c.phases), c.lat, c.windSpeed, c.gustSpeed, c.pressure)
-      : getImpact(c.snow, c.annualSnow, c.hasStormTemp, c.stormTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure, c.persistenceMult);
+      ? getRainImpact(totalRainInchesRated(c.phases), c.lat, c.windSpeed, c.gustSpeed, c.pressure)
+      : getImpact(c.snow, c.annualSnow, c.hasStormTemp, c.stormTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure, c.persistenceMult, c.peakRate);
     return imp.effective > best.eff ? { eff: imp.effective, level: imp.level, name: c.name } : best;
   }, { eff: 0, level: 'None', name: '' });
   const peakEffective = peakCity.eff;
@@ -4323,10 +4596,11 @@ function generateProfile(rsiOverride) {
   if (hasIce && totalIce >= 1) ff.push('\u{1F9CA} Over 1\u2033 of ice accumulation is catastrophic \u2014 trees collapse, power grids fail, and travel is impossible.');
 
   // Wind fun facts
-  if (maxWind >= 35 && maxSnow >= 3) ff.push('\u{1F4A8} <strong>Blizzard conditions:</strong> Sustained winds of 35+ mph with snow create near-zero visibility and dangerous wind chill. The NWS would issue a <strong>Blizzard Warning</strong>.');
+  if (maxWind >= 35 && maxSnow >= 1) ff.push('\u{1F4A8} <strong>Blizzard conditions:</strong> Sustained winds of 35+ mph with snow create near-zero visibility and dangerous wind chill. The NWS would issue a <strong>Blizzard Warning</strong>.');
   else if (maxWind >= 25 && maxSnow >= 2) ff.push('\u{1F4A8} High winds with snow cause significant drifting \u2014 plowed roads can drift shut within hours.');
   if (maxGust >= 50) ff.push('\u{1F4A8} Gusts over 50 mph can topple trees onto power lines, especially those weighed down by ice or heavy snow.');
-  if (maxWind >= 45) ff.push('\u{1F32A}\uFE0F Violent winds make this storm exceptionally dangerous \u2014 travel is virtually impossible even without precipitation.');
+  if (maxWind >= 74) ff.push('🌪️ Hurricane-force winds make this storm exceptionally dangerous — travel is virtually impossible even without precipitation.');
+  else if (maxWind >= 58) ff.push('🌪️ Damaging winds of 58+ mph bring down trees and power lines; expect outages and blocked roads.');
 
   // Mixed precip fun facts
   if (hasRain && (hasIce || maxSnow >= 1)) {
@@ -4349,7 +4623,7 @@ function generateProfile(rsiOverride) {
 
   // Treat both 0.025 (Half Trace) and 0.05 (Trace) as trace amounts.
   const trace = sorted.filter(c => c.snow > 0 && c.snow <= 0.05).length;
-  if (trace > 0) ff.push(`${trace} ${trace===1?'city':'cities'} received only a trace of snow.`);
+  if (trace > 0) ff.push(`${trace} ${trace===1?'city':'cities'} received only a trace of ${hasIce ? 'frozen precipitation' : 'snow'}.`);
 
   const closest = HISTORIC_STORMS.reduce((b,s) => { const d=Math.abs(s.rsi-officialRSI); return d<b.diff?{storm:s,diff:d}:b; }, {storm:null,diff:Infinity});
   if (closest.storm && officialRSI >= 1) ff.push(`Closest historical comparison: <strong>${closest.storm.name}</strong> (RSI ${closest.storm.rsi.toFixed(1)}).`);
@@ -4364,9 +4638,9 @@ function generateProfile(rsiOverride) {
       <div class="stat-box"><div class="val">${formatSnow(maxSnow)}</div><div class="lbl">Max Frozen Precip</div></div>
       <div class="stat-box"><div class="val">${(avgSnow>=0.01&&avgSnow<=0.05)?'Trace':formatSnow(avgSnow)}</div><div class="lbl">Avg Frozen Precip</div></div>
       <div class="stat-box"><div class="val">${officialRSI < 1 ? officialRSI.toFixed(2) : officialRSI.toFixed(1)}</div><div class="lbl">RSI Score</div></div>
-      ${hasIce ? `<div class="stat-box"><div class="val" style="color:#c084fc">${totalIce.toFixed(1)}\u2033</div><div class="lbl">Total Ice</div></div>` : ''}
+      ${hasIce ? `<div class="stat-box"><div class="val" style="color:#c084fc">${totalIce < 0.1 ? totalIce.toFixed(2) : totalIce.toFixed(1)}\u2033</div><div class="lbl">Total Ice</div></div>` : ''}
       ${hasWind ? `<div class="stat-box"><div class="val" style="color:#a5b4fc">${maxWind}${maxGust ? '/G'+maxGust : ''}</div><div class="lbl">Max Wind (mph)</div></div>` : ''}
-      ${coldestTemp !== null ? `<div class="stat-box"><div class="val">${coldestTemp}\u00b0F</div><div class="lbl">Coldest</div></div>` : ''}
+      ${coldestTemp !== null ? `<div class="stat-box"><div class="val">${coldestTemp}\u00b0F</div><div class="lbl">${coldestTemp <= 32 ? 'Coldest' : (coldCities.length > 1 ? 'Lowest Storm Temp' : 'Storm Temp')}</div></div>` : ''}
       ${stormDurationHrs ? `<div class="stat-box"><div class="val">${stormDurationHrs}h</div><div class="lbl">Storm Duration</div></div>` : ''}
     </div>
     ${earliestFirst && latestLast ? `<div style="font-size:0.78rem;opacity:0.5;margin-bottom:8px">\u{1F552} Storm window: ${formatTimeline(earliestFirst)} \u2192 ${formatTimeline(latestLast)}</div>` : ''}
@@ -4954,30 +5228,46 @@ function calculateTimeline(phases, isCenter, stormStart, arrivalOffset) {
   // Duration weight per phase. A tornado's amount is a wind speed (mph), not
   // inches, and it passes in minutes — so treat it as a short fixed phase
   // rather than letting a 3-digit mph dominate the storm's duration.
-  const durWeight = p => p.type === 'tornado' ? 0.3 : p.amount;
+  const allPhases = phases;
+  // Tornadoes run inside the storm that spawns them, so they are timed after
+  // the precipitation phases are laid out, never as their own sequential stretch.
+  phases = phases.filter(p => p.type !== 'tornado');
+  const tornadoes = allPhases.filter(p => p.type === 'tornado');
+  if (!phases.length) phases = [{ type: 'thunderstorm', amount: 0, hours: 0.25, synthetic: true }];
+  const durWeight = p => p.amount;
 
   // Total precipitation for duration calc
   const totalPrecip = phases.reduce((s, p) => s + durWeight(p), 0);
+  const convectiveOnly = phases.every(p => p.type === 'thunderstorm' || p.type === 'hail');
 
-  // Duration scales with total precipitation
-  const totalDurationHrs = totalPrecip <= 0.05
-    ? rand(0.5, 1.5)
-    : Math.max(1.5, totalPrecip * 1.4 + rand(-1.5, 1.5));
+  // Duration scales with total precipitation. Thunderstorms rain hard and pass
+  // quickly (about 1.2"/hr), so a convective burst is minutes, not hours.
+  let totalDurationHrs = convectiveOnly
+    ? Math.max(0.25, totalPrecip / 1.2)
+    : totalPrecip <= 0.05
+      ? rand(0.5, 1.5)
+      : Math.max(1.5, totalPrecip * 1.4 + rand(-1.5, 1.5));
+  // Phases with an entered duration keep it; the rest share the default time.
+  const fixedHrs = phases.reduce((s, p) => s + (p.hours > 0 ? p.hours : 0), 0);
+  const freePhases = phases.filter(p => !(p.hours > 0));
+  if (!freePhases.length) totalDurationHrs = fixedHrs;
+  else if (fixedHrs > 0) totalDurationHrs = fixedHrs + Math.max(0.5, totalDurationHrs * freePhases.reduce((s, p) => s + durWeight(p), 0) / Math.max(totalPrecip, 0.05));
 
   const stormStartTime = new Date(stormStart.getTime() + arrivalOffset * 3600000);
 
-  // Divide duration among phases proportional to amounts (min 0.5 hrs each)
-  const minPhaseHrs = 0.5;
-  const totalAmount = phases.reduce((s, p) => s + Math.max(durWeight(p), 0.05), 0);
-  let remainingHrs = totalDurationHrs;
-  const phaseDurations = phases.map(p => {
-    const proportion = Math.max(durWeight(p), 0.05) / totalAmount;
-    return Math.max(minPhaseHrs, proportion * totalDurationHrs);
-  });
-  // Normalize to fit total duration
-  const durSum = phaseDurations.reduce((s, d) => s + d, 0);
-  const scale = totalDurationHrs / durSum;
-  phaseDurations.forEach((d, i) => phaseDurations[i] = d * scale);
+  // Divide duration among phases proportional to amounts (min 0.5 hrs each,
+  // 0.25 for convective bursts). Entered durations are kept exactly.
+  const minPhaseHrs = convectiveOnly ? 0.25 : 0.5;
+  const freeHrs = Math.max(0, totalDurationHrs - fixedHrs);
+  const freeAmount = freePhases.reduce((s, p) => s + Math.max(durWeight(p), 0.05), 0);
+  const phaseDurations = phases.map(p => p.hours > 0 ? p.hours
+    : Math.max(minPhaseHrs, (Math.max(durWeight(p), 0.05) / Math.max(freeAmount, 0.05)) * freeHrs));
+  // Normalize the free phases to fit the time left over
+  const freeSum = phases.reduce((s, p, i) => s + (p.hours > 0 ? 0 : phaseDurations[i]), 0);
+  if (freeSum > 0 && freeHrs > 0) {
+    const scale = freeHrs / freeSum;
+    phases.forEach((p, i) => { if (!(p.hours > 0)) phaseDurations[i] *= scale; });
+  }
 
   // Build phase events with sequential timing
   const phaseEvents = [];
@@ -4998,14 +5288,28 @@ function calculateTimeline(phases, isCenter, stormStart, arrivalOffset) {
     // Small gap between phases (0-10 min) for realism
     cursor = phaseEnd.getTime() + (i < phases.length - 1 ? rand(0, 10) * 60000 : 0);
   });
+  if (phases.length === 1 && phases[0].synthetic) phaseEvents[0].type = 'tornado';
+  // Each tornado touches down near the peak of the most convective phase and
+  // stays on the ground for its EF rating's typical minutes.
+  tornadoes.forEach(tn => {
+    if (phases.length === 1 && phases[0].synthetic) { phaseEvents[0].amount = tn.amount; return; }
+    const host = phaseEvents.find(pe => pe.type === 'thunderstorm' || pe.type === 'hail')
+      || phaseEvents.find(pe => pe.type !== 'tornado') || phaseEvents[0];
+    const mins = tornadoAssessment(tn.amount).minutes;
+    const start = new Date(host.peakTime.getTime() - mins * 30000);
+    phaseEvents.push({ type: 'tornado', amount: tn.amount, startTime: start,
+      peakTime: new Date(start.getTime() + mins * 30000), endTime: new Date(start.getTime() + mins * 60000) });
+  });
+  phaseEvents.sort((a, b) => a.startTime - b.startTime);
 
+  const endMs = Math.max(...phaseEvents.map(pe => pe.endTime.getTime()));
   return {
     start: phaseEvents[0].startTime,
-    end: phaseEvents[phaseEvents.length - 1].endTime,
+    end: new Date(endMs),
     phaseEvents,
     // Keep legacy fields for backward compat with storm window stats
     firstFlakes: phaseEvents[0].startTime,
-    lastSnow: phaseEvents[phaseEvents.length - 1].endTime
+    lastSnow: new Date(endMs)
   };
 }
 
@@ -5422,10 +5726,17 @@ function shouldSample(day) {
 // `opts` lets a caller simulate something other than the open ground: sweMult
 // scales the water the pack starts with, rateFactor scales how fast it goes.
 // Both default to 1, so a call without options is the plain open-ground melt.
+// Sunshine after a storm speeds melt; overcast slows it.
+const SKY_MELT_FACTOR = { sunny: 1.25, partly: 1.0, cloudy: 0.85 };
+
 function simulateMelt(city, stormEnd, opts) {
   const o = opts || {};
   const sweMult = (o.sweMult === undefined) ? 1 : o.sweMult;
-  const rateFactor = (o.rateFactor === undefined) ? 1 : o.rateFactor;
+  const rateFactor = ((o.rateFactor === undefined) ? 1 : o.rateFactor) * (SKY_MELT_FACTOR[city.sky] || 1);
+  // A pure ice glaze has no snowpack for ground heat to eat into; it goes when
+  // the air (or road treatment) gets above freezing, not before.
+  const frozen = (city.phases || []).filter(p => !NON_FROZEN_TYPES.includes(p.type));
+  const glazeOnly = frozen.length > 0 && frozen.every(p => p.type === 'ice');
   let swe = packSWE(city.phases) * sweMult;
   if (swe <= 0) return null;
 
@@ -5454,7 +5765,7 @@ function simulateMelt(city, stormEnd, opts) {
     const tmean = windowTempFor(day, temps, date, city);
 
     let melt = (ddf(date, city.lat) * Math.max(0, tmean - MELT_THRESHOLD_F)
-                + GROUND_FLUX * coldFluxFactor(tmean)) * rateFactor;
+                + (glazeOnly ? 0 : GROUND_FLUX * coldFluxFactor(tmean))) * rateFactor;
     if (day === 1 && rainInches > 0) melt += 0.007 * rainInches * (rainTemp - 32) * rateFactor;
 
     const before = swe;
@@ -9142,7 +9453,11 @@ window.__snowTests.push((t, approx) => {
 
 // Baseline recorded from shipped behavior before the melt work began.
 // If a task changes this, the change must be intentional and explained.
-window.__IMPACT_FINGERPRINT = 'Glacial Epoch|Major|Major|Very Light|Ice Age Onset';
+// Changed intentionally 2026-09-25 (multiplier-stack cap + realistic tiers re-spaced
+// so real record blizzards stop landing in fiction): was
+// 'Glacial Epoch|Major|Major|Very Light|Ice Age Onset'. The 34" Tulsa arctic blizzard
+// is now Historic and the 60" Milwaukee monster Catastrophic: extreme, but real.
+window.__IMPACT_FINGERPRINT = 'Historic|Oppressive|Major|Very Light|Catastrophic';
 
 window.__snowTests.push((t, approx) => {
   // Fixture spans the paths that matter: deep + cold + windy + low pressure,
