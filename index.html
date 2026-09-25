@@ -670,6 +670,32 @@
     .ladder-title { font-size: 0.46rem; }
     .ladder-item { font-size: 0.44rem; padding: 2px 1px; }
   }
+  /* Heat Index Mode */
+  .heat-num { width: 130px; }
+  .heat-opt { opacity: 0.5; font-size: 0.7rem; }
+  .heat-lakes { margin-top: 16px; }
+  .heat-lake-fields { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+  .heat-lake-fields > div { width: 110px; }
+  .heat-sub { font-size: 0.72rem; opacity: 0.6; }
+  @media (max-width: 600px) { .heat-num, .heat-lake-fields > div { width: calc(50% - 6px); } }
+  .impact-h0  { background: #0f172a; color: #475569; }
+  .impact-h1  { background: #14281c; color: #86efac; }
+  .impact-h2  { background: #2a2a12; color: #fde68a; }
+  .impact-h3  { background: #3a2a0a; color: #fcd34d; }
+  .impact-h4  { background: #422006; color: #fbbf24; }
+  .impact-h5  { background: #451a03; color: #fb923c; }
+  .impact-h6  { background: #4a1505; color: #f97316; }
+  .impact-h7  { background: #4c0f0f; color: #f87171; }
+  .impact-h8  { background: #500a0a; color: #ef4444; }
+  .impact-h9  { background: #4a0620; color: #fb7185; }
+  .impact-h10 { background: #3b0a2e; color: #f472b6; }
+  .impact-h11 { background: #3b0764; color: #e879f9; }
+  .impact-h12 { background: #2e1065; color: #c4b5fd; }
+  .impact-h13 { background: #7c2d12; color: #fed7aa; }
+  .impact-h14 { background: #a16207; color: #fef9c3; }
+  .impact-h15 { background: #ea580c; color: #fff7ed; }
+  .impact-h16 { background: #fde68a; color: #78350f; }
+  .impact-h17 { background: #ffffff; color: #6d28d9; }
 </style>
 </head>
 <body>
@@ -846,6 +872,7 @@
       <button type="button" class="mode-btn" data-mode="historic">Historic Reference</button>
       <button type="button" class="mode-btn" data-mode="replay">Historic Replay</button>
       <button type="button" class="mode-btn" data-mode="snowwar">Snow War Tiers</button>
+      <button type="button" class="mode-btn" data-mode="heat">Heat Index</button>
     </div>
   </div>
 
@@ -854,6 +881,46 @@
     <p class="paragraph-hint">All <span id="snowWarCount">&mdash;</span> snow war activity tiers, ordered by the packable snow depth that reaches them &mdash; from a single disputed flake up past 30,000&Prime;. Every city in a storm lands on exactly one of these, based on how much of its precipitation packs.</p>
     <div class="historic-list" id="snowWarList"></div>
   </div>
+
+  <div class="card" id="heatCard" style="display:none">
+    <h2>Add Cities &mdash; Heat Index</h2>
+    <div class="row">
+      <div class="city-field">
+        <label for="heatCityInput">City</label>
+        <input type="text" id="heatCityInput" placeholder="e.g. Tulsa, OK" autocomplete="off">
+        <div class="autocomplete-list" id="heatAcList"></div>
+      </div>
+      <div class="heat-num">
+        <label for="heatTempInput">Temp (&deg;F)</label>
+        <input type="number" id="heatTempInput" placeholder="96">
+      </div>
+      <div class="heat-num">
+        <label for="heatDewInput">Dewpoint <span class="heat-opt">optional</span></label>
+        <input type="number" id="heatDewInput" placeholder="auto">
+      </div>
+      <div class="heat-num">
+        <label for="heatDaysInput">Days <span class="heat-opt">optional</span></label>
+        <input type="number" id="heatDaysInput" placeholder="1" min="1" max="365" step="1">
+      </div>
+      <button type="button" class="btn-add" id="heatAddBtn">Add City</button>
+    </div>
+    <div class="error-msg" id="heatError"></div>
+    <div class="heat-lakes">
+      <div class="warming-label">Great Lakes water temps (&deg;F)
+        <span class="help-text">Optional. A cool lake cuts lakeshore highs (lake breeze); a warm lake adds humidity and keeps nights warm. Every Michigan city is affected.</span>
+      </div>
+      <div class="heat-lake-fields">
+        <div><label for="lake_superior">Superior</label><input type="number" id="lake_superior" placeholder="&mdash;"></div>
+        <div><label for="lake_michigan">Michigan</label><input type="number" id="lake_michigan" placeholder="&mdash;"></div>
+        <div><label for="lake_huron">Huron</label><input type="number" id="lake_huron" placeholder="&mdash;"></div>
+        <div><label for="lake_erie">Erie</label><input type="number" id="lake_erie" placeholder="&mdash;"></div>
+        <div><label for="lake_ontario">Ontario</label><input type="number" id="lake_ontario" placeholder="&mdash;"></div>
+      </div>
+    </div>
+    <div id="heatCityList" style="margin-top:12px"></div>
+    <button class="btn-generate" id="heatGenerateBtn" disabled>Generate Heat Profile</button>
+  </div>
+  <div class="card" id="heatProfileCard" style="display:none"></div>
 
   <div class="card" id="historicReplayCard" style="display:none">
     <h2>Replay Historic Storm</h2>
@@ -6977,6 +7044,9 @@ function setInputMode(mode) {
   historic.style.display = (mode === 'historic')  ? '' : 'none';
   replay.style.display   = (mode === 'replay')    ? '' : 'none';
   snowWar.style.display  = (mode === 'snowwar')   ? '' : 'none';
+  document.getElementById('heatCard').style.display = (mode === 'heat') ? '' : 'none';
+  const heatProfile = document.getElementById('heatProfileCard');
+  heatProfile.style.display = (mode === 'heat' && heatProfile.innerHTML.trim()) ? '' : 'none';
 }
 document.querySelectorAll('.mode-btn').forEach(b => {
   b.addEventListener('click', () => setInputMode(b.dataset.mode));
