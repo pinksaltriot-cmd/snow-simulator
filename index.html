@@ -8009,6 +8009,47 @@ function heatTierFor(x) {
   return { tier: HEAT_TIERS[idx], index: idx };
 }
 
+/* ---- Heat Index Mode: alerts and outdoor impact ---- */
+function heatRiskCategory(hi) {
+  if (hi === null || hi >= 125) return 'Extreme Danger';
+  if (hi >= 103) return 'Danger';
+  if (hi >= 90) return 'Extreme Caution';
+  if (hi >= 80) return 'Caution';
+  return 'None';
+}
+function heatAlertRegion(city) {
+  if (!heatIsUS(city.n)) return null;
+  if (PACIFIC_MARINE.has(city.n)) return 'pacific';
+  if (city.lon < -105) return 'west';
+  if (city.lat < 31.5 && city.lon > -98) return 'gulf';
+  if (city.r === 'NE' || city.r === 'UM' || city.r === 'NR' || (city.r === 'OV' && city.lat >= 41)) return 'north';
+  return 'south';
+}
+const HEAT_ALERT_RULES = {
+  north:   x => x.hi >= 105 ? 2 : x.hi >= 100 ? 1 : 0,
+  south:   x => x.hi >= 110 ? 2 : x.hi >= 105 ? 1 : 0,
+  gulf:    x => x.hi >= 113 ? 2 : x.hi >= 108 ? 1 : 0,
+  pacific: x => x.anom >= 22 ? 2 : x.anom >= 15 ? 1 : 0,
+  west:    x => (x.T >= 115 || x.anom >= 12) ? 2 : (x.T >= 110 || x.anom >= 8) ? 1 : 0
+};
+function heatAlert(city, x) {
+  const region = heatAlertRegion(city);
+  if (!region) return { level: 0, label: 'No NWS product (outside U.S.)' };
+  let level = x.hi === null ? 2 : HEAT_ALERT_RULES[region](x);
+  if (level >= 1 && x.days >= 3 && x.warmNights) level = 2;
+  return { level, label: ['No heat product', 'Heat Advisory', 'Extreme Heat Warning'][level] };
+}
+function heatOutdoorImpact(hi, resilienceLabel) {
+  const naive = ['Heat-Wary', 'Heat-Naive', 'Cool-Summer'].includes(resilienceLabel);
+  const parts = [];
+  if (hi === null || hi >= 104) parts.push('No outdoor activity.');
+  else if (hi >= 95) parts.push('Modified practice: no pads, extra rest breaks.');
+  else if (hi >= 90) parts.push('Mandatory water breaks every 20 minutes.');
+  else parts.push('Normal outdoor activity.');
+  if (naive && (hi === null || hi >= 92)) parts.push('Schools without A/C dismiss early.');
+  return parts.join(' ');
+}
+
 /* ======================================================================
    SELFTEST HARNESS
    Browser-run tests. Load index.html?selftest=1 and read the console.
