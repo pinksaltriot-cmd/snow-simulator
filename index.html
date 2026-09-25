@@ -7727,6 +7727,34 @@ phaseBuilder.addEventListener('keydown', e => { if (e.key==='Enter' && e.target.
   }
 })();
 
+/* ---- Heat Index Mode: physics ----
+   NWS heat index (Steadman + Rothfusz with NWS adjustments), RH from dewpoint
+   (Magnus), and wet-bulb (Stull 2011). All temperatures in °F except wet-bulb (°C). */
+function heatSatVapor(c) { return 6.112 * Math.exp(17.62 * c / (243.12 + c)); }
+function heatFtoC(f) { return (f - 32) * 5 / 9; }
+function heatRH(T, Td) {
+  return Math.min(100, 100 * heatSatVapor(heatFtoC(Td)) / heatSatVapor(heatFtoC(T)));
+}
+// Returns null past 135°F, where the Rothfusz fit is meaningless.
+function heatIndexF(T, RH) {
+  if (T > 135) return null;
+  const simple = 0.5 * (T + 61 + (T - 68) * 1.2 + RH * 0.094);
+  if ((simple + T) / 2 < 80) return simple;
+  let hi = -42.379 + 2.04901523 * T + 10.14333127 * RH - 0.22475541 * T * RH
+    - 0.00683783 * T * T - 0.05481717 * RH * RH + 0.00122874 * T * T * RH
+    + 0.00085282 * T * RH * RH - 0.00000199 * T * T * RH * RH;
+  if (RH < 13 && T >= 80 && T <= 112) hi -= ((13 - RH) / 4) * Math.sqrt((17 - Math.abs(T - 95)) / 17);
+  else if (RH > 85 && T >= 80 && T <= 87) hi += ((RH - 85) / 10) * ((87 - T) / 5);
+  return hi;
+}
+// Stull is fit for -20..50°C; past 122°F there is no wet-bulb and tiering uses air temp.
+function heatWetBulbC(T, RH) {
+  if (T > 122) return null;
+  const t = heatFtoC(T);
+  return t * Math.atan(0.151977 * Math.sqrt(RH + 8.313659)) + Math.atan(t + RH)
+    - Math.atan(RH - 1.676331) + 0.00391838 * Math.pow(RH, 1.5) * Math.atan(0.023101 * RH) - 4.686035;
+}
+
 /* ======================================================================
    SELFTEST HARNESS
    Browser-run tests. Load index.html?selftest=1 and read the console.
@@ -8586,6 +8614,140 @@ window.__snowTests.push((t, approx) => {
   t('past a year names the year', formatMeltMoment(d, 400) === 'Thu Feb 11, 2027');
   t('no date is never', formatMeltMoment(null, Infinity) === 'Never');
   t('permanent with a date still dates', formatMeltMoment(d, Infinity) === 'Thu Feb 11');
+});
+
+// T1 physics
+window.__snowTests.push((t, approx) => {
+  [[80,40,80],[90,50,95],[90,70,106],[96,50,108],[100,40,109],[104,40,119],
+   [86,90,105],[110,10,104],[84,85,96],[100,15,96],[92,65,108],[98,55,117]]
+    .forEach(([T, RH, ref]) => t(`HI ${T}F/${RH}% = ${ref} (NWS chart)`, approx(heatIndexF(T, RH), ref, 1)));
+  t('HI below 80 uses Steadman', approx(heatIndexF(70, 50), 69.05, 0.01));
+  t('HI null past 135F', heatIndexF(140, 20) === null);
+  t('saturated air is 100% RH', approx(heatRH(80, 80), 100, 0.01));
+  t('Tulsa 96/74 RH ~49%', approx(heatRH(96, 74), 49.4, 0.3));
+  t('Tulsa 96/74 HI ~107', approx(heatIndexF(96, heatRH(96, 74)), 107.2, 0.3));
+  t('Dhahran wet-bulb ~36.5C', approx(heatWetBulbC(108, heatRH(108, 95)), 36.5, 0.2));
+  t('wet-bulb null past 122F', heatWetBulbC(125, 20) === null);
+});
+
+// T2 climatology
+window.__snowTests.push((t) => {
+  const city = n => CITY_DB.find(c => c.n === n);
+  [['Tulsa, OK',93],['Chicago, IL',84],['Phoenix, AZ',106],['Las Vegas, NV',104],['Miami, FL',91],
+   ['Dallas, TX',96],['New York, NY',85],['San Francisco, CA',68],['Seattle, WA',76],['San Diego, CA',75],
+   ['Denver, CO',89],['Duluth, MN',77],['Marquette, MI',77],['Portland, OR',81]]
+    .forEach(([n, f]) => t(`summer high ${n}`, Math.abs(heatSummerHigh(city(n)).f - f) <= 2));
+  t('override not flagged est', heatSummerHigh(city('Tulsa, OK')).est === false);
+  t('non-override flagged est', heatSummerHigh(city('Fort Wayne, IN')).est === true);
+  t('every override exists in CITY_DB', Object.keys(SUMMER_HIGH_OVERRIDES).every(n => city(n)));
+  t('every marine city exists in CITY_DB', [...PACIFIC_MARINE].every(n => city(n)));
+  t('Houston dewpoint 74', heatAssumedDewpoint(city('Houston, TX')) === 74);
+  t('El Paso dewpoint 45', heatAssumedDewpoint(city('El Paso, TX')) === 45);
+  t('Seattle dewpoint 55', heatAssumedDewpoint(city('Seattle, WA')) === 55);
+  t('Tulsa dewpoint 70', heatAssumedDewpoint(city('Tulsa, OK')) === 70);
+  t('Chicago dewpoint 66', heatAssumedDewpoint(city('Chicago, IL')) === 66);
+  t('Reno is not marine', heatAssumedDewpoint(city('Reno, NV')) === 45);
+});
+
+// T3 Great Lakes
+window.__snowTests.push((t, approx) => {
+  const city = n => CITY_DB.find(c => c.n === n);
+  const duluth = city('Duluth, MN');
+  const d = heatApplyLakes(duluth, 90, 68, { superior: 52 });
+  t('Duluth shore cooled to 75', approx(d.T, 75, 0.01));
+  t('Duluth shore dewpoint capped at 62', approx(d.Td, 62, 0.01));
+  const blank = heatApplyLakes(duluth, 90, 68, {});
+  t('blank lake = no change', blank.T === 90 && blank.Td === 68 && !blank.affected);
+  t('inland city unaffected', heatApplyLakes(city('Madison, WI'), 95, 70, { michigan: 60 }).T === 95);
+  t('every Michigan city is lake-affected',
+    CITY_DB.filter(c => /,\s*MI$/.test(c.n)).every(c => heatLakesFor(c).length > 0));
+  const unlisted = heatLakesFor({ n: 'Nowhere, MI', lat: 44.0, lon: -84.5 });
+  t('unlisted MI city defaults to peninsula', unlisted.length === 1 && unlisted[0][1] === 'peninsula');
+  t('every lake-table city exists in CITY_DB', Object.keys(LAKE_CITIES).every(n => city(n)));
+  t('cooling capped at 15', heatApplyLakes(duluth, 110, 60, { superior: 40 }).T === 95);
+  const muggy = heatApplyLakes(city('Cleveland, OH'), 80, 79, { erie: 84 });
+  t('dewpoint never exceeds T', muggy.Td <= muggy.T);
+  t('warm Erie night floor 77', heatApplyLakes(city('Cleveland, OH'), 92, 72, { erie: 80 }).nightFloor === 77);
+  const one = heatApplyLakes(city('Buffalo, NY'), 90, 65, { erie: 70 }).T;
+  const two = heatApplyLakes(city('Buffalo, NY'), 90, 65, { erie: 70, ontario: 70 }).T;
+  t('Buffalo Erie cools 10', approx(90 - one, 10, 0.01));
+  t('Buffalo second lake at half strength', approx(one - two, 3.35, 0.01));
+});
+
+// T4 resilience and ladder
+window.__snowTests.push((t) => {
+  const city = n => CITY_DB.find(c => c.n === n);
+  t('Phoenix Furnace-Forged', heatResilience(city('Phoenix, AZ')).label === 'Furnace-Forged');
+  t('Tulsa Heat-Seasoned', heatResilience(city('Tulsa, OK')).label === 'Heat-Seasoned');
+  t('Seattle notched to Cool-Summer', heatResilience(city('Seattle, WA')).label === 'Cool-Summer');
+  t('London notched to Cool-Summer', heatResilience(city('London, England')).label === 'Cool-Summer');
+  t('ladder has 50 tiers', HEAT_TIERS.length === 50);
+  const names = HEAT_TIERS.map(x => x.level);
+  t('tier names unique', new Set(names).size === names.length);
+  const score = HEAT_TIERS.filter(x => x.kind === 'score');
+  t('score bounds increasing', score.every((x, i) => i === 0 || x.maxS > score[i - 1].maxS));
+  const fic = HEAT_TIERS.filter(x => x.kind === 'fiction');
+  t('fiction bounds increasing', fic.every((x, i) => i === 0 || x.minT > fic[i - 1].minT));
+  t('fiction at Tw 37', heatTierFor({ S: 10, T: 115, hi: 150, tw: 37.2 }).tier.level === 'Beyond Record');
+  t('fiction past 134F', heatTierFor({ S: 10, T: 136, hi: null, tw: null }).tier.level === 'Beyond Record');
+  t('Boiling Point at 212', heatTierFor({ S: Infinity, T: 212, hi: null, tw: null }).tier.level === 'Boiling Point');
+  t('Big Bang past Planck', heatTierFor({ S: Infinity, T: 1e33, hi: null, tw: null }).tier.level === 'Big Bang Recurrence');
+  t('Death Valley floor', heatTierFor({ S: 20, T: 130, hi: 125, tw: 24 }).tier.level === 'Death Valley–Class');
+  t('top score tier without floor', heatTierFor({ S: 400, T: 105, hi: 130, tw: 30 }).tier.level === '2003 Europe–Class');
+  t('floor raises past top score tier', heatTierFor({ S: 400, T: 105, hi: 130, tw: 33.5 }).tier.level === 'Persian Gulf–Class');
+  t('no snow-ladder name reused', !names.some(n => /Heat Death of Snow|Apocalyptic|Catastrophic/.test(n)));
+});
+
+// T5 alerts and outdoor impact
+window.__snowTests.push((t) => {
+  const city = n => CITY_DB.find(c => c.n === n);
+  t('risk Danger at 107', heatRiskCategory(107) === 'Danger');
+  t('risk Extreme Danger at 125', heatRiskCategory(125) === 'Extreme Danger');
+  t('risk Caution at 85', heatRiskCategory(85) === 'Caution');
+  t('Tulsa south', heatAlertRegion(city('Tulsa, OK')) === 'south');
+  t('Chicago north', heatAlertRegion(city('Chicago, IL')) === 'north');
+  t('Houston gulf', heatAlertRegion(city('Houston, TX')) === 'gulf');
+  t('Seattle pacific', heatAlertRegion(city('Seattle, WA')) === 'pacific');
+  t('Phoenix west', heatAlertRegion(city('Phoenix, AZ')) === 'west');
+  t('Toronto outside U.S.', heatAlertRegion(city('Toronto, ON, Canada')) === null);
+  const x = (hi, extra) => Object.assign({ hi, T: 96, anom: 0, days: 1, warmNights: false }, extra);
+  t('Tulsa 107 advisory', heatAlert(city('Tulsa, OK'), x(107)).label === 'Heat Advisory');
+  t('Tulsa 110 warning', heatAlert(city('Tulsa, OK'), x(110)).label === 'Extreme Heat Warning');
+  t('Chicago 100 advisory', heatAlert(city('Chicago, IL'), x(100)).label === 'Heat Advisory');
+  t('Miami 104 nothing', heatAlert(city('Miami, FL'), x(104)).level === 0);
+  t('3 warm days upgrade', heatAlert(city('Tulsa, OK'), x(106, { days: 3, warmNights: true })).level === 2);
+  t('outdoor 104 cancels', heatOutdoorImpact(104, 'Temperate').startsWith('No outdoor activity'));
+  t('outdoor naive dismissal', heatOutdoorImpact(93, 'Heat-Naive').includes('dismiss early'));
+  t('outdoor normal', heatOutdoorImpact(85, 'Sun-Belt') === 'Normal outdoor activity.');
+});
+
+// T6 calibration anchors, end to end
+window.__snowTests.push((t) => {
+  const ev = (n, temp, dew, days, lakes, ov) => evaluateHeatCity({ n, temp, dew, days }, lakes || {}, ov);
+  const idx = name => HEAT_TIERS.findIndex(x => x.level === name);
+  const tulsa = ev('Tulsa, OK', 96, 74, 1);
+  t('Tulsa -> Sweltering', tulsa.tier.level === 'Sweltering');
+  t('Tulsa -> Heat Advisory', tulsa.alert.label === 'Heat Advisory');
+  t('Phoenix routine <= Hot', ev('Phoenix, AZ', 108, 45, 1).tierIndex <= idx('Hot'));
+  t('Seattle anomaly >= Dangerous Heat', ev('Seattle, WA', 108, 60, 1).tierIndex >= idx('Dangerous Heat'));
+  t('Phoenix 2023', ev('Phoenix, AZ', 116, 45, 31).tier.level === '2023 Phoenix–Class');
+  t('Portland 2021', ev('Portland, OR', 116, 62, 3).tier.level === '2021 Heat Dome–Class');
+  t('Chicago 1995', ev('Chicago, IL', 104, 78, 5).tier.level === '1995 Chicago–Class');
+  const dh = ev('Dhahran', 108, 95, 1, {}, { n: 'Dhahran', lat: 26.3, lon: 50.1, r: null, snow: 0 });
+  t('Dhahran-Class', dh.tier.level === 'Dhahran-Class');
+  t('Dhahran HI ~176', Math.abs(dh.hi - 177) <= 2);
+  const inland = ev('Duluth, MN', 90, 68, 1), shore = ev('Duluth, MN', 90, 68, 1, { superior: 52 });
+  t('Duluth shore below inland', shore.tierIndex < inland.tierIndex);
+  t('Duluth shore keeps inland reference', shore.inland !== null && shore.inland.T === 90);
+  t('blank dewpoint flagged', ev('Tulsa, OK', 96, null, 1).dewAssumed === true);
+  t('unknown city still evaluates', ev('Atlantis', 100, 70, 1).hi > 100);
+  let prev = -1, mono = true;
+  for (let T = 60; T <= 1000; T++) {
+    const r = ev('Tulsa, OK', T, Math.min(T, 70), 1);
+    if (r.tierIndex < prev) mono = false;
+    prev = r.tierIndex;
+  }
+  t('tier never drops as temperature rises', mono);
 });
 
 window.addEventListener('load', () => {
