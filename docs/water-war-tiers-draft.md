@@ -3,7 +3,7 @@
 **Status:** Shipped in v3.3.0; the descriptions live in index.html (WATER_WAR_TIERS).
 **Date:** 2026-09-24
 
-The warm-season counterpart to the 286 snow war tiers. **222 tiers**, driven by heat:
+The warm-season counterpart to the 288 snow war tiers. **222 tiers**, driven by heat:
 a city lands on its tier by the same heat score as the heat impact ladder, so hotter,
 longer, and more unusual heat means a bigger water war. Past 134°F the ladder is keyed
 on air temperature and turns fictional, matching the heat impact ladder.

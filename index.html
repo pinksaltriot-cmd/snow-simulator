@@ -188,7 +188,7 @@
   .impact-pill { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; }
   .res-pill { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.68rem; font-weight: 600; white-space: nowrap; }
 
-  /* Snow war activity (286 tiers, banded into 16 colors) */
+  /* Snow war activity (288 tiers, banded into 16 colors) */
   .war-pill { display: inline-block; padding: 3px 9px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; white-space: nowrap; }
   .war-desc { display: block; margin-top: 4px; opacity: 0.62; font-size: 0.72rem; line-height: 1.35; }
   .war-w0 { background: #0f172a; color: #334155; }
@@ -902,7 +902,7 @@
 
 <div class="container">
   <h1>Snow Event Profile Maker 3.5.0</h1>
-  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">11149 lines of code</p>
+  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">11153 lines of code</p>
   <p class="subtitle">Powered by real NOAA RSI methodology with location-based impact scaling</p>
 
   <div class="card">
@@ -2453,7 +2453,7 @@ function snowWarScore(phases) {
   return roundPrecip(6 * p * p);
 }
 
-// 286 tiers, keyed by the upper bound of packable inches that reaches them.
+// 288 tiers, keyed by the upper bound of packable inches that reaches them.
 // Runs from a single disputed flake to 30,000" and beyond, matching the reach
 // of the snow impact ladder. css picks a color band; the ladder darkens from
 // grey through blue and amber into magenta, then violet into the white void.
@@ -2582,6 +2582,8 @@ const SNOW_WAR_TIERS = [
     desc:'The two sides of an ongoing fight each acquire a machine and the war acquires a second front, fought over ground rather than with it. Neither operator throws anything all afternoon. Both come home having covered more ground than their entire side threw across, and both are told they missed the actual battle.' },
   { maxP: 1.1,     css:'w2', icon:'⚔️', label:'Snowball Fight',
     desc:'A proper fight at last: six to ten participants, cover behind parked cars, and a running stockpile resupplied mid-engagement at about forty rounds per side. Effective range extends to thirty-five feet. Duration is set by how long hands stay warm, which in practice means twenty to thirty minutes.' },
+  { maxP: 1.14,    css:'w2', icon:'📜', label:'Spreader Patent Dispute',
+    desc:'Two households each claim the machine as their own design: eleven-centimetre screw, seven-centimetre pitch, slip clutch set to the kitchen-scale figure. The case is heard in a garage by a panel of three older kids. The original is entered as evidence: graph paper at four squares to the inch, one wheel drawn larger than the other, dated in felt-tip in the corner. The panel rules for the kid who drew it and grants the other household the right to print from the files, on condition that every trough carries a scratched mark crediting the design.' },
   { maxP: 1.18,    css:'w3', icon:'🪞', label:'Counterfeit Spreaders',
     desc:'Machines start appearing that were not printed from the files: wrong pitch, wrong flight depth, no clutch at all. Three of the four fail within a week, two by snapping a screw shaft under load, in exactly the way the clutch exists to prevent. The original design gains a scratched mark on the trough to distinguish it, and the mark is copied within nine days.' },
   { maxP: 1.25,    css:'w3', icon:'🎽', label:'Running Battle',
@@ -2842,6 +2844,8 @@ const SNOW_WAR_TIERS = [
     desc:'A fixed body of recited material forms — roughly two hundred pieces, none written down, held by about forty specialists. Reciting the full canon takes eleven hours and is done twice a year. Comparison of two distant reciters shows agreement on ninety-four percent of lines.' },
   { maxP: 110,     css:'w8', icon:'📖', label:'Founding Myths',
     desc:'Origin stories are told about the first round ever thrown, in at least eight competing versions. They contradict each other on every material point — the thrower, the range, the year — and none can be checked against a record. Six of the eight have never been written down.' },
+  { maxP: 111.5,   css:'w8', icon:'⚙️', label:'The Spreader Dynasty',
+    desc:'Of the four cartel houses, one outlasts the others: the family descended from the kid who drew the sketch, holding the original pattern and supplying seven machines in ten across the alliance. Every unit it casts descends from the same drawing, the eleven-centimetre screw scaled by whole numbers and never redesigned. A member of the family attends every first push of the season. The heirs are raised on graph paper at four squares to the inch, discouraged from drawing anything else, and taught to draw one wheel larger than the other.' },
   { maxP: 113,     css:'w8', icon:'🗝️', label:'The First Spreader',
     desc:'An object is venerated as the original machine: a printed screw in two half-shells with a proud seam along its length, held in a case, produced once a year. Four separate polities hold an object described in exactly these terms. Three are demonstrably later work and the fourth cannot be examined, and every side considers the question settled in its own favour.' },
   { maxP: 117,     css:'w9', icon:'✍️', label:'Chroniclers',
