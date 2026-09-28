@@ -743,6 +743,8 @@
   .impact-sev14 { background: #0c0a09; color: #fafaf9; box-shadow: inset 0 0 0 1px #fafaf9; }
   .impact-sev15 { background: #1e1b4b; color: #c7d2fe; }
   .impact-sev16 { background: #000; color: #a78bfa; }
+  /* Yoopanese names run longer than the English ones: wrap them instead of clipping. */
+  html[data-lang="yooper"] .tier-ladder .ladder-item { white-space: normal; text-overflow: clip; line-height: 1.15; }
 </style>
 </head>
 <body>
@@ -901,8 +903,9 @@
 </aside>
 
 <div class="container">
-  <h1>Snow Event Profile Maker 3.5.0</h1>
-  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">11153 lines of code</p>
+  <div style="text-align:right;margin-bottom:-6px"><button type="button" id="langToggle" class="btn-clear" data-noyoop>🗣️ Yoopanese</button></div>
+  <h1 id="appTitle">Snow Event Profile Maker 3.5.0</h1>
+  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">11427 lines of code</p>
   <p class="subtitle">Powered by real NOAA RSI methodology with location-based impact scaling</p>
 
   <div class="card">
@@ -1257,6 +1260,11 @@
   </div>
 </div>
 
+<!-- Yoopanese (display-only language toggle): dictionaries load before the main script. -->
+<script src="yooper/snow-war-a.js"></script>
+<script src="yooper/snow-war-b.js"></script>
+<script src="yooper/water-war.js"></script>
+<script src="yooper/ui.js"></script>
 <script>
 /* ======================================================================
    CITY DATABASE
@@ -9833,6 +9841,226 @@ sevEl('severeAcList').addEventListener('click', e => {
 });
 document.addEventListener('click', e => { if (!e.target.closest('#severeCard .city-field')) sevEl('severeAcList').classList.remove('open'); });
 
+/* ================= YOOPANESE (language toggle) ================= */
+// Display-only translation layer. Every number, key, tier and score is computed in
+// English and never touched: getSnowWar, the water war lookups, getImpact and the rest
+// keep returning their English objects. Only the words a person reads are swapped, on
+// the rendered page, after each render. English is the default and renders exactly as
+// before; the self-test always runs in English. ?lang=yooper or the header button
+// switches it. Dictionaries live in yooper/*.js and may be missing or partial; every
+// lookup falls back to the English string.
+const YOOP = (function () {
+  let lang = (function () {
+    if (/(\?|&)selftest\b/.test(location.search)) return 'en';
+    const q = /(?:\?|&)lang=(yooper|en)\b/.exec(location.search);
+    if (q) return q[1];
+    try { return localStorage.getItem('snowsim.lang') === 'yooper' ? 'yooper' : 'en'; } catch (e) { return 'en'; }
+  })();
+  const src = () => window.YOOPER || {};
+  let dict = null, rules = null, phrases = null, ctx = null;
+  const memo = new Map();
+  const ws = s => s.replace(/\s+/g, ' ');
+  const own = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+  const reEsc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+  function build() {
+    if (dict) return;
+    const Y = src();
+    dict = new Map();
+    const put = (en, yp) => { if (typeof en === 'string' && typeof yp === 'string' && yp) dict.set(ws(en.trim()), yp); };
+    Object.entries(Y.UI || {}).forEach(([k, v]) => put(k, v));
+    // War ladders: the files key by the exact English label; the English desc comes from
+    // the ladder itself, so a translated desc is found wherever that desc is displayed.
+    // A war label that is also an ordinary UI word ("Mythic") keeps its war reading
+    // only inside the war lists and pills.
+    const warMap = {};
+    const warPut = (en, yp) => {
+      if (typeof en !== 'string' || typeof yp !== 'string' || !yp) return;
+      const k = ws(en.trim());
+      warMap[k] = yp;
+      if (!dict.has(k)) dict.set(k, yp);
+    };
+    const war = (tiers, map) => {
+      if (!map) return;
+      tiers.forEach(t => {
+        const y = own(map, t.label) ? map[t.label] : null;
+        if (!y) return;
+        warPut(t.label, y.label);
+        warPut(t.desc, y.desc);
+      });
+    };
+    war(SNOW_WAR_TIERS, Y.SNOW_WAR_TIERS);
+    war(WATER_WAR_TIERS, Y.WATER_WAR_TIERS);
+    Object.entries(Y.WATER_WAR_BANDS || {}).forEach(([k, v]) => warPut(k, v));
+    // Full-string templates: "{}" is a captured piece that is itself translated
+    // (so a tier label inside a sentence is swapped, and a number passes through).
+    rules = (Y.UI_RULES || []).map(([pat, rep]) => {
+      let re = pat;
+      if (typeof pat === 'string') re = new RegExp('^' + pat.split('{}').map(p => reEsc(ws(p))).join('(.+?)') + '$');
+      return { re, rep };
+    });
+    phrases = (Y.UI_PHRASES || []).slice().sort((a, b) => b[0].length - a[0].length)
+      .map(([en, yp]) => ({ re: new RegExp('(^|[^A-Za-z])' + reEsc(en) + '(?![A-Za-z])', 'g'), yp }));
+    ctx = Object.entries(Y.UI_CTX || {});
+    ctx.push(['#snowWarList, #waterWarList, #snowWarCard, #waterWarCard, .war-pill, .war-desc', warMap]);
+  }
+
+  let CUR = null;                          // context map for the node being translated
+  function list(s, sep) {
+    const parts = s.split(sep);
+    const t = parts.map(p => core(p));
+    return t.some((x, i) => x !== parts[i]) ? t.join(sep) : null;
+  }
+  function core(s) {
+    if (!/[A-Za-z]/.test(s)) return s;
+    if (CUR && own(CUR, s)) return CUR[s];
+    if (dict.has(s)) return dict.get(s);
+    for (const r of rules) {
+      const m = r.re.exec(s);
+      if (!m) continue;
+      // A rule that changes nothing steps aside for the next one.
+      const out = typeof r.rep === 'function' ? r.rep(m, tr)
+        : r.rep.replace(/\{(=?)(\d)\}/g, (_, raw, i) => raw ? m[+i] : tr(m[+i]));
+      if (out !== s) return out;
+    }
+    // A leading icon or symbol ("🌡️ Torch", "⚠️ …"), a trailing colon or period,
+    // or a wrapping pair of parentheses around something known.
+    let m = /^([^A-Za-z0-9\s]+\s+)(.*[A-Za-z].*)$/.exec(s);
+    if (m) { const t = core(m[2]); if (t !== m[2]) return m[1] + t; }
+    m = /^([(\[])(.*)([)\]])$/.exec(s);
+    if (m) { const t = core(m[2]); if (t !== m[2]) return m[1] + t + m[3]; }
+    // Joined lists ("A; B; C", "A · B", "A + B") and runs of whole sentences.
+    for (const sep of ['; ', ' · ', ' + ', ' / ', ' — ']) {
+      if (s.includes(sep)) { const t = list(s, sep); if (t) return t; }
+    }
+    const sent = s.split(/(?<=[.!?])\s+(?=[A-Z0-9⚠🌡])/);
+    if (sent.length > 1) {
+      const t = sent.map(x => core(x));
+      if (t.some((x, i) => x !== sent[i])) return t.join(' ');
+    }
+    m = /^(.*[A-Za-z].*?)([:.,;!]|:?\s*[·—–-])$/.exec(s);
+    if (m) { const t = core(m[1]); if (t !== m[1]) return t + m[2]; }
+    return s;
+  }
+  function tr(s) {
+    if (s == null) return s;
+    const key = ws(String(s).trim());
+    if (!key) return s;
+    if (!CUR && memo.has(key)) return memo.get(key);
+    let out = core(key);
+    if (out === key && phrases.length && key.length > 12) {
+      out = phrases.reduce((acc, p) => acc.replace(p.re, (_, pre) => pre + p.yp), key);
+    }
+    if (!CUR) memo.set(key, out);
+    return out;
+  }
+  // Translate one displayed string. Returns the English untouched unless lang is yooper.
+  function L(s) {
+    if (lang !== 'yooper') return s;
+    build();
+    return tr(s);
+  }
+  function trIn(s, el) {
+    let m = null;
+    for (const [sel, map] of ctx) {
+      if (el && el.closest && el.closest(sel)) m = Object.assign(m || {}, map);
+    }
+    if (!m) return tr(s);
+    CUR = m;
+    try { return tr(s); } finally { CUR = null; }
+  }
+
+  const ORIG = new WeakMap();             // text node -> its English text
+  const AORIG = new WeakMap();            // element -> { attr: English value }
+  const ATTRS = ['placeholder', 'title', 'aria-label'];
+  const SKIP = 'script,style,textarea,input,.storm-name-display,.hs-name,[data-noyoop]';
+  function apply(root) {
+    if (!root) return;
+    const on = lang === 'yooper';
+    if (on) build();
+    const texts = [];
+    if (root.nodeType === 3) texts.push(root);
+    else if (root.nodeType === 1) {
+      const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      let n; while ((n = w.nextNode())) texts.push(n);
+    } else return;
+    texts.forEach(n => {
+      const el = n.parentElement;
+      if (!el || el.closest(SKIP)) return;
+      if (on) {
+        const orig = ORIG.has(n) ? ORIG.get(n) : n.nodeValue;
+        if (!/[A-Za-z]/.test(orig)) return;
+        const core = trIn(orig, el);
+        const key = ws(orig.trim());
+        if (core === key && !ORIG.has(n)) return;
+        const lead = /^\s*/.exec(orig)[0] ? ' ' : '', trail = /\s*$/.exec(orig)[0] ? ' ' : '';
+        const t = core === key ? orig : lead + core + trail;
+        if (!ORIG.has(n)) ORIG.set(n, orig);
+        if (n.nodeValue !== t) n.nodeValue = t;
+      } else if (ORIG.has(n)) {
+        n.nodeValue = ORIG.get(n);
+        ORIG.delete(n);
+      }
+    });
+    if (root.nodeType !== 1) return;
+    const els = [root, ...root.querySelectorAll('[placeholder],[title],[aria-label]')];
+    els.forEach(el => {
+      if (el.closest('[data-noyoop]')) return;
+      let o = AORIG.get(el);
+      ATTRS.forEach(a => {
+        if (!el.hasAttribute(a) && !(o && own(o, a))) return;
+        if (on) {
+          const orig = o && own(o, a) ? o[a] : el.getAttribute(a);
+          const t = tr(orig);
+          if (t === ws(orig.trim())) return;
+          if (!o) { o = {}; AORIG.set(el, o); }
+          if (!own(o, a)) o[a] = orig;
+          el.setAttribute(a, t);
+        } else if (o && own(o, a)) {
+          el.setAttribute(a, o[a]);
+          delete o[a];
+        }
+      });
+    });
+  }
+
+  const EN_TITLE = document.title;
+  function chrome() {
+    document.documentElement.setAttribute('data-lang', lang);
+    document.title = lang === 'yooper' ? tr(EN_TITLE) : EN_TITLE;
+    const b = document.getElementById('langToggle');
+    if (b) b.textContent = lang === 'yooper' ? '🗣️ English' : '🗣️ Yoopanese';
+  }
+  function setLang(l) {
+    lang = l === 'yooper' ? 'yooper' : 'en';
+    try { localStorage.setItem('snowsim.lang', lang); } catch (e) {}
+    if (lang === 'yooper') build();
+    apply(document.body);
+    chrome();
+  }
+  // Every render replaces innerHTML; translate whatever was just added.
+  const obs = new MutationObserver(list => {
+    if (lang !== 'yooper') return;
+    list.forEach(m => m.addedNodes.forEach(apply));
+  });
+  function start() {
+    obs.observe(document.body, { childList: true, subtree: true });
+    const b = document.getElementById('langToggle');
+    if (b) b.addEventListener('click', () => setLang(lang === 'yooper' ? 'en' : 'yooper'));
+    if (lang === 'yooper') { build(); apply(document.body); }
+    chrome();
+  }
+  return {
+    get lang() { return lang; },
+    L, setLang, apply, start,
+    // test hooks: run fn with the language forced, restoring afterwards
+    withLang(l, fn) { const was = lang; lang = l; if (l === 'yooper') build(); try { return fn(); } finally { lang = was; } },
+    rebuild() { dict = null; memo.clear(); build(); },
+    dictSize() { build(); return dict.size; }
+  };
+})();
+YOOP.start();
+
 /* ======================================================================
    SELFTEST HARNESS
    Browser-run tests. Load index.html?selftest=1 and read the console.
@@ -11132,6 +11360,52 @@ window.__snowTests.push((t) => {
   renderSevereProfile([aug30]);
   t('profile renders the tier', document.getElementById('severeProfileCard').innerHTML.includes('Tornado Touchdown'));
   document.getElementById('severeProfileCard').innerHTML = '';
+});
+
+// YOOP-1 Yoopanese display layer: English by default, words swap, numbers and scores do not.
+window.__snowTests.push((t) => {
+  const nums = s => (s.match(/\d+(?:[.,]\d+)*/g) || []).join('|');
+  const yp = s => YOOP.withLang('yooper', () => YOOP.L(s));
+  t('selftest runs in English', YOOP.lang === 'en');
+  t('English passes through untouched', YOOP.L('Storm Profile') === 'Storm Profile');
+  t('title and header stay English', document.title === 'Snow Event Profile Maker 3.5.0'
+    && document.getElementById('appTitle').textContent === 'Snow Event Profile Maker 3.5.0');
+  t('toggle offers Yoopanese', document.getElementById('langToggle').textContent.includes('Yoopanese'));
+  t('Yooper swaps a heading', yp('Storm Profile') === 'Da Storm Profile');
+  t('Yooper swaps a tier name', yp('Crippling') === 'Stuck at Camp' && yp('Omega Point Frost') === 'Heikki Lunta Himself');
+  t('Yooper keeps the version string', yp('Snow Event Profile Maker 3.5.0').includes('3.5.0'));
+  t('Yooper keeps the line count', yp('12345 lines of code').startsWith('12345 '));
+  t('Yooper sentence keeps its numbers', yp('💨 Windy winds of 30 mph, gusting to 52 mph amplify impact (×1.50)') !== '💨 Windy winds of 30 mph, gusting to 52 mph amplify impact (×1.50)'
+    && nums(yp('💨 Windy winds of 30 mph, gusting to 52 mph amplify impact (×1.50)')) === '30|52|1.50');
+  t('NWS product names stay plain', yp('Winter Storm Warning') === 'Winter Storm Warning' && yp('Tornado Emergency') === 'Tornado Emergency');
+  t('parser keywords stay English', PARAGRAPH_TYPE_KEYWORDS.some(k => k.words.includes('polar vortex')));
+  // Every hand-written UI string carries the same numbers as its English.
+  const ui = (window.YOOPER && window.YOOPER.UI) || {};
+  const badNums = Object.keys(ui).filter(k => nums(k) !== nums(ui[k]));
+  t('UI dictionary keeps every number (' + Object.keys(ui).length + ' strings)', Object.keys(ui).length > 500 && badNums.length === 0);
+  t('no "youse" anywhere', !Object.values(ui).some(v => /\byouse\b/i.test(v)));
+  // Scores and tiers are computed in English whatever the language.
+  const en = getImpact(12, 30, true, 10, 12, 30, 45, 42, 985, 1, 1).level;
+  const yo = YOOP.withLang('yooper', () => getImpact(12, 30, true, 10, 12, 30, 45, 42, 985, 1, 1).level);
+  t('impact tier is the English object in Yooper mode', en === yo && typeof en === 'string');
+  const war = YOOP.withLang('yooper', () => getSnowWar([{ type: 'snowball', amount: 6 }]));
+  t('snow war tier is the English object in Yooper mode', SNOW_WAR_TIERS.some(x => x.label === war.label && x.desc === war.desc));
+  // Rendered cards: translate a copy, compare numbers, translate back.
+  const sev = evaluateSevereCity({ n: 'Tulsa, OK', temp: 92, gust: 60, rain: 0.4, rainMin: 20, startMb: 1011, lowMb: 995, fallMin: 40, tornado: 75, start: new Date(2026, 7, 30, 17) });
+  renderSevereProfile([sev]);
+  renderHeatProfile([evaluateHeatCity({ n: 'Tulsa, OK', temp: 96, dew: 74, days: 1 }, {})]);
+  const box = document.createElement('div');
+  box.innerHTML = document.getElementById('severeProfileCard').innerHTML + document.getElementById('heatProfileCard').innerHTML;
+  box.querySelectorAll('.war-desc, .war-pill').forEach(e => e.remove());   // war ladders are checked in their own files
+  const english = box.innerHTML, enText = box.textContent;
+  YOOP.withLang('yooper', () => YOOP.apply(box));
+  const ypText = box.textContent;
+  t('rendered cards change words in Yooper', ypText !== enText && ypText.includes('Da Heat Profile'));
+  t('rendered cards keep every number', nums(ypText) === nums(enText));
+  YOOP.withLang('en', () => YOOP.apply(box));
+  t('switching back restores the exact English', box.innerHTML === english);
+  document.getElementById('severeProfileCard').innerHTML = '';
+  document.getElementById('heatProfileCard').innerHTML = '';
 });
 
 window.addEventListener('load', () => {
