@@ -1,7 +1,7 @@
 /* Yoopanese (Upper Peninsula of Michigan) display strings for the snow simulator's UI.
  * Display-only: the page computes everything in English and swaps the words a person
  * reads after each render (see YOOP in index.html). Keys are the exact English text.
- * The snow war and water war ladders live in snow-war-a.js, snow-war-b.js, water-war.js.
+ * The snow war, water war and cozy war ladders live in snow-war-a.js, snow-war-b.js, water-war.js, cozy-war.js.
  * Kept out of the UI: city names, storm names, units, numbers, NWS product names, and
  * anything the app parses as input (paragraph-mode keywords). */
 window.YOOPER = window.YOOPER || {};
@@ -240,6 +240,11 @@ window.YOOPER.UI = Object.assign(window.YOOPER.UI || {}, {
   "Historic Replay": "Run an Old One Again",
   "Snow War Tiers": "Snowball Fight Tiers",
   "Water War Tiers": "Water Fight Tiers",
+  "Cozy War Tiers": "Blanket Fort Fight Tiers",
+  "cozy war tiers, ordered by the effective rain that reaches them — from a dry day that sends everyone outside to rain beyond anything on record. Every town that gets rain lands on exactly one of these; wind and low pressure push it higher.": "blanket fort fight tiers, lined up by how much rain really gets 'em dere — from a dry day dat sends everybody outside to rain past anyting on record. Every town dat gets rain lands on exactly one of dese; wind and low pressure push it up higher yet.",
+  "Rainy Day": "Rainy Day at Camp",
+  "High Water": "High Water, Eh",
+  "Beyond the Weather": "Holy Wah, Past Da Weather",
   "Severe Storm": "Nasty Thunderstorm",
   "Add Cities — Heat Index": "Add Towns — Heat Index",
   "City": "Town",
@@ -666,6 +671,7 @@ window.YOOPER.UI = Object.assign(window.YOOPER.UI || {}, {
   "Melt-Out": "When She Melts",
   "School Impact": "School",
   "Snow War Activity": "Snowball Fight Action",
+  "Cozy War": "Blanket Fort Fight",
   "Details": "Da Details",
   "tropical/arid region rarely sees soaking rain": "tropical or dry country dat hardly ever gets a soaker",
   "subtropical region with limited drainage": "subtropical country without much for drains",
@@ -1211,7 +1217,7 @@ window.YOOPER.UI_CTX = Object.assign(window.YOOPER.UI_CTX || {}, {
   // input-mode buttons are small; keep them short
   '.mode-toggle': {
     'Paragraph Mode': 'Just Tell Me', 'Historic Reference': 'Old Storms', 'Historic Replay': 'Run It Again',
-    'Snow War Tiers': 'Snowball Fights', 'Water War Tiers': 'Water Fights', 'Severe Storm': 'Nasty Storms',
+    'Snow War Tiers': 'Snowball Fights', 'Water War Tiers': 'Water Fights', 'Cozy War Tiers': 'Blanket Forts', 'Severe Storm': 'Nasty Storms',
     'Detailed Input': 'All Da Details', 'Heat Index': 'Heat Index, Eh'
   },
   // storm spread slider

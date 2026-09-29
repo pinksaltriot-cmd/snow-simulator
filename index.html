@@ -711,6 +711,19 @@
   .war-ww11 { background: #111827; color: #e0f2fe; box-shadow: inset 0 0 0 1px rgba(224,242,254,0.3); }
   .war-ww12 { background: #e5e7eb; color: #334155; }
   .war-ww13 { background: #2e1065; color: #ddd6fe; }
+  /* Cozy War (150 tiers, 3 bands x 3 shades): lamp amber and quilt rose, shelter
+     blue-grey and cot green, night-sky indigo to starfield violet */
+  .war-cz0 { background: #3a2a12; color: #fcd34d; }
+  .war-cz1 { background: #45301a; color: #fdba74; }
+  .war-cz2 { background: #4a1f2e; color: #fda4af; }
+  .war-cz3 { background: #1e2a36; color: #a7b8c9; }
+  .war-cz4 { background: #22303a; color: #b8c7d4; }
+  .war-cz5 { background: #1a3326; color: #86efac; }
+  .war-cz6 { background: #1e1b4b; color: #a5b4fc; }
+  .war-cz7 { background: #2a1760; color: #c4b5fd; }
+  .war-cz8 { background: #3b0a6e; color: #e9d5ff; box-shadow: inset 0 0 0 1px rgba(233,213,255,0.35); }
+  .cozy-band-head { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.55; margin: 14px 0 6px; font-weight: 600; }
+  .cozy-band-head:first-child { margin-top: 0; }
   /* Heat Wave 2b */
   input[type="date"] {
     width: 100%; padding: 10px 14px; border: 1px solid rgba(255,255,255,0.2);
@@ -905,7 +918,7 @@
 <div class="container">
   <div style="text-align:right;margin-bottom:-6px"><button type="button" id="langToggle" class="btn-clear" data-noyoop>🗣️ Yoopanese</button></div>
   <h1 id="appTitle">Snow Event Profile Maker 3.5.0</h1>
-  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">11427 lines of code</p>
+  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">11979 lines of code</p>
   <p class="subtitle">Powered by real NOAA RSI methodology with location-based impact scaling</p>
 
   <div class="card">
@@ -924,6 +937,7 @@
       <button type="button" class="mode-btn" data-mode="snowwar">Snow War Tiers</button>
       <button type="button" class="mode-btn" data-mode="heat">Heat Index</button>
       <button type="button" class="mode-btn" data-mode="waterwar">Water War Tiers</button>
+      <button type="button" class="mode-btn" data-mode="cozywar">Cozy War Tiers</button>
       <button type="button" class="mode-btn" data-mode="severe">Severe Storm</button>
     </div>
   </div>
@@ -988,6 +1002,11 @@
     <h2>Water War Tiers</h2>
     <p class="paragraph-hint">All <span id="waterWarCount">&mdash;</span> water war tiers, ordered by the heat that reaches them &mdash; from a condensation ring on a glass to the first rain of the next universe. Heat alone decides the tier: the heat score through the realistic range, the deadliest wet-bulb readings at the top of Continental, and air temperature alone past 134&deg;F.</p>
     <div class="historic-list" id="waterWarList"></div>
+  </div>
+  <div class="card" id="cozyWarCard" style="display:none">
+    <h2>Cozy War Tiers</h2>
+    <p class="paragraph-hint">All <span id="cozyWarCount">&mdash;</span> cozy war tiers, ordered by the effective rain that reaches them &mdash; from a dry day that sends everyone outside to rain beyond anything on record. Every town that gets rain lands on exactly one of these; wind and low pressure push it higher.</p>
+    <div class="historic-list" id="cozyWarList"></div>
   </div>
   <div class="card" id="heatRecoveryCard" style="display:none"></div>
   <div class="card" id="heatRhiCard" style="display:none"></div>
@@ -1264,6 +1283,7 @@
 <script src="yooper/snow-war-a.js"></script>
 <script src="yooper/snow-war-b.js"></script>
 <script src="yooper/water-war.js"></script>
+<script src="yooper/cozy-war.js"></script>
 <script src="yooper/ui.js"></script>
 <script>
 /* ======================================================================
@@ -3517,7 +3537,9 @@ function getRainResilienceLabel(annualRain, lat) {
    we don't track annual rainfall per city — but latitude is used to bump
    tropical / arid regions where infrastructure rarely sees soaking rains.
    ====================================================================== */
-function getRainImpact(rainInches, lat, windSpeed, gustSpeed, pressure) {
+// The multipliers that turn rain inches into effective rain. Shared by
+// getRainImpact() and the Cozy War ladder (getCozyWar).
+function rainMultipliers(lat, windSpeed, gustSpeed, pressure) {
   const windMult = getWindMultiplier(windSpeed, gustSpeed);
   const pressureMult = getPressureMultiplier(pressure);
   // Latitude bump: arid subtropical / desert belts and tropical-margin
@@ -3529,7 +3551,16 @@ function getRainImpact(rainInches, lat, windSpeed, gustSpeed, pressure) {
     if (absLat < 25)      latMult = 1.15;  // tropical / outer-tropical
     else if (absLat < 32) latMult = 1.08;  // subtropical / arid belt
   }
-  const effective = (rainInches || 0) * windMult * latMult * pressureMult;
+  return { windMult, latMult, pressureMult };
+}
+function effectiveRain(rainInches, lat, windSpeed, gustSpeed, pressure) {
+  const m = rainMultipliers(lat, windSpeed, gustSpeed, pressure);
+  return (rainInches || 0) * m.windMult * m.latMult * m.pressureMult;
+}
+
+function getRainImpact(rainInches, lat, windSpeed, gustSpeed, pressure) {
+  const { windMult, latMult, pressureMult } = rainMultipliers(lat, windSpeed, gustSpeed, pressure);
+  const effective = effectiveRain(rainInches, lat, windSpeed, gustSpeed, pressure);
 
   let result;
   if (effective === 0)            result = { level:'Bone Dry',            css:'rain-none',           desc:'No precipitation. Clear skies.', alerts:'No alerts in effect.',                                                  school:'0-minute delay; normal schedule.' };
@@ -3580,6 +3611,341 @@ function getRainImpact(rainInches, lat, windSpeed, gustSpeed, pressure) {
   result.latMult = latMult;
   result.pressureMult = pressureMult;
   return result;
+}
+
+/* ---- Cozy War ----
+   150 tiers, driven by effective rain (the same number getRainImpact() uses).
+   Bands: 1 Rainy Day (#1-60, 0 then up to 4.0), 2 High Water (#61-110, up to 55),
+   3 Beyond the Weather (#111-150, past 55). Tier 1 is exactly 0 effective rain.
+   Thresholds are literal so they can be hand-edited. */
+const COZY_WAR_BANDS = ['Rainy Day', 'High Water', 'Beyond the Weather'];
+// COZY_WAR_TIERS:BEGIN
+const COZY_WAR_TIERS = [
+  { band:1, maxR:0, css:'cz0', icon:'☀️', label:'Sent Outside',
+    desc:'No rain, so no excuse. At 10:04 a parent announces it is a beautiful day, and both occupants of the couch are sent outside for a minimum of 45 minutes. The blanket is folded, the 4 cushions are returned to the sofa, and the war is declared postponed rather than lost. It is 72°F and nobody is happy about it.' },
+  { band:1, maxR:0.001, css:'cz0', icon:'🌱', label:'Wet Grass Claim',
+    desc:'At 7:15 the lawn is wet, and the younger sibling, age 7, files a claim that it rained overnight. The claim is reviewed at the back door and denied on the grounds that dew is not weather. One sock is found soaked through to the second toe and is entered into evidence. The appeal is heard after breakfast and takes under 2 minutes.' },
+  { band:1, maxR:0.00115, css:'cz0', icon:'🛋️', label:'One Cushion',
+    desc:'A single sofa cushion, 24 by 24 by 5 inches, is removed from the couch and placed on the floor as a forward position. It holds one child and one stuffed bear. A parent observes that it is not raining and returns the cushion at 8:02. It is removed again at 8:03.' },
+  { band:1, maxR:0.00133, css:'cz0', icon:'🟩', label:'The Blanket',
+    desc:'The Blanket is issued. It is a 50-by-60-inch green fleece throw with one corner chewed by a dog, and it has lived on the back of the recliner for 3 years. Draped over one cushion it forms a lean-to with 2 square feet of floor space. The dog, who chewed the corner, is not consulted.' },
+  { band:1, maxR:0.00154, css:'cz0', icon:'🔍', label:'Porch Inspection',
+    desc:'At 9:30 the younger sibling inspects the porch railing and finds 11 droplets, none of them falling. A report is drafted in crayon arguing that droplets are rain that has stopped. The report is 1 page long and spells droplets 3 different ways. It is filed under the couch.' },
+  { band:1, maxR:0.00177, css:'cz0', icon:'⛺', label:'Lean-To Holdout',
+    desc:'The lean-to under the Blanket is held for 40 minutes against no opponent. Its occupant consumes 1 granola bar and 6 ounces of apple juice and declares the position secure. A parent steps over it 4 times on the way to the laundry room without once acknowledging it as a structure.' },
+  { band:1, maxR:0.00204, css:'cz0', icon:'🌫️', label:'Window Fog',
+    desc:'Mist arrives and fogs the lower 8 inches of the living-room window. The younger sibling writes RAIN in it with one finger, in letters 3 inches tall, as a matter of record. The older sibling, age 11, examines the evidence from the doorway and concedes nothing. The fog is gone by 10:20 and the word goes with it.' },
+  { band:1, maxR:0.00236, css:'cz0', icon:'👥', label:'Second Recruit',
+    desc:'The older sibling, 11, joins the lean-to on the condition that the younger one, 7, move over. Two occupants in 2 square feet exceed the design load by roughly 100 percent. The lean-to collapses at the 90-second mark and is rebuilt in exactly the same configuration, which also collapses.' },
+  { band:1, maxR:0.00272, css:'cz0', icon:'📋', label:'Cushion Audit',
+    desc:'The couch is formally inventoried: 2 seat cushions, 2 back cushions, and 2 throw pillows, 6 pieces in all. The inventory is written on a sticky note and stuck to the television screen. A parent removes the note at 11:05, which both siblings record as the first act of censorship in the conflict.' },
+  { band:1, maxR:0.00314, css:'cz0', icon:'🧦', label:'Sock Munitions',
+    desc:'Ammunition is identified. A laundry basket in the hall holds 14 balled pairs of socks at about 2 ounces each, heavy enough to announce an impact and too light to cause one. The stockpile is divided 7 and 7. No shots are fired, because the basket is still technically folded laundry.' },
+  { band:1, maxR:0.00362, css:'cz0', icon:'🎯', label:'First Volley',
+    desc:'The laundry is declared unfolded at 11:40. The opening volley is 3 socks thrown from a range of 9 feet, of which 1 connects, with a shoulder. Casualties are zero. The basket cannot be restored to its folded state, and a parent assigns both combatants 10 minutes of refolding, which they complete in 22.' },
+  { band:1, maxR:0.00418, css:'cz0', icon:'🥪', label:'Lunch Truce',
+    desc:'Lunch imposes a truce. The kitchen table is 60 inches long and the two parties sit at opposite ends, a separation that exceeds the range of a thrown grape by approximately nothing. One grape is thrown. The truce is extended through dessert under supervision, and 4 cookies are distributed evenly, which is to say 2 each.' },
+  { band:1, maxR:0.00482, css:'cz0', icon:'🪟', label:'Mist Standoff',
+    desc:'Mist continues at a rate no gauge can measure. The two sides hold facing cushions 12 feet apart for 35 minutes, neither advancing, each describing the other as the aggressor. The dog lies down in the exact center of no man\'s land and is recognized by both parties as neutral territory.' },
+  { band:1, maxR:0.00556, css:'cz0', icon:'💧', label:'Official Rain',
+    desc:'The first actual drops strike the patio at about 1 per square foot per minute. Both siblings observe from the sliding door, and the older one, 11, formally concedes that it is raining. Outdoor play is suspended, indoor war is authorized, and the Blanket is moved from the recliner to the front line at 1:12.' },
+  { band:1, maxR:0.00642, css:'cz0', icon:'📦', label:'Cereal Box Survey',
+    desc:'An empty cereal box is flattened on the kitchen floor to serve as drafting paper. Its back panel measures about 8 by 12 inches, with a maze printed on it, and the maze is ruled out of bounds. The survey of the living room takes 20 minutes and establishes that the couch is 84 inches wide and the room is mostly couch.' },
+  { band:1, maxR:0.0074, css:'cz0', icon:'🗺️', label:'The Fort Plan',
+    desc:'The Fort Plan is drawn in pencil on the back of the cereal box: 4 cushions, 2 chairs, 1 blanket, 6 clothespins. The 2 dining chairs, 34 inches at the back, stand 4 feet apart as uprights, the Blanket spans them, and the cushions form the walls. Both siblings sign it. The drawing takes 25 minutes and is the most important document the household will ever produce.' },
+  { band:1, maxR:0.00854, css:'cz0', icon:'🧷', label:'Clothespin Requisition',
+    desc:'The Fort Plan requires 6 clothespins, and the house has 6, all of them closing a bag of frozen peas. The peas are resealed with a rubber band, which is entered in the log as a supply-chain compromise. The requisition takes 4 minutes and is completed before the freezer door alarm sounds at the 5-minute mark.' },
+  { band:1, maxR:0.00986, css:'cz0', icon:'🏗️', label:'Groundbreaking',
+    desc:'Construction begins at 1:50. The 2 chairs are set facing each other 48 inches apart, the Blanket goes over the top, and 6 clothespins secure it at the corners and midpoints. The finished interior is 48 by 30 inches with a ceiling height of 34 inches, and it matches the Fort Plan exactly.' },
+  { band:1, maxR:0.0114, css:'cz0', icon:'📉', label:'Ceiling Sag',
+    desc:'The fleece ceiling sags 7 inches at the center within the first 10 minutes, reducing headroom for a seated 7-year-old to zero. A broom handle 54 inches long is inserted as a ridge pole. It works, and it becomes the first amendment to the Fort Plan, written in the margin in smaller letters.' },
+  { band:1, maxR:0.0131, css:'cz0', icon:'🪶', label:'Pillow Skirmish',
+    desc:'The first pillow fight is fought over who sits by the door. Both standard pillows, 20 by 26 inches, are deployed, and 17 blows are exchanged in about 90 seconds. The fort loses 1 clothespin and a wall cushion. Casualties by pillow are recorded as 2 bruised egos and a lamp that wobbled but held.' },
+  { band:1, maxR:0.0151, css:'cz1', icon:'☕', label:'Cocoa Line',
+    desc:'The first logistics run brings 2 mugs of cocoa microwaved to about 160°F. The recommended cooling interval is 6 minutes, and both mugs are watched continuously for all of them. The younger sibling attempts a sip at minute 3 and reports the tongue as lightly damaged but still in service.' },
+  { band:1, maxR:0.0175, css:'cz1', icon:'⚖️', label:'Marshmallow Ration',
+    desc:'Marshmallows are counted before distribution: 23 in the bag. The older sibling proposes 12 and 11, by age. The younger proposes 12 and 11 the other way. A parent settles it by eating the odd one, leaving 11 each, and both sides regard the outcome as a loss of sovereignty.' },
+  { band:1, maxR:0.0201, css:'cz1', icon:'📜', label:'Drizzle Doctrine',
+    desc:'Steady drizzle begins and the siblings adopt the Drizzle Doctrine: no one leaves the fort while the rain is audible. The doctrine is suspended 3 times in the first hour for bathroom visits and once for a snack. The doorway, a pillowcase of 20 by 26 inches hung from the ridge pole, is logged open and shut each time.' },
+  { band:1, maxR:0.0232, css:'cz1', icon:'🔦', label:'Flashlight Code',
+    desc:'A flashlight is issued with 2 AA batteries and a code of 3 signals: 1 flash for cocoa, 2 for danger, 3 for parent approaching. By 3:10 the code has been used 41 times, 38 of them for cocoa. The batteries are estimated to have another 4 hours in them.' },
+  { band:1, maxR:0.0268, css:'cz1', icon:'🛋️', label:'Couch Annexation',
+    desc:'The cushionless couch frame is annexed as a second structure, with a bare deck of 84 by 30 inches. It becomes the observation platform. A parent sits on it at 3:30, sinks 4 inches into the springs, and leaves the area without comment after 2 minutes.' },
+  { band:1, maxR:0.0309, css:'cz1', icon:'🚧', label:'Hallway Checkpoint',
+    desc:'The hallway, 36 inches wide and 14 feet long, is declared a controlled corridor. A checkpoint of 2 throw pillows is set at the midpoint, and passage requires a password that changes every 15 minutes. The password is forgotten by its author at 3:45, and the corridor is closed to all traffic, including the author.' },
+  { band:1, maxR:0.0357, css:'cz1', icon:'🎲', label:'Board Game Treaty',
+    desc:'Hostilities pause for a board game rated for 2 to 4 players. The game runs 70 minutes, and the treaty, written on the back of the score sheet, grants the winner first choice of fort position for 1 full day. The loser disputes the final roll, a 6, which left the table and was read under the couch by flashlight.' },
+  { band:1, maxR:0.0412, css:'cz1', icon:'⚠️', label:'Treaty Violation',
+    desc:'The treaty lasts 26 minutes. The winner exercises first choice of position, the loser occupies it anyway, and 9 socks are fired in the ensuing exchange. The score sheet is torn into 2 halves, one per party, and each side maintains that its half is the original.' },
+  { band:1, maxR:0.0475, css:'cz1', icon:'🐕', label:'Dog Neutrality',
+    desc:'The dog enters the fort and sits on the Blanket, specifically on the chewed corner, as if returning to the scene. Both sides attempt to recruit it with a combined offer of 5 crackers. It accepts all 5, joins neither side, and occupies 40 percent of the 48-by-30-inch floor for the next hour.' },
+  { band:1, maxR:0.0548, css:'cz1', icon:'🧺', label:'Linen Closet Raid',
+    desc:'A light shower sets in, measurable at last in hundredths of an inch, and the war outgrows 1 blanket. A linen closet raid yields a queen blanket, 90 by 90 inches, and 2 bath towels. The new blanket covers about 56 square feet, roughly 2.7 times the Blanket, which remains the flag and is never demoted.' },
+  { band:1, maxR:0.0632, css:'cz1', icon:'🏠', label:'Annex Construction',
+    desc:'The queen blanket is stretched from the fort to the couch frame, adding an annex of 6 by 7 feet. It needs 4 more supports and the house has 2 spare dining chairs, so the difference is made up with a laundry basket and an ottoman 18 inches tall. The annex falls at 4:20 and is rebuilt with books as ballast.' },
+  { band:1, maxR:0.073, css:'cz1', icon:'📚', label:'Book Ballast',
+    desc:'Eleven hardcovers averaging 2 pounds each are laid on the queen blanket\'s edges where they cross the chair seats, a total of 22 pounds of literature. Nobody reads any of it. The heaviest, a dictionary of about 4 pounds, anchors the corner nearest the door and is referred to thereafter as the keystone.' },
+  { band:1, maxR:0.0842, css:'cz1', icon:'💡', label:'Lamp Protocol',
+    desc:'A floor lamp 60 inches tall is found to be inside the annex. It is designated a protected structure and may not be struck by pillow, sock, or elbow. The protocol is breached 2 times in 30 minutes, the shade tilting 15 degrees each time, and the lamp is quietly relocated by a parent to the dining room.' },
+  { band:1, maxR:0.0971, css:'cz1', icon:'🚚', label:'Cocoa Convoy',
+    desc:'The second cocoa run is organized as a convoy of 2 mugs carried 22 feet from the kitchen, through the hallway checkpoint, to the annex. Transit time is 50 seconds and losses are about 1 ounce to the carpet, over which a towel is laid in accordance with standard practice. The 6-minute cooling period is again observed in full.' },
+  { band:1, maxR:0.112, css:'cz1', icon:'🌧️', label:'Rain on the Roof',
+    desc:'Rain becomes audible on the roof as the day\'s total passes a tenth of an inch, and morale improves. The siblings lie in the fort for 12 minutes doing nothing but listening to it, which is logged as a strategic pause. The flashlight is switched off to conserve its 2 batteries, and the room goes the gray of 5 o\'clock.' },
+  { band:1, maxR:0.129, css:'cz1', icon:'🤞', label:'Sibling Pact',
+    desc:'A mutual defense pact is concluded against the one remaining adult threat, bedtime, currently scheduled for 8:30. Both signatories agree to present a united front, request 30 more minutes, and cite the rain as grounds. The pact is written in marker on an index card of 3 by 5 inches and tucked under the Blanket\'s chewed corner for safekeeping.' },
+  { band:1, maxR:0.149, css:'cz1', icon:'🍽️', label:'Dinner Evacuation',
+    desc:'Dinner requires all 4 dining chairs, 2 of which are load-bearing. Negotiations last 8 minutes and end in a controlled evacuation: the fort ceiling is lowered onto the couch frame and 11 books, and the chairs report to the table. Dinner lasts 19 minutes, the fastest meal on household record.' },
+  { band:1, maxR:0.172, css:'cz1', icon:'🌙', label:'Night Operations',
+    desc:'The rain turns steady after dark and the fort is reinstated at 7:05. Night operations run on 1 flashlight and a string of 50 holiday lights from a garage box, plugged in 12 feet away with the cord run along the baseboard. The dog is found asleep inside at 7:40 and is allowed to stay as a guest of the state.' },
+  { band:1, maxR:0.199, css:'cz1', icon:'🛏️', label:'Bedtime Siege',
+    desc:'At 8:30 the pact is invoked. Both signatories request 30 more minutes, citing 0.18 inches of rain, and are granted 15. The fort is ordered struck by 9:00, and the 6 clothespins are returned to the peas, which have spent 7 hours in a rubber band without incident.' },
+  { band:1, maxR:0.229, css:'cz1', icon:'📅', label:'Second Day',
+    desc:'Rain continues into a second day, dripping off the gutter at about 1 drop per second at the downspout. The Fort Plan is recovered from the recycling bin, where it was placed in error at 9:14 the previous night, and the fort is rebuilt from it in 11 minutes flat. Veterans note that the first build took 3 times as long.' },
+  { band:1, maxR:0.264, css:'cz2', icon:'🚪', label:'Bedroom Front',
+    desc:'The war expands upstairs. The older sibling\'s bedroom, 10 by 12 feet, becomes a second theater with a bunker of mattress and desk chair. The 2 fronts are 26 steps apart, 14 of them stairs, and are linked by flashlight from the landing using the 3-signal code, which acquires a fourth signal meaning come here but not urgently.' },
+  { band:1, maxR:0.305, css:'cz2', icon:'🧱', label:'Mattress Wall',
+    desc:'Steady rain arrives and the war acquires heavy armor. A twin mattress, 38 by 75 inches and about 40 pounds, is dragged from the bedroom and stood on edge in the hallway as a wall. The move takes both siblings 6 minutes and removes 1 framed photograph from the wall on the way. The photograph is rehung 5 degrees crooked and never mentioned again.' },
+  { band:1, maxR:0.352, css:'cz2', icon:'🧮', label:'Pillow Census',
+    desc:'A full pillow census is taken: 9 pillows in the house, of which 4 are standard at 20 by 26 inches, 2 are king at 20 by 36, 2 are throw pillows, and 1 is decorative and may not be touched. The decorative pillow is placed under diplomatic protection. The remaining 8 are divided 4 and 4, and each side appoints a quartermaster, who is also its entire army.' },
+  { band:1, maxR:0.406, css:'cz2', icon:'💥', label:'Battle of the Landing',
+    desc:'The Battle of the Landing is fought at 2:15 across the 8-foot upstairs hall. It lasts 4 minutes and involves 8 pillows, 31 blows, and 1 king pillow thrown overhand, later ruled excessive. Losses are 1 pillowcase seam, 1 stuffed rabbit knocked down the stairs, and 0 injuries. Both sides claim the landing.' },
+  { band:1, maxR:0.468, css:'cz2', icon:'🌂', label:'The Recruit',
+    desc:'A neighbor kid, age 9, arrives at 10:00 under an umbrella, carrying a sleeping bag and 1 backpack. The house now holds 3 combatants and a question of who gets the recruit. The recruit settles it by choosing the side with the flashlight, and the other side fires 2 socks at the door in protest.' },
+  { band:1, maxR:0.54, css:'cz2', icon:'🌀', label:'Sleeping Bag Tunnel',
+    desc:'The recruit\'s sleeping bag, 33 by 72 inches unzipped, is laid under the kitchen table to form a tunnel between the living-room fort and the kitchen. The table is 60 inches long, leaving 6 inches of bag exposed at each end, and these are designated the portals. The dog uses the tunnel 6 times in the first hour and is not charged a toll.' },
+  { band:1, maxR:0.623, css:'cz2', icon:'🏘️', label:'Three-Room Fort',
+    desc:'The rain passes half an inch and the fort occupies 3 rooms, the living room, hallway, and dining room, about 420 square feet of floor. Materials in service include 4 cushions, 4 chairs, 3 blankets, 1 mattress, 1 sleeping bag, and every clothespin in the house, which is still 6. The floor plan is redrawn on a 2nd cereal box.' },
+  { band:1, maxR:0.719, css:'cz2', icon:'🧼', label:'Laundry Day Crisis',
+    desc:'Wash day arrives and a parent reclaims 3 blankets and 14 pairs of socks for the washer, which runs 58 minutes a load. The front loses its entire sock arsenal and 2 of its ceilings. The Blanket is exempted on the grounds that it was washed 9 days ago and that it is the flag.' },
+  { band:1, maxR:0.83, css:'cz2', icon:'🔥', label:'Dryer Warmth',
+    desc:'The first load comes out of the dryer at about 135°F and is carried to the fort in a basket. The occupants lie under warm blankets for 18 minutes, the longest ceasefire of the war, while the fabric cools toward the house\'s 70°F. Both sides later agree that the dryer is the most powerful weapon in the house and that it belongs to neither of them.' },
+  { band:1, maxR:0.957, css:'cz2', icon:'📻', label:'Walkie-Talkie Net',
+    desc:'Rain nears an inch and indoor fronts open across the street. Parents in 4 households arrange a rotation at 11:30, and by noon the 5 kids involved are trading intelligence by walkie-talkie on channel 3. Range is about 300 feet, enough to reach 2 houses and a garage, and every transmission ends in the word over, including the ones that are only the word over.' },
+  { band:1, maxR:1.1, css:'cz2', icon:'🎒', label:'Sleepover Declared',
+    desc:'The rain reaches an inch and a sleepover is declared at the house with the biggest living room, 16 by 20 feet. Attendance is 4 kids, 4 sleeping bags, and 1 dog, and the host parent sets lights-out for 10:00. Fort materials arrive by car in 3 laundry baskets, while the Blanket travels separately in a backpack, as befits its rank.' },
+  { band:1, maxR:1.27, css:'cz2', icon:'🎖️', label:'Joint Command',
+    desc:'The 4 kids form a joint command and elect the host kid, 10, as commander over the objections of the older sibling, 11, who is appointed chief of cocoa. The first joint order is a fort on the Fort Plan pattern, doubled: 8 cushions, 4 chairs, 2 blankets, 12 clothespins. It is built in 22 minutes and comes out 2 inches off square.' },
+  { band:1, maxR:1.47, css:'cz2', icon:'🫖', label:'Cocoa Pipeline',
+    desc:'The chief of cocoa establishes a pipeline: 1 saucepan of 32 ounces yields 4 mugs of 8 ounces at about 160°F. The line runs every 45 minutes. The 6-minute cooling rule is enforced by kitchen timer, and one early drinker is placed on 1 round of probation, served with an ice cube.' },
+  { band:1, maxR:1.7, css:'cz2', icon:'⬇️', label:'Basement Front',
+    desc:'Downpour rain passes an inch and a half and the basement, a finished room of 400 square feet, opens as a third front. A dehumidifier runs in the corner at 50 pints a day. A parent checks the floor drain every 30 minutes and finds it dry, and the fort goes up around the ping-pong table, 9 by 5 feet, which makes an excellent roof.' },
+  { band:1, maxR:1.96, css:'cz2', icon:'🏡', label:'Two-House Accord',
+    desc:'A second sleepover forms across the street, 5 kids strong, and the 2 houses, 140 feet apart, open diplomatic relations by walkie-talkie. Terms are negotiated over 50 minutes: no raids in the rain, a shared pool of 30 marshmallows, and mutual recognition of each other\'s forts. The Blanket is hung in the front window as a flag of intent.' },
+  { band:1, maxR:2.26, css:'cz2', icon:'⛈️', label:'Thunder Drill',
+    desc:'A cloudburst arrives with thunder, and both houses run the drill: count the seconds from flash to boom and divide by 5 for miles. The first count is 10 seconds, or 2 miles. At 3 seconds every kid moves to an interior room, the forts stand empty for 20 minutes, and a board game is played under the Blanket in a hallway 36 inches wide.' },
+  { band:1, maxR:2.6, css:'cz2', icon:'🔋', label:'Power Flicker',
+    desc:'The power flickers twice and goes out for 38 minutes. Fort command switches to 3 flashlights and 1 battery lantern, and the cocoa pipeline shuts down because the stove is electric. Morale is measured by the number of kids under the Blanket, which reaches 6 in a space of 50 by 60 inches.' },
+  { band:1, maxR:3.01, css:'cz2', icon:'🏰', label:'Three-House Alliance',
+    desc:'The rain tops 2.6 inches and a third house joins, making a sleepover alliance of 14 kids across 3 living rooms and 2 basements. The charter runs 1 page, front and back, and article 1 adopts the Fort Plan as the standard unit of construction: 4 cushions, 2 chairs, 1 blanket, and 6 clothespins per fort. Fifteen forts are proposed and 9 are built.' },
+  { band:1, maxR:3.47, css:'cz2', icon:'🛡️', label:'Fortified House',
+    desc:'The host house is fortified from front door to back: 6 rooms, 1,100 square feet, 9 blankets, 22 cushions, and every chair on the ground floor. Movement between rooms is by tunnel only, at a crawling height of 30 inches. The parents are issued a single approved route to the coffee maker, 26 feet long, and are fined 1 marshmallow per deviation.' },
+  { band:1, maxR:4, css:'cz2', icon:'🏛️', label:'Surge Watch Lockdown',
+    desc:'Rain nears 4 inches, the curbs run full, and 3 sets of parents order every kid to stay put in whichever house they are in. Nobody crosses the street, where the gutter water runs 5 inches deep and moving. The 3 houses hold 14 kids and 22 forts between them, checking in by walkie-talkie every 15 minutes. In the host house the Fort Plan hangs framed on the mantel, and the Blanket covers the youngest, age 5.' },
+  { band:2, maxR:4.22, css:'cz3', icon:'🛏️', label:'Upstairs Garrison',
+    desc:'The Flash Flood Warning comes in at 9:40 at night and the household moves upstairs, which is the correct response and also, it turns out, a relocation of the front. The upstairs hallway is 36 inches wide and 14 feet long, and 3 people, 2 pillows each, and 1 dog now hold it. Move to higher ground when water is rising, and never wait to see how high it gets. The hallway fort is declared operational at 9:52.' },
+  { band:2, maxR:4.44, css:'cz3', icon:'🧺', label:'Linen Closet Requisition',
+    desc:'The linen closet at the top of the stairs is inventoried by flashlight: 7 towels, 4 pillowcases, 2 sheets, and 1 quilt that was supposed to be for guests. All 14 items are requisitioned for the hallway fort. The guest quilt is 90 by 90 inches and covers the hallway twice over, so the surplus is folded into a bench. Nobody signs anything, but a list is kept on the back of an envelope.' },
+  { band:2, maxR:4.68, css:'cz3', icon:'🎒', label:'The Go-Bag Audit',
+    desc:'The county tells residents near the creek to be ready to leave, and each person is told to pack 1 bag. The bags are audited at the kitchen table at 11:15 at night. The adults pack medications, phone chargers, and 3 days of clothes; the children pack 2 pillows, 1 stuffed rabbit, and a flashlight with no batteries. The audit finds the pillows compliant and the flashlight a problem, and 4 batteries are issued.' },
+  { band:2, maxR:4.93, css:'cz3', icon:'🏘️', label:'Neighbor Annex',
+    desc:'The neighbors across the street live in a one-story house, so at 1:30 in the morning they come over with 2 kids, 1 cat, and 3 pillows. The hallway fort, rated for 3 people, now holds 7. A joint command is formed at the top of the stairs. The cat is assigned to nobody and sleeps on the guest quilt anyway, which is logged as an occupation.' },
+  { band:2, maxR:5.2, css:'cz3', icon:'↩️', label:'Cocoa Run Denied',
+    desc:'At 6:00 in the morning someone proposes driving to the grocery store for cocoa, and the proposal is denied. The road at the bottom of the hill has 8 inches of water moving across it, and a foot of moving water can float most cars. Turn around, don’t drown. The cocoa supply is recounted instead: 11 packets, enough for 7 people at 1 packet each with 4 held in reserve.' },
+  { band:2, maxR:5.48, css:'cz3', icon:'⛪', label:'Fellowship Hall Posting',
+    desc:'The church on the ridge, 60 feet above the creek, opens its basement fellowship hall as a shelter at 8:00 in the morning. It has 12 folding tables, 96 folding chairs, and a kitchen pass-through. By noon 23 people are inside, and the first fort is built from 2 tables pushed together with a tablecloth over the top. The tablecloth is 52 by 114 inches and is technically on loan from the altar guild.' },
+  { band:2, maxR:5.77, css:'cz3', icon:'🍲', label:'Potluck Supply Line',
+    desc:'The church kitchen opens a supply line: 4 casseroles, 1 coffee urn, and 60 paper bowls of chili by 5:30 in the evening. The fort under the tables is reclassified as the dining annex after 9 children eat inside it. A sign-up sheet for fort occupancy goes up on the bulletin board with 3 time slots. It is full within 20 minutes, and the waiting list runs onto a second page.' },
+  { band:2, maxR:6.08, css:'cz3', icon:'🟩', label:'The Blanket Evacuates',
+    desc:'A family arrives from the creek side in the back of a sheriff’s truck with 2 bags, 1 dog, and The Blanket, a 50-by-60-inch green fleece throw with one corner chewed by a dog. Their basement took 30 inches of water overnight. The Blanket was the only thing the youngest, age 7, refused to leave behind. It is dry, it is intact, and within 1 hour it is the roof of the most requested fort in the hall.' },
+  { band:2, maxR:6.41, css:'cz3', icon:'🧾', label:'Standard Issue',
+    desc:'The shelter’s first supply pallet arrives: 150 cots, 150 blankets, and a laminated card stating the allocation of 1 blanket per evacuee. The blankets are grey, 60 by 80 inches, and identical, which ends 3 ownership disputes on arrival and starts 5 new ones by bedtime. A volunteer is appointed Keeper of the Tally and marks each blanket issued on a clipboard. The count closes at 41 issued and 109 in reserve.' },
+  { band:2, maxR:6.76, css:'cz3', icon:'📐', label:'Fort Plan, Cot Edition',
+    desc:'The youngest of the creek-side family produces The Fort Plan, drawn on the back of a cereal box: 4 cushions, 2 chairs, 1 blanket, 6 clothespins. The shelter has no cushions, so 4 cots stand in for them, set on their sides as walls to make a square 75 inches on a side. Two folding chairs hold up the middle, The Blanket goes on top, and 6 clothespins are borrowed from the church laundry line. The counts are kept exactly.' },
+  { band:2, maxR:7.12, css:'cz3', icon:'🏀', label:'Gymnasium Theater',
+    desc:'The middle school gym opens as the second shelter, with a floor of 94 by 50 feet and 180 cots in 12 rows of 15. The bleachers, 8 tiers high, are declared high ground within the high ground. By 9:00 at night the top tier is held by 11 children with donated pillows, who refuse to come down for lights-out. Negotiations are opened by a volunteer holding 1 cup of cocoa.' },
+  { band:2, maxR:7.5, css:'cz3', icon:'🪜', label:'The Bleacher Siege',
+    desc:'The bleacher holdouts dig in. They have 14 pillows, 3 standard-issue blankets, and a clear line of sight across all 180 cots. The volunteers hold the floor and the cocoa urn, which holds 40 cups and is kept at 170 degrees. The siege lasts 47 minutes. It ends when the urn is moved 6 feet closer to the bleachers, and terms are signed on a paper napkin.' },
+  { band:2, maxR:7.91, css:'cz3', icon:'🌊', label:'Six-Inch Rule',
+    desc:'A teenager proposes wading down to the house to retrieve a better pillow. The proposal is denied by 4 adults simultaneously. Six inches of moving water can knock an adult down, and the street outside the house has 18 inches. The teenager is issued 2 donated pillows from the reserve bin instead, stacked, which the shelter rates as roughly equal to 1 good pillow from home.' },
+  { band:2, maxR:8.33, css:'cz3', icon:'🔢', label:'Cot Row Numbering',
+    desc:'Mandatory evacuations begin for 3 neighborhoods, and the gym fills to 212 people by midnight. More cots arrive and the rows are numbered with masking tape, A through P, 16 rows in all. Each cot is exactly 75 by 25 inches, and a family of 4 is assigned 4 adjacent cots, which forms, by accident, a platform 75 by 100 inches. Every family notices this at once.' },
+  { band:2, maxR:8.78, css:'cz3', icon:'📦', label:'Lost-and-Found Armory',
+    desc:'The school’s lost-and-found bin is opened under supervision and found to contain 23 sweatshirts, 9 single mittens, 4 towels, and 1 sleeping bag of unknown origin. The contents are declared a strategic reserve. The sleeping bag, which unzips flat to 66 by 72 inches, is awarded by lottery. Eighty-seven people enter. The winner uses it as a fort roof, and the others are issued sweatshirts as consolation.' },
+  { band:2, maxR:9.25, css:'cz3', icon:'🚚', label:'Guard Convoy',
+    desc:'Mandatory evacuations extend along the river, and the National Guard delivers 400 more cots in 5 trucks. The shelter network now runs 3 sites with 610 evacuees. At the gym, the arrival of 400 cots sets off a construction boom, and 27 forts are up before the trucks leave. A volunteer walks the rows with a clipboard and confirms that 1 blanket per person is still in effect.' },
+  { band:2, maxR:9.75, css:'cz3', icon:'🧱', label:'Cardboard Partition Act',
+    desc:'Privacy partitions arrive flat-packed: cardboard panels 48 inches high and 72 inches wide, 2 per family. Within an hour, 30 of them have been folded into walls, 6 into a tunnel, and 1 into a sign reading OCCUPIED. The shelter manager issues a memo stating that partitions are for privacy, not fortification. The memo is taped to a partition, which is then used as a fort door.' },
+  { band:2, maxR:10.3, css:'cz4', icon:'🔦', label:'Lights-Out Protocol',
+    desc:'Lights-out is set at 10:00 at night, with the gym dropped to 2 of its 24 overhead fixtures. Flashlight use after lights-out is limited to 3 minutes and must be pointed at the floor. The fort in row K is found to contain 5 children reading by 4 flashlights pointed at the ceiling. The flashlights are confiscated and returned at 7:00 in the morning, fully charged, by the same volunteer.' },
+  { band:2, maxR:10.8, css:'cz4', icon:'🚗', label:'Low-Water Bridge Ruling',
+    desc:'A resident asks to drive home for the family’s own pillows, 9 miles away. The route crosses 2 low-water bridges that have been closed since yesterday. A foot of moving water can float most cars, and 2 feet can sweep away SUVs and trucks. The request is declined, and 6 donated pillows are issued instead, graded by a volunteer on a 1-to-5 fluffiness scale.' },
+  { band:2, maxR:11.4, css:'cz4', icon:'📋', label:'Intake Desk',
+    desc:'Rescue boats are working the subdivisions, and arrivals reach the intake desk at a rate of 1 every 4 minutes. Each is logged and given a wristband, a cot number, and 1 dry blanket within 90 seconds of the door. The intake table is 8 feet long and staffed by 3 volunteers. Nobody arriving is asked about fort affiliation until they have had cocoa, which is the one rule the shelter has never broken.' },
+  { band:2, maxR:12, css:'cz4', icon:'🛌', label:'Pillow Drive',
+    desc:'A donation drive in the next county sends 1,200 pillows in 40 contractor bags. They are sorted on 6 tables into firm, medium, soft, and a fourth category labeled suspicious. Distribution is 1 per evacuee, with a waiting list for a second. The suspicious category, 17 pillows in all, is quietly retired to fort-wall duty, where it performs above expectations.' },
+  { band:2, maxR:12.7, css:'cz4', icon:'🕊️', label:'Quiet Hours Armistice',
+    desc:'Pillow fights in the cot rows are suspended under a written armistice covering 10 at night to 7 in the morning. Violations are reviewed by a council of 5 children and 2 volunteers who meet at the cocoa urn. In 3 nights the council hears 14 complaints and upholds 2. The penalty in both cases is folding 20 blankets for the laundry run.' },
+  { band:2, maxR:13.4, css:'cz4', icon:'🧶', label:'The Lending Blanket',
+    desc:'The Blanket becomes the shelter’s first heirloom by informal vote, 61 to 0. Its owner, now 6 and a half, agrees to lend it each night to whichever child arrived most recently. A sign-out sheet is kept on the clipboard. Over 11 nights it covers 11 different children, is washed twice, and comes back each morning folded in quarters, chewed corner facing up, as the rule requires.' },
+  { band:2, maxR:14.1, css:'cz4', icon:'🏟️', label:'Arena Floor',
+    desc:'With downtown flooding and the National Guard deployed, the county opens the hockey arena, its ice covered with insulated flooring. The floor holds 1,400 cots in a grid measured to the inch. The arena is kept at 71 degrees, which evacuees report is 4 degrees too cold for sleeping and exactly right for building. By the second night, 212 forts have been registered with the front desk.' },
+  { band:2, maxR:14.8, css:'cz4', icon:'🏔️', label:'Upper Deck Holdout',
+    desc:'The bleacher siege returns at arena scale. Section 214 in the upper deck, 31 rows high, is occupied by 26 teenagers with 40 pillows and a folded cardboard partition used as a flag. Arena staff note that the section has the warmest air in the building, about 6 degrees above the floor. A treaty grants the teenagers the section in exchange for helping unload 3 cot trucks each morning.' },
+  { band:2, maxR:15.6, css:'cz4', icon:'🤸', label:'Mat Castle',
+    desc:'The arena’s children’s area receives 18 folding tumbling mats, each 4 by 8 feet and 2 inches thick. By afternoon the mats have become a castle with 2 towers, 1 moat of donated stuffed animals, and a drawbridge made from a cot. A volunteer measures the interior at 64 square feet and posts a capacity sign reading 9. The sign is obeyed, and a line forms at 7:00 each morning.' },
+  { band:2, maxR:16.5, css:'cz4', icon:'🚫', label:'Moat Stays Indoors',
+    desc:'A proposal to extend the moat to the arena parking lot, which has 14 inches of standing water, is rejected in under 1 minute. Floodwater can carry sewage, fuel, and chemicals, and can hide downed power lines and open manholes. Children stay out of it. The moat remains indoors, dry, and made of 73 stuffed animals, and a second moat of 38 is approved to keep things fair.' },
+  { band:2, maxR:17.4, css:'cz4', icon:'🏛️', label:'Convention Hall Command',
+    desc:'A federal disaster declaration brings the convention center online as the regional shelter, with 5,000 cots across 3 exhibit halls of 100,000 square feet each. Cot rows are given street names so people can find their way back from the showers. A fort registry is kept in a binder 4 inches thick. The first 900 entries are sorted by type: tent, tunnel, lean-to, and cot pyramid.' },
+  { band:2, maxR:18.3, css:'cz4', icon:'🫧', label:'Laundry Rotation',
+    desc:'The regional shelter launders standard-issue blankets on a 3-day cycle, 1,700 a day, through 12 commercial washers running 18 hours. Each blanket goes back to its cot by tag number, and forts must come down before 6:00 in the morning on laundry day. Compliance on the first cycle is 41 percent. By the third cycle, families are dismantling at 5:45 and rebuilding by 9, faster than the laundry.' },
+  { band:2, maxR:19.3, css:'cz4', icon:'📬', label:'Cot Row Post Office',
+    desc:'The row names prove so useful that a postal service forms. Mail between forts is delivered twice daily by 8 volunteers under age 12, using a route map covering 47 named rows. Addresses take the form of row, cot number, and fort name. In the first week the service handles 1,312 letters, 88 of them formal complaints about pillow encroachment across a cot line.' },
+  { band:2, maxR:20.3, css:'cz4', icon:'🐕', label:'Pet Wing Ruling',
+    desc:'With the transit system shut and downtown impassable for weeks, the shelter opens a pet wing for 340 animals in crates. Owners may visit in 2-hour windows. A beagle in crate 117 is no longer permitted a blanket of its own, under a rule adopted after 3 standard-issue blankets were found with one corner chewed. The beagle has appealed through its owner, age 8, and the appeal is pending.' },
+  { band:2, maxR:21.4, css:'cz4', icon:'📏', label:'Standard Fort Code',
+    desc:'The shelter adopts The Fort Plan as its standard fort, to settle disputes over floor space. Every family pod may build 1 fort to the original counts, 4 cushions, 2 chairs, 1 blanket, 6 clothespins, with cots standing in as cushions and folding chairs as chairs. The footprint is capped at 75 by 75 inches. Inspectors check 300 forts a day, and the most common violation is a seventh clothespin.' },
+  { band:2, maxR:22.6, css:'cz4', icon:'🏫', label:'School Network',
+    desc:'The region’s schools become shelters, 14 of them linked by a single radio channel and a shared blanket ledger. A family moving from one school to another carries its blankets with a transfer slip in triplicate. Over 10 days the ledger records 2,260 transfers and a net loss of 19 blankets, all traced to 1 school where the gym forts are rumored to have a second floor.' },
+  { band:2, maxR:23.8, css:'cz4', icon:'☕', label:'Cocoa Logistics',
+    desc:'Cocoa is now a logistics line item. The region’s shelters go through 640 gallons a day, served from 22 urns held between 160 and 170 degrees. Each urn has a volunteer and a laminated schedule. A marshmallow shortage on day 12 is treated as a supply emergency and resolved in 5 hours by a bakery in a dry county, which sends 90 pounds.' },
+  { band:2, maxR:25.1, css:'cz5', icon:'🏢', label:'Mega-Shelter',
+    desc:'Levees breach and the regional mega-shelter opens in a stadium complex, with 12,000 cots on the field, the concourses, and 4 practice gyms. The site is organized into 30 districts, each with a district captain, a cocoa urn, and a lost-and-found. Forts are permitted in all 30 districts. The largest, in district 17, spans 11 cots and has a waiting list, a mailbox, and minutes.' },
+  { band:2, maxR:26.4, css:'cz5', icon:'⚡', label:'Generator Briefing',
+    desc:'Families returning to check on their homes are briefed at the exit in groups of 20. Never run a generator indoors or in a garage, even with the door open; carbon monoxide can build to deadly levels in minutes. Stay out of any building with standing water until it is inspected. Back inside, the briefing is also posted on 30 district boards and 1 fort door, at the fort’s own request.' },
+  { band:2, maxR:27.8, css:'cz5', icon:'📊', label:'Mega-Shelter Pillow Census',
+    desc:'The mega-shelter conducts a pillow census, counting 13,406 pillows among 12,000 evacuees. The surplus of 1,406 is investigated. Findings show 71 percent held in forts as structural material, 22 percent in use as extra bedding, and 7 percent unaccounted for. The census recommends no action, on the grounds that the forts are load-bearing and the evacuees have been through enough.' },
+  { band:2, maxR:29.3, css:'cz5', icon:'🎖️', label:'Blanket Marshals',
+    desc:'Quiet hours are enforced by blanket marshals, 60 volunteers in orange vests, each covering 200 cots. Marshals carry 1 flashlight, 1 clipboard, and 4 spare standard-issue blankets for anyone found cold. They have no authority over forts but are consulted on all of them. On a typical night a marshal issues 3 blankets, settles 2 border disputes, and is invited into 9 forts.' },
+  { band:2, maxR:30.9, css:'cz5', icon:'🎂', label:'Cot-Side Birthday',
+    desc:'A child turns 7 on day 19 of the shelter stay. District 12 holds the party in a fort built from 6 cots and 14 standard-issue blankets. The cake is a sheet cake cut into 48 pieces, and the line reaches across 3 districts. The birthday child receives 1 new pillow, still in its plastic, which the shelter records as the most valuable item distributed that week.' },
+  { band:2, maxR:32.6, css:'cz5', icon:'🚌', label:'Interstate Transfer',
+    desc:'Beyond any record, the region can no longer hold everyone, and 8,000 evacuees are bused to shelters in 4 other states, some 600 miles away. Each bus carries 56 people and 56 blankets, 1 apiece. The Blanket goes too, in a carry-on, with a transfer slip attached. At the receiving shelter it is unfolded on the first night, and a waiting list forms before the cots are made up.' },
+  { band:2, maxR:34.3, css:'cz5', icon:'📜', label:'Inter-Shelter Treaty',
+    desc:'The sending shelters and the receiving shelters sign a blanket treaty covering 23 sites. Any blanket traveling with an evacuee keeps its home tag. Pillows are exchanged 1 for 1 at the edge of each shelter’s parking lot. Fort designs are recognized reciprocally, which means a fort legal in one state is legal in all 5. The treaty runs 11 pages and is signed on a cot.' },
+  { band:2, maxR:36.2, css:'cz5', icon:'🚧', label:'Barricade Rule',
+    desc:'A bus on the transfer route meets a flooded underpass with 3 barricades across it, and the driver waits 40 minutes for a detour. Never drive around a road-closed barricade; the water beyond it is often deeper and faster than it looks. The 52 passengers wait in their seats. By the time the detour is posted, 4 small forts have been built across rows 9 through 12 from coats and carry-on pillows.' },
+  { band:2, maxR:38.1, css:'cz5', icon:'📖', label:'Shelter Almanac',
+    desc:'Day 30. A shelter almanac is published on 1 sheet folded in 3, recording that the region’s shelters have issued 41,000 blankets, 38,500 pillows, and 1.9 million cups of cocoa. The almanac lists 1,250 registered forts and names the longest continuously occupied: a cot-and-tablecloth build in district 4, standing 27 days. It is printed in 9,000 copies and read mostly inside forts.' },
+  { band:2, maxR:40.2, css:'cz5', icon:'🌧️', label:'Metro Displacement',
+    desc:'The metro is paralyzed, and more than 300,000 people are displaced. Shelters open in 60 buildings, from church basements to a convention center holding 10,000. The blanket allocation remains 1 per evacuee and is met on day 2, after 90 trucks arrive. Fort construction is the first recreational activity to appear at every site, typically within 6 hours of the doors opening.' },
+  { band:2, maxR:42.3, css:'cz5', icon:'🏨', label:'Months, Not Days',
+    desc:'Shelter stays stretch from weeks into months, and 22,000 families move into hotel rooms under a temporary housing program. A standard room is 325 square feet with 2 beds, 4 pillows, and 1 closet shelf of extra blankets. The first fort in each room goes up within 3 hours and uses the hotel’s 2 armchairs as walls. Housekeeping is asked, politely, to work around it.' },
+  { band:2, maxR:44.6, css:'cz5', icon:'📚', label:'Homework Fort',
+    desc:'School resumes in 14 shelter classrooms on day 45, and homework moves into the forts. Each fort is issued 1 clip-on lamp and 1 folding tray table, 18 by 24 inches. Completion rates in forts run 9 points above the cot rows, a result the shelter school board records without explanation. The board votes 5 to 0 to issue lamps to every fort.' },
+  { band:2, maxR:47, css:'cz5', icon:'🧤', label:'Muck-Out Orders',
+    desc:'Families begin mucking out their homes on day 50, with 1 shelter volunteer for every 4 houses. Wear gloves and boots, and throw out anything soaked by floodwater that cannot be disinfected, including mattresses, pillows, and stuffed toys. Drywall is cut out at least 12 inches above the water line to stop mold. Back at the shelter, 600 replacement pillows are issued the same night, 1 per returning child.' },
+  { band:2, maxR:49.5, css:'cz5', icon:'🚐', label:'Trailer Alliance',
+    desc:'A temporary housing site opens on a fairground with 420 travel trailers in rows of 30. Each trailer has a dinette that converts to a bed 40 by 72 inches, which converts again, by day 3, into a fort. Trailer rows 7 through 11 form an alliance and hold a joint fort inspection each Saturday. The alliance charter is 1 page long and requires cocoa at every meeting.' },
+  { band:2, maxR:52.2, css:'cz5', icon:'📓', label:'The Blanket Logbook',
+    desc:'The Blanket’s sign-out sheet has become a logbook of 2 volumes. It records 97 nights lent to 97 children across 3 shelters, 2 states, and 1 hotel room. It has been washed 31 times, and the chewed corner has not been repaired, by unanimous decision. It is still the 50-by-60-inch green fleece throw with one corner chewed by a dog, and it still goes back folded in quarters, corner up.' },
+  { band:2, maxR:55, css:'cz5', icon:'🏠', label:'Last Cot Folded',
+    desc:'Day 90. The last shelter closes, and its final 212 cots are folded and stacked in 17 minutes. Before the gym is handed back, the remaining families build The Fort Plan one last time at center court: 4 cots for cushions, 2 folding chairs, The Blanket, and 6 clothespins. It stands for 1 hour. Then The Blanket is folded in quarters and goes home with its family, to a house rebuilt with 14 sheets of new drywall.' },
+  { band:3, maxR:64.6, css:'cz6', icon:'🔔', label:'The Indoor Recess',
+    desc:'At 55 inches of effective rain the bell for outdoor recess is not rung, and a committee of 9 hall monitors rules that it will not be rung until the ground is visible. The ground has not been visible for 14 months. Indoor Recess is declared permanent, the gym is subdivided into 212 fort lots of 64 square feet, and the lost-and-found is nationalized as a strategic cushion reserve holding 1,140 items, mostly mittens.' },
+  { band:3, maxR:76, css:'cz6', icon:'📜', label:'The Recess Charter',
+    desc:'The permanent Indoor Recess adopts a written charter of 31 articles, copied by hand onto 7 sheets of construction paper and ratified by a show of 4,600 hands. Article 1 guarantees every citizen a pillow. Article 2 guarantees that the pillow will be fluffed. Article 31, added after 3 days of debate, forbids sitting on another person\'s fort, even to tie a shoe.' },
+  { band:3, maxR:89.3, css:'cz6', icon:'🏰', label:'Pillow Feudalism',
+    desc:'Land is now held in pillows. A lord of 40 pillows owes the crown 6 pillows a year and a knight\'s service of 2 pillow fights, conducted by the rules; a serf holds 1 pillow and the right to rest a head on it for 8 hours. Enclosure begins when a single household claims 3 sectional sofas and the ottoman, and 900 smallholders are displaced to beanbags.' },
+  { band:3, maxR:105, css:'cz6', icon:'🧵', label:'The Cushion Guilds',
+    desc:'Cushion-making passes to the guilds, and no cushion may be sold that has not been sat upon by a master for 7 consecutive days. An apprentice spends 4 years learning to plump, 3 years learning to tuck, and 1 year learning when not to flip a cushion over to hide a stain. The Guild of Sofa Wrights, 2,300 members strong, controls all 12,000 cushions in the district and has never once admitted that a cushion is lumpy.' },
+  { band:3, maxR:123, css:'cz6', icon:'🤝', label:'The Duvet Accords',
+    desc:'After 19 months of blanket-hogging disputes, delegates from 38 households sign the Duvet Accords at a table built entirely from couch cushions. The Accords fix the minimum overhang on each side of a shared bed at 11 inches, outlaw the cocoon maneuver after 10 p.m., and establish a neutral zone down the middle of every mattress. 2 signatories fall asleep during the signing, which is recorded as unanimous consent.' },
+  { band:3, maxR:145, css:'cz6', icon:'🕯️', label:'The Blanket Enshrined',
+    desc:'The Blanket is carried in procession to the Great Linen Closet: a 50-by-60-inch green fleece throw with one corner chewed by a dog, last washed 3 years ago on the gentle cycle. It is displayed folded in 4, chewed corner showing, behind a curtain opened on the first day of each month, which is also rainy. Pilgrims wait up to 9 hours to see it, and 70,000 have been allowed to touch the corner.' },
+  { band:3, maxR:170, css:'cz6', icon:'🗓️', label:'The Nap Calendar',
+    desc:'The sun has not been seen in 4 years, and the Recess replaces the calendar with one reckoned in naps. A day is 3 naps, a week is 20, and a year is 1,000 naps plus a leap nap every 4th year that may be taken anywhere. Dates are written as naps since the Declaration of Indoor Recess, and the present nap is 4,212, which is being taken now.' },
+  { band:3, maxR:200, css:'cz6', icon:'👑', label:'Blanket Empires',
+    desc:'The fiefs consolidate into 3 blanket empires: the Fleece Dominion of the north, the Quilted Realm of the river valleys, and the Knitted Commonwealth, which crochets anyway. Together they rule 41 million people and 2.6 million square miles of floor. Border disputes are settled by pulling, and the frontier moves an average of 14 inches a night, always toward whoever is colder.' },
+  { band:3, maxR:235, css:'cz6', icon:'📏', label:'The Standard Blanket',
+    desc:'By imperial decree the Blanket becomes the standard unit of area: 1 blanket equals 3,000 square inches, or 50 by 60, measured with the chewed corner included and restored by calculation. A standard acre is now 2,090.88 blankets, and deeds are written in blankets, half-blankets and corners. A platinum copy is kept at 68 degrees in a sealed drawer, and the chewed corner is reproduced on it by 11 licensed dogs.' },
+  { band:3, maxR:277, css:'cz6', icon:'☕', label:'The Cocoa Treasury',
+    desc:'Currency is backed by cocoa, held in a reserve of 80 million mugs kept at exactly 140°F. A mug is divided into 12 sips, and the central bank\'s great fear is marshmallow inflation, which peaked at 9 marshmallows per mug before a reform returned the standard to 3. Counterfeiting is punishable by being served cocoa made with water instead of milk.' },
+  { band:3, maxR:325, css:'cz6', icon:'🪖', label:'The Clothespin Army',
+    desc:'Each empire keeps a standing army armed with clothespins, issued 6 to a soldier in memory of the Fort Plan. The Fleece Dominion fields 1.2 million troops, the Quilted Realm 900,000, and the Knitted Commonwealth refuses to publish a figure. Wars are fought by clipping enemy blankets to furniture, and a battle is lost when 50 percent of a side\'s forts are pinned open to the draft.' },
+  { band:3, maxR:382, css:'cz6', icon:'🛋️', label:'The Sectional Schism',
+    desc:'The Church of the Cushion splits over whether a sectional sofa is 1 couch or several. The Unifiers hold that the chaise is part of the body; the Detachers hold that it may be removed and slept on independently. The schism lasts 212 years, produces 40 rival councils and 7,000 pamphlets, and is resolved only when a 6-piece sectional is found to have been a 5-piece sectional with a loveseat pushed against it.' },
+  { band:3, maxR:449, css:'cz6', icon:'🪡', label:'The Great Quilt Begun',
+    desc:'The 3 empires agree to stitch a single quilt, one square per household, each square 1 standard blanket. 18 million squares are contributed in the first 10 years, and every seam is inspected by the Cushion Guilds at 12 stitches to the inch. The first square is green fleece with a corner cut away, and every guild argues that its own square should go second.' },
+  { band:3, maxR:528, css:'cz6', icon:'⛵', label:'The Quilt Afloat',
+    desc:'The Great Quilt reaches the coast after 90 years and continues onto the water, floated on 400,000 inflatable pool mattresses lashed together at the corners. The crossing covers 3,100 miles and takes 26 years, during which the stitching crews live entirely on the quilt, and 2 generations are born who have never touched a floor. They consider floors a rumor.' },
+  { band:3, maxR:621, css:'cz7', icon:'🏛️', label:'The Pillow Parliament',
+    desc:'A Pillow Parliament of 1,500 seats convenes on the quilt, each seat a pillow, each member lying down. Debate is limited to the length of a nap, roughly 40 minutes, and a bill passes if a majority are still awake at the end. In 300 years of sessions only 17 bills have passed, all of them resolutions to adjourn.' },
+  { band:3, maxR:730, css:'cz7', icon:'⚖️', label:'Court of Tucked Corners',
+    desc:'Blanket jurisprudence is codified in 44 volumes by the Court of Tucked Corners, whose 9 justices hear cases from inside a single king-size fort. Its landmark ruling holds that a blanket over 2 sleepers belongs to both, but the corner belongs to whoever tucked it. Precedent now runs 1,700 years, and no justice has ever been seen without a blanket, including in the official portraits.' },
+  { band:3, maxR:858, css:'cz7', icon:'🌧️', label:'The Long Afternoon',
+    desc:'The rain has fallen for 2,400 years without a break longer than 6 minutes, and the word outside survives only in the phrase outside the blanket, meaning cold. The last known umbrella is kept in a museum next to 1 rubber boot. Children are taught that the sky is a very large ceiling with a leak, and 88 percent of adults agree.' },
+  { band:3, maxR:1008, css:'cz7', icon:'🏗️', label:'The Continental Fort',
+    desc:'A fort is raised over an entire continent: 4.8 million square miles of quilt held aloft on 60 million chairs, each chair back 34 inches high, as the original chairs were. The Clothespin Corps maintains 900 million clips along the eaves. Inside, the climate is held at 71°F, the light is always lamp-colored, and nobody alive can remember a draft.' },
+  { band:3, maxR:1185, css:'cz7', icon:'🌍', label:'The Great Quilt',
+    desc:'The Great Quilt is finished after 3,600 years: 7 continents joined at the seams, 57 million square miles of patchwork, and 1 unbroken hem around the whole of it. Each square is still exactly 1 standard blanket. The last stitch is placed by a child of 6 chosen by lot, and the planet is formally declared tucked in.' },
+  { band:3, maxR:1393, css:'cz7', icon:'🌐', label:'Planetary Cozy Order',
+    desc:'A single Planetary Cozy Order governs 11 billion people, all of them indoors and 94 percent of them lying down at any given time. Its constitution runs to 1 sentence: No one shall be made to get up. The administrative apparatus consists of 400 million pillow clerks, whose main duty is to fluff one another, and the capital moves nightly to wherever the best nap was reported.' },
+  { band:3, maxR:1637, css:'cz7', icon:'🚪', label:'The Last Door',
+    desc:'The last door to the outside is closed after 5,000 years of standing slightly ajar, and a draft snake 26 feet long is laid along its threshold. Every other opening on the planet has already been quilted over. A ceremony of 3 knocks is held there once each 1,000 naps, and nobody on either side of the door answers, because there is nobody on the other side.' },
+  { band:3, maxR:1924, css:'cz7', icon:'🛰️', label:'Orbital Forts',
+    desc:'The first orbital fort is launched to 250 miles: 2 chairs welded to a pressure hull, 4 cushions, and a blanket stretched over the whole of it against 1 sunrise every 90 minutes. Within 300 years there are 16,000 of them, ringed around the planet like a comforter that has slipped halfway off the bed. Crews sleep in shifts, since someone must always be awake to tuck the others in.' },
+  { band:3, maxR:2261, css:'cz7', icon:'🌙', label:'The Lunar Pillow',
+    desc:'The moon is covered in a single pillowcase 14.6 million square miles in area, stuffed with 40 trillion cubic feet of synthetic down made over 700 years. Viewed from the planet, it is exactly the right softness. Tides are observed to be gentler, and the Court of Tucked Corners rules, 7 to 2, that the moon may now be napped on without a permit.' },
+  { band:3, maxR:2658, css:'cz7', icon:'🪨', label:'The Cushion Belt',
+    desc:'The Cushion Guilds upholster the asteroid belt, 1.1 million bodies each fitted with a slipcover and assigned a household. The work takes 2,000 years at an average of 550 slipcovers a year, and the guild still refuses to cover the 4 largest because they are, in its words, not cushions but ottomans. The belt becomes the most comfortable region of the system, and the most disputed.' },
+  { band:3, maxR:3124, css:'cz7', icon:'💡', label:'The Solar Lampshade',
+    desc:'The sun is judged too bright to nap under and is fitted with a lampshade 1.1 million miles across, pleated in 48 panels of cream-colored sail. Output to the inner planets drops to 60 percent, which is exactly the setting of a reading lamp at bedtime. The project takes 4,000 years, and the pull-chain, 93 million miles long, is left within reach of the capital.' },
+  { band:3, maxR:3672, css:'cz7', icon:'🚀', label:'The Blanket Ark',
+    desc:'The Blanket leaves the home world aboard a generation ship called the Good Dog, carried in a climate-controlled drawer at 68 degrees, chewed corner up. The voyage to the nearest star covers 4.2 light-years and takes 1,900 years, during which 63 generations of crew are born, fold the Blanket once a year for inspection, and pass on without ever having unfolded it fully, which is forbidden.' },
+  { band:3, maxR:4316, css:'cz7', icon:'🌠', label:'The Colony Forts',
+    desc:'Colony forts are raised in 340 star systems, each built from 1 kit containing a standard blanket, a pair of chairs and a pouch of clothespins, and each dedicated to a replica of the Blanket with the corner chewed by an approved dog. Messages between forts take up to 80 years each way and consist almost entirely of the question are you warm enough. In 6,000 years of correspondence the answer has always been yes.' },
+  { band:3, maxR:5072, css:'cz8', icon:'🌟', label:'The Star-System Duvet',
+    desc:'A single blanket is drawn over an entire star system: a fleece membrane 9 billion miles across, 1 fiber thick, with the star inside it as the night-light. It holds 8 planets, 212 moons and an estimated 40 billion residents at a uniform 71°F. The hem is tucked under the system\'s gravity well, and the one corner left loose is chewed ceremonially every 1,000 years.' },
+  { band:3, maxR:5962, css:'cz8', icon:'🐕', label:'The Chewed Corner Doctrine',
+    desc:'A council of 212 systems debates for 3,000 years whether a perfect blanket should have 4 corners, or 3 and a chew. The Doctrine of the Chewed Corner prevails by 1 vote: a blanket is not complete until something has loved it enough to ruin it a little. Blankets are thereafter made with the corner already missing, and the 14 heretic systems that insist on 4 intact corners are treated with pity rather than force.' },
+  { band:3, maxR:7007, css:'cz8', icon:'🌌', label:'The Galactic Quilt',
+    desc:'Colony forts are stitched together across the galactic arm into a quilt 12,000 light-years long, each patch a star system, each seam a supply lane patrolled by the Clothespin Corps. It takes 90,000 years. There are 4 million patches, and when they are finally joined the quilt is found to be 1 blanket short of covering the arm, a shortfall the guilds blame on shrinkage in the wash.' },
+  { band:3, maxR:8236, css:'cz8', icon:'😴', label:'The Long Nap',
+    desc:'The galaxy enters the Long Nap, a sleep period of 250 million years timed to 1 rotation of the galaxy around its core. Duty officers remain awake in 1 fort per 10,000 systems to adjust the thermostat and turn the pages of books nobody is reading. The nap calendar records it as a single nap, number 91 billion, and the Pillow Parliament\'s motion to extend it by 5 minutes passes unanimously.' },
+  { band:3, maxR:9681, css:'cz8', icon:'🛏️', label:'The Local Group Comforter',
+    desc:'The comforter is extended beyond the galaxy to the local group, 54 galaxies under a single cover 10 million light-years wide. Filling it requires 6 quintillion tons of down, and the Cushion Guilds, now 2 trillion members strong, spend 40 million years arguing about thread count before settling on 400, the number on the original sheets. The gaps between galaxies are declared the cold side of the bed and assigned to no one.' },
+  { band:3, maxR:11378, css:'cz8', icon:'🕸️', label:'The Quilted Web',
+    desc:'After 900 million years of survey, the cosmic web is recognized as quilting: filaments are seams, voids are patches, and the whole is 93 billion light-years across with 2 trillion galaxies sewn in at roughly 1 per stitch. The guilds decline to claim they made it. They only note that the stitching is 12 to the inch, the old standard, and that somebody somewhere must have been very cold.' },
+  { band:3, maxR:13374, css:'cz8', icon:'🌡️', label:'The Thermostat Hearings',
+    desc:'The universe begins to cool toward the end, and the Court of Tucked Corners hears Everyone v. the Second Law of Thermodynamics over 10 billion years. The defendant does not appear. Judgment is entered by default and the Court orders the universe held at 71°F; the order is ignored, the background falls to 1 degree above absolute zero, and all 9 justices file a dissent against the temperature itself.' },
+  { band:3, maxR:15719, css:'cz8', icon:'🔥', label:'The Last Hearth',
+    desc:'The stars go out at a rate of 1 per century, then 1 per millennium, and then there are 3 left, and the cozy order gathers around them the way a family gathers around a woodstove. The last star is a red dwarf 0.1 the mass of the sun, expected to burn for 10 trillion years. Its surface is 4,000°F, and every surviving fort faces it, with socks drying on the chairs.' },
+  { band:3, maxR:18476, css:'cz8', icon:'🧺', label:'Folding Up',
+    desc:'With the last star out, forts are taken down 1 at a time and their blankets folded into the forts that remain, 4 into 1 and then 4 into 1 again, for 100 trillion years. Cushions are stacked, chairs pushed in, clothespins returned to their bag in 6s. By the end 1 fort is standing, and 1 flashlight is on, running on its last 2 batteries, the only light left anywhere.' },
+  { band:3, maxR:21716, css:'cz8', icon:'🟩', label:'The Last Cozy Thing',
+    desc:'The flashlight goes out, the fort\'s last chair is returned to a kitchen that no longer exists, and the Blanket is the only object remaining in the universe: 50 by 60 inches, green fleece, 1 corner chewed by a dog. Every atom of everything else has decayed, a process that took 10 to the 100th years and did not touch it. It is not warm, either. It is simply still the Blanket, and the chewed corner is still chewed.' },
+  { band:3, maxR:25524, css:'cz8', icon:'📐', label:'Measure of Everything',
+    desc:'With nothing else to compare it to, the Blanket is the unit, the measured object and the whole of the measurement at once. The dark around it is recorded as 3,000 square inches of blanket and an unknown quantity of not-blanket. Its temperature is recorded as the same as it was on the couch, give or take 1 degree. The last entry in the ledger, 1 line long, reads: 1 blanket, 50 by 60, chewed.' },
+  { band:3, maxR:30000, css:'cz8', icon:'📦', label:'Six Clothespins',
+    desc:'At nearly 30,000 inches the design reaches its final form and is found to be the drawing from the first rainy afternoon, on the back of a cereal box, unchanged: 4 cushions, 2 chairs, 1 blanket, 6 clothespins. The cushions are now galaxies, the chairs are the 2 walls of a void 400 million light-years deep, and the blanket is the Blanket, still 50 by 60 inches, which turns out to be enough. No scale of comfort has ever produced a reason for a seventh clothespin.' },
+  { band:3, maxR:Infinity, css:'cz8', icon:'💤', label:'Five More Minutes',
+    desc:'The scale runs out of names at 30,000 inches, and the rain, wherever it is falling, keeps falling. Whatever is taking place under the Blanket stopped matching the definition of a blanket fort an estimated 10 to the 100th years ago, and nobody has come to take it down. Somewhere under the chewed corner, someone asks for 5 more minutes. The request is granted, and its duration is reported as unbounded.' }
+];
+// COZY_WAR_TIERS:END
+
+// First tier whose maxR reaches the effective rain. Returns { tier, index }.
+function cozyWarTierFor(effective) {
+  const e = effective > 0 ? effective : 0;
+  const index = COZY_WAR_TIERS.findIndex(t => e <= t.maxR);
+  const i = index < 0 ? COZY_WAR_TIERS.length - 1 : index;
+  return { tier: COZY_WAR_TIERS[i], index: i };
+}
+// Resolve a storm city ({ phases, lat, windSpeed, gustSpeed, pressure }) to its cozy war
+// tier. No rain, no cozy war: returns null. Scoring is English whatever the language.
+function getCozyWar(c) {
+  const rain = totalRainInchesRated(c && c.phases);
+  if (!(rain > 0)) return null;
+  const effective = effectiveRain(rain, c.lat, c.windSpeed, c.gustSpeed, c.pressure);
+  const { tier, index } = cozyWarTierFor(effective);
+  return { ...tier, effective, index };
+}
+// Results-table cell for the Cozy War column: pill and description, or a dash
+// for a city that got no rain.
+function cozyWarCell(c) {
+  const cz = getCozyWar(c);
+  if (!cz) return '<td class="cozy-war-cell" style="opacity:0.4">\u2014</td>';
+  return `<td class="cozy-war-cell" style="min-width:190px"><span class="war-pill war-${cz.css}">${cz.icon} ${esc(cz.label)}</span><span class="war-desc">${esc(cz.desc)}</span></td>`;
 }
 
 /* ======================================================================
@@ -4590,6 +4956,7 @@ function generateProfile(rsiOverride) {
       <td><span class="impact-pill impact-${imp.css}">${imp.level}</span></td>
       <td style="font-size:0.82rem">\u{1F3EB} ${schoolTextFor(c, imp)}</td>
       <td style="min-width:190px"><span class="war-pill war-${war.css}">${war.icon} ${war.label}</span><span class="war-desc">${war.desc}</span></td>
+      ${cozyWarCell(c)}
       <td style="opacity:0.7;font-size:0.78rem">${detail}</td>
     </tr>`;
   }).join('');
@@ -4722,7 +5089,7 @@ function generateProfile(rsiOverride) {
     ${earliestFirst && latestLast ? `<div style="font-size:0.78rem;opacity:0.5;margin-bottom:8px">\u{1F552} Storm window: ${formatTimeline(earliestFirst)} \u2192 ${formatTimeline(latestLast)}</div>` : ''}
     <div class="impact-table-wrap">
     <table class="impact-table">
-      <thead><tr><th>City</th><th>Precip</th><th>Storm Timeline</th><th>Melt-Out</th><th>Resilience</th><th>Impact</th><th>School Impact</th><th>Snow War Activity</th><th>Details</th></tr></thead>
+      <thead><tr><th>City</th><th>Precip</th><th>Storm Timeline</th><th>Melt-Out</th><th>Resilience</th><th>Impact</th><th>School Impact</th><th>Snow War Activity</th><th>Cozy War</th><th>Details</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
     </div>
@@ -7491,6 +7858,7 @@ function setInputMode(mode) {
   const heatProfile = document.getElementById('heatProfileCard');
   heatProfile.style.display = (mode === 'heat' && heatProfile.innerHTML.trim()) ? '' : 'none';
   document.getElementById('waterWarCard').style.display = (mode === 'waterwar') ? '' : 'none';
+  document.getElementById('cozyWarCard').style.display = (mode === 'cozywar') ? '' : 'none';
   document.getElementById('severeCard').style.display = (mode === 'severe') ? '' : 'none';
   const sevProfile = document.getElementById('severeProfileCard');
   sevProfile.style.display = (mode === 'severe' && sevProfile.innerHTML.trim()) ? '' : 'none';
@@ -9442,6 +9810,34 @@ function renderWaterWarList() {
 }
 renderWaterWarList();
 
+/* ---- Cozy War Tiers list: 150 rows grouped under the three bands ---- */
+function renderCozyWarList() {
+  const list = document.getElementById('cozyWarList');
+  if (!list) return;
+  document.getElementById('cozyWarCount').textContent = COZY_WAR_TIERS.length;
+  const fmt = n => (n < 1 ? parseFloat(n.toPrecision(3)) : n).toLocaleString('en-US', { maximumFractionDigits: 20 });
+  const last = COZY_WAR_TIERS.length - 1;
+  let html = '', band = null;
+  COZY_WAR_TIERS.forEach((t, i) => {
+    if (t.band !== band) {
+      band = t.band;
+      html += `<div class="cozy-band-head">${esc(COZY_WAR_BANDS[band - 1])}</div>`;
+    }
+    const chip = i === 0 ? '= 0'
+      : i === last ? fmt(COZY_WAR_TIERS[last - 1].maxR) + '″+'
+      : '≤ ' + fmt(t.maxR) + '″';
+    html += `<div class="historic-row war-row">
+      <span class="wt-depth war-${t.css}">${esc(chip)}</span>
+      <span class="wt-body">
+        <span class="wt-label"><span class="wt-icon">${t.icon}</span>${esc(t.label)}</span>
+        <span class="wt-desc">${esc(t.desc)}</span>
+      </span>
+    </div>`;
+  });
+  list.innerHTML = html;
+}
+renderCozyWarList();
+
 /* ---- Heat Index Mode: recovery, RHI, and gap-fill cards ---- */
 let heatLastResults = [];
 let heatGapResults = [];
@@ -9892,6 +10288,8 @@ const YOOP = (function () {
     war(SNOW_WAR_TIERS, Y.SNOW_WAR_TIERS);
     war(WATER_WAR_TIERS, Y.WATER_WAR_TIERS);
     Object.entries(Y.WATER_WAR_BANDS || {}).forEach(([k, v]) => warPut(k, v));
+    war(COZY_WAR_TIERS, Y.COZY_WAR_TIERS);
+    Object.entries(Y.COZY_WAR_BANDS || {}).forEach(([k, v]) => warPut(k, v));
     // Full-string templates: "{}" is a captured piece that is itself translated
     // (so a tier label inside a sentence is swapped, and a number passes through).
     rules = (Y.UI_RULES || []).map(([pat, rep]) => {
@@ -9902,7 +10300,7 @@ const YOOP = (function () {
     phrases = (Y.UI_PHRASES || []).slice().sort((a, b) => b[0].length - a[0].length)
       .map(([en, yp]) => ({ re: new RegExp('(^|[^A-Za-z])' + reEsc(en) + '(?![A-Za-z])', 'g'), yp }));
     ctx = Object.entries(Y.UI_CTX || {});
-    ctx.push(['#snowWarList, #waterWarList, #snowWarCard, #waterWarCard, .war-pill, .war-desc', warMap]);
+    ctx.push(['#snowWarList, #waterWarList, #cozyWarList, #snowWarCard, #waterWarCard, #cozyWarCard, .war-pill, .war-desc', warMap]);
   }
 
   let CUR = null;                          // context map for the node being translated
@@ -11360,6 +11758,160 @@ window.__snowTests.push((t) => {
   renderSevereProfile([aug30]);
   t('profile renders the tier', document.getElementById('severeProfileCard').innerHTML.includes('Tornado Touchdown'));
   document.getElementById('severeProfileCard').innerHTML = '';
+});
+
+// CZ1 Cozy War structure, anchors, and the effectiveRain refactor
+window.__snowTests.push((t) => {
+  const Z = COZY_WAR_TIERS;
+  t('cozy war has 150 tiers', Z.length === 150);
+  const counts = [1, 2, 3].map(b => Z.filter(x => x.band === b).length).join(',');
+  t('cozy band counts 60/50/40', counts === '60,50,40');
+  t('cozy bands in order', Z.every((x, i) => i === 0 || x.band >= Z[i - 1].band));
+  t('cozy has 3 band names', COZY_WAR_BANDS.length === 3 && COZY_WAR_BANDS[0] === 'Rainy Day');
+  t('cozy labels unique', new Set(Z.map(x => x.label)).size === 150);
+  t('cozy maxR strictly increasing', Z.every((x, i) => i === 0 || x.maxR > Z[i - 1].maxR));
+  t('cozy tier 1 is exactly 0', Z[0].maxR === 0);
+  t('cozy last tier is Infinity', Z[149].maxR === Infinity);
+  t('cozy css classes cz0-cz8', Z.every(x => /^cz[0-8]$/.test(x.css) && Math.floor(+x.css.slice(2) / 3) === x.band - 1));
+  const words = /\b(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty|thirty|forty|fifty|hundred|thousand|million|billion|trillion|dozen|half|single|double|triple)\b/gi;
+  const bad = Z.filter(x => {
+    const n = (x.desc.match(/\d[\d,.]*/g) || []).length + (x.desc.match(words) || []).length;
+    const sentences = x.desc.split(/[.!?](?=\s|$)/).filter(s => s.trim()).length;
+    return !x.icon || !x.label || !x.desc || n < 3 || sentences < 2 || sentences > 5;
+  }).map(x => x.label);
+  t('every cozy desc has an icon, 3+ numbers and 2-5 sentences' + (bad.length ? ' (' + bad.slice(0, 5).join(', ') + ')' : ''), bad.length === 0);
+  const at = e => cozyWarTierFor(e).index + 1;
+  t('cozy anchor: effective 0 -> #1', at(0) === 1);
+  t('cozy anchor: 4.0 -> #60', at(4.0) === 60);
+  t('cozy anchor: 4.01 -> #61', at(4.01) === 61);
+  t('cozy anchor: 55 -> #110', at(55) === 110);
+  t('cozy anchor: 55.01 -> #111', at(55.01) === 111);
+  t('cozy anchor: 1e9 -> #150', at(1e9) === 150);
+  t('cozy anchor: a tiny drizzle is #2', at(0.0005) === 2);
+  // effectiveRain refactor: getRainImpact matches the pre-refactor formula exactly.
+  const oldEff = (r, lat, w, g, p) => {
+    let latMult = 1.0;
+    if (lat !== null && lat !== undefined) {
+      const a = Math.abs(lat);
+      if (a < 25) latMult = 1.15; else if (a < 32) latMult = 1.08;
+    }
+    return (r || 0) * getWindMultiplier(w, g) * latMult * getPressureMultiplier(p);
+  };
+  let same = true, n = 0;
+  [0, 0.001, 0.04, 0.3, 1, 2.5, 4, 7.5, 20, 55, 300, 25000].forEach(r =>
+    [null, 18, 29.5, 36.15, 47].forEach(lat =>
+      [[null, null], [10, null], [25, 40], [45, 70], [80, 120]].forEach(([w, g]) =>
+        [null, 1013, 990, 960, 920].forEach(p => {
+          n++;
+          const imp = getRainImpact(r, lat, w, g, p);
+          const e = oldEff(r, lat, w, g, p);
+          if (imp.effective !== e || effectiveRain(r, lat, w, g, p) !== e) same = false;
+          const m = rainMultipliers(lat, w, g, p);
+          if (imp.windMult !== m.windMult || imp.latMult !== m.latMult || imp.pressureMult !== m.pressureMult) same = false;
+        }))));
+  t('effectiveRain refactor leaves getRainImpact unchanged (' + n + ' cases)', same && n === 1500);
+  t('getRainImpact tiers unchanged at anchors', getRainImpact(0, 36).level === 'Bone Dry'
+    && getRainImpact(4, 36).level === 'Surge Watch' && getRainImpact(55, 40).level === 'Harvey-Class'
+    && getRainImpact(1e6, 40).level === 'Ocean Singularity');
+  // Monotonic: more rain, or more effective rain, never lowers the tier.
+  let prev = -1, mono = true;
+  for (let k = 0; k <= 600; k++) {
+    const e = k === 0 ? 0 : 1e-4 * Math.pow(10, k / 60);
+    const i = cozyWarTierFor(e).index;
+    if (i < prev) mono = false;
+    prev = i;
+  }
+  prev = -1;
+  for (let r = 0.01; r <= 200; r *= 1.05) {
+    const i = getCozyWar({ phases: [{ type: 'rain', amount: r }], lat: 36.15, windSpeed: 30, gustSpeed: 45, pressure: 990 }).index;
+    if (i < prev) mono = false;
+    prev = i;
+  }
+  t('cozy war never drops as rain rises', mono);
+  t('no rain, no cozy war', getCozyWar({ phases: [{ type: 'snowball', amount: 6 }], lat: 36.15 }) === null
+    && getCozyWar({ phases: [], lat: 36.15 }) === null && getCozyWar({ phases: null }) === null);
+  const cz = getCozyWar({ phases: [{ type: 'rain', amount: 3 }], lat: 36.15, windSpeed: 40, gustSpeed: null, pressure: null });
+  t('rainy city gets a cozy tier with its effective rain', cz && cz.label && cz.effective === effectiveRain(3, 36.15, 40, null, null)
+    && cz.index === cozyWarTierFor(cz.effective).index && cz.effective > 3);
+  t('wind pushes the cozy tier higher', cz.index > getCozyWar({ phases: [{ type: 'rain', amount: 3 }], lat: 36.15 }).index);
+});
+
+// CZ2 Cozy War display: results column, list, mode card
+window.__snowTests.push((t) => {
+  const saved = cities.splice(0, cities.length);
+  const savedHTML = profileCard.innerHTML, wasVisible = profileEl.classList.contains('visible');
+  const mk = (name, phases, windSpeed) => {
+    const db = lookupCity(name), d = computeDerivedPrecip(phases);
+    return { name, phases, snow: d.snow, snowEquivalent: d.snowEquivalent, pop: db ? db.pop : null, region: db ? db.r : null,
+      annualSnow: db ? db.snow : null, lat: db ? db.lat : null, lon: db ? db.lon : null, hasStormTemp: false, stormTemp: null,
+      warming: { short: 'auto', medium: 'auto', long: 'auto' }, windSpeed, gustSpeed: null, pressure: null, peakRate: null, sky: null };
+  };
+  try {
+    cities.push(mk('Tulsa, OK', [{ type: 'rain', amount: 3 }], 40), mk('Denver, CO', [{ type: 'snowball', amount: 8 }], null));
+    generateProfile();
+    const html = profileCard.innerHTML;
+    t('results table has a Cozy War column after Snow War', html.includes('<th>Snow War Activity</th><th>Cozy War</th>'));
+    const cells = [...profileCard.querySelectorAll('td.cozy-war-cell')];
+    const tulsa = getCozyWar(cities[0]);
+    t('rainy city shows its cozy tier', cells.some(td => td.textContent.includes(tulsa.label) && td.querySelector('.war-pill.war-' + tulsa.css)));
+    t('snow-only city shows a dash', cells.length === 2 && cells.some(td => td.textContent.trim() === '\u2014'));
+    const rows = [...profileCard.querySelectorAll('.impact-table tbody tr')];
+    t('every results row has the same cell count as the header',
+      rows.length === 2 && rows.every(r => r.children.length === profileCard.querySelectorAll('.impact-table thead th').length));
+  } finally {
+    cities.splice(0, cities.length, ...saved);
+    profileCard.innerHTML = savedHTML;
+    if (!wasVisible) profileEl.classList.remove('visible');
+  }
+  t('Cozy War list renders 150 rows', document.querySelectorAll('#cozyWarList .war-row').length === 150);
+  t('Cozy War count shows 150', document.getElementById('cozyWarCount').textContent === '150');
+  const heads = [...document.querySelectorAll('#cozyWarList .cozy-band-head')].map(e => e.textContent);
+  t('Cozy War list has the 3 band headings', heads.join('|') === 'Rainy Day|High Water|Beyond the Weather');
+  const txt = document.getElementById('cozyWarList').textContent;
+  t('cozy chips show = 0, ≤ 4″ and the open top', txt.includes('= 0') && txt.includes('≤ 4″') && txt.includes('30,000″+'));
+  t('Cozy War Tiers button opens the cozy card', (() => {
+    const before = document.querySelector('.mode-btn.active').dataset.mode;
+    setInputMode('cozywar');
+    const shown = document.getElementById('cozyWarCard').style.display === '' && document.getElementById('waterWarCard').style.display === 'none';
+    setInputMode('waterwar');
+    const hidden = document.getElementById('cozyWarCard').style.display === 'none';
+    setInputMode(before);
+    return shown && hidden;
+  })());
+  t('Cozy War button sits after Water War', (() => {
+    const modes = [...document.querySelectorAll('.mode-btn')].map(b => b.dataset.mode);
+    return modes.indexOf('cozywar') === modes.indexOf('waterwar') + 1;
+  })());
+});
+
+// CZ3 Cozy War in Yoopanese: display-only, numbers untouched
+window.__snowTests.push((t) => {
+  const nums = s => (s.match(/\d+(?:[.,]\d+)*/g) || []).join('|');
+  const c = { phases: [{ type: 'rain', amount: 3 }], lat: 36.15, windSpeed: 40, gustSpeed: null, pressure: null };
+  const en = getCozyWar(c), yo = YOOP.withLang('yooper', () => getCozyWar(c));
+  t('cozy war tier is the English object in Yooper mode', COZY_WAR_TIERS.some(x => x.label === yo.label && x.desc === yo.desc)
+    && yo.label === en.label && yo.effective === en.effective);
+  const Y = (window.YOOPER && window.YOOPER.COZY_WAR_TIERS) || {};
+  const yk = Object.keys(Y);
+  const missing = COZY_WAR_TIERS.filter(x => !(Y[x.label] && Y[x.label].label && Y[x.label].desc)).map(x => x.label);
+  // Passes vacuously until the Yooper ladder lands; enforces all 150 once any entry exists.
+  t('every cozy label has a Yooper entry' + (yk.length ? ' (' + missing.length + ' missing)' : ' (skipped: no Yooper cozy ladder yet)'),
+    yk.length === 0 || missing.length === 0);
+  t('Yooper cozy entries keep their numbers', yk.every(k => {
+    const x = COZY_WAR_TIERS.find(z => z.label === k);
+    return !x || nums(Y[k].desc || '') === nums(x.desc);
+  }));
+  t('Yooper cozy UI strings are present', YOOP.withLang('yooper', () => YOOP.L('Cozy War Tiers')) !== 'Cozy War Tiers'
+    && YOOP.withLang('yooper', () => YOOP.L('Cozy War')) !== 'Cozy War');
+  const box = document.createElement('div');
+  box.innerHTML = document.getElementById('cozyWarCard').innerHTML;
+  const english = box.innerHTML, enText = box.textContent;
+  YOOP.withLang('yooper', () => YOOP.apply(box));
+  const ypText = box.textContent;
+  t('cozy card changes words in Yooper', ypText !== enText);
+  t('cozy card keeps every number in Yooper', nums(ypText) === nums(enText));
+  YOOP.withLang('en', () => YOOP.apply(box));
+  t('cozy card switches back to the exact English', box.innerHTML === english);
 });
 
 // YOOP-1 Yoopanese display layer: English by default, words swap, numbers and scores do not.
