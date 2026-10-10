@@ -514,6 +514,37 @@
     font-size: 0.88rem; font-weight: 600; transition: all 0.2s;
   }
   .mode-btn:hover { background: rgba(255,255,255,0.1); }
+
+  /* Challenge Mode: Storm Architect */
+  .grand-badge { display: inline-block; padding: 5px 12px; border-radius: 999px; font-size: 0.78rem; font-weight: 700;
+    color: #3b2a00; background: linear-gradient(135deg, #fde68a, #f59e0b); box-shadow: 0 0 10px rgba(245,158,11,0.45); vertical-align: middle; }
+  .ch-card { border-color: rgba(250,204,21,0.35); }
+  .ch-sub { font-size: 0.82rem; opacity: 0.6; margin-bottom: 12px; line-height: 1.45; }
+  .ch-rank { font-size: 0.9rem; margin-bottom: 12px; }
+  .ch-level { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 0; border-top: 1px solid rgba(255,255,255,0.08); }
+  .ch-level-name { min-width: 80px; font-weight: 700; font-size: 0.85rem; opacity: 0.8; }
+  .ch-level.locked { opacity: 0.38; }
+  .ch-brief-btn { flex: 1; min-width: 150px; background: rgba(255,255,255,0.06); color: #fff; border: 1px solid rgba(255,255,255,0.15);
+    font-size: 0.82rem; padding: 8px 10px; text-align: left; }
+  .ch-brief-btn:hover:not(:disabled) { background: rgba(255,255,255,0.12); }
+  .ch-brief-btn:disabled { cursor: not-allowed; }
+  .ch-grade { display: inline-block; min-width: 22px; text-align: center; margin-left: 6px; padding: 1px 6px; border-radius: 6px; font-weight: 800; font-size: 0.75rem; background: rgba(255,255,255,0.12); }
+  .ch-grade.pass { background: #16a34a; color: #fff; }
+  .ch-grade.fail { background: #b91c1c; color: #fff; }
+  .ch-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 6px; }
+  .ch-blurb { font-size: 0.86rem; opacity: 0.75; margin-bottom: 12px; line-height: 1.45; }
+  .ch-h3 { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.5; margin: 12px 0 6px; }
+  .ch-targets { margin: 0 0 8px 18px; font-size: 0.88rem; }
+  .ch-budget { display: flex; gap: 18px; flex-wrap: wrap; font-size: 0.86rem; align-items: center; }
+  .ch-meter { position: relative; height: 14px; border-radius: 7px; background: rgba(0,0,0,0.35); overflow: hidden; margin: 6px 0 4px; }
+  .ch-meter-fill { height: 100%; background: linear-gradient(90deg, #22c55e, #facc15); transition: width 0.2s; }
+  .ch-meter-fill.over { background: #ef4444; }
+  .ch-report { width: 100%; border-collapse: collapse; font-size: 0.84rem; margin-top: 6px; }
+  .ch-report th, .ch-report td { text-align: left; padding: 5px 8px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .ch-report th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.8px; opacity: 0.5; }
+  .ch-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .ch-banner { margin-top: 10px; padding: 8px 12px; border-radius: 8px; background: rgba(250,204,21,0.15); color: #fde68a; font-weight: 700; font-size: 0.88rem; }
+  .mode-btn:disabled { opacity: 0.3; cursor: not-allowed; }
   .mode-btn.active {
     background: linear-gradient(135deg, #5b9cf5, #6366f1);
     border-color: transparent;
@@ -916,7 +947,7 @@
 </aside>
 
 <div class="container">
-  <div style="text-align:right;margin-bottom:-6px"><button type="button" id="langToggle" class="btn-clear" data-noyoop>🗣️ Yoopanese</button></div>
+  <div style="text-align:right;margin-bottom:-6px"><span id="grandBadge" class="grand-badge" style="display:none" title="Beat all five Storm Architect levels">🏅 Grand Architect of Storms</span> <button type="button" id="challengeBtn" class="btn-clear">🏆 Challenge</button> <button type="button" id="langToggle" class="btn-clear" data-noyoop>🗣️ Yoopanese</button></div>
   <h1 id="appTitle">Snow Event Profile Maker 3.5.0</h1>
   <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">12600 lines of code</p>
   <p class="subtitle">Powered by real NOAA RSI methodology with location-based impact scaling</p>
@@ -941,6 +972,8 @@
       <button type="button" class="mode-btn" data-mode="severe">Severe Storm</button>
     </div>
   </div>
+
+  <div class="card ch-card" id="challengeCard" style="display:none"></div>
 
   <div class="card" id="snowWarCard" style="display:none">
     <h2>Snow War Tiers</h2>
@@ -5168,6 +5201,27 @@ function schoolTextFor(c, imp) {
 }
 
 /* ---- Generate ---- */
+// Melt and warming-outlook persistence for every storm city, ahead of the impact
+// read. Shared by generateProfile and the Challenge Mode evaluator.
+function prepareCityMelt() {
+  // Cities with no CITY_DB match have no latitude or annual snowfall, which the
+  // climatology needs. Borrow the storm's median rather than a global default.
+  const knownLats = cities.map(c => c.lat).filter(v => v !== null && v !== undefined).sort((a,b) => a-b);
+  const knownSnow = cities.map(c => c.annualSnow).filter(v => v !== null && v !== undefined).sort((a,b) => a-b);
+  const medLat = knownLats.length ? knownLats[Math.floor(knownLats.length/2)] : null;
+  const medSnow = knownSnow.length ? knownSnow[Math.floor(knownSnow.length/2)] : null;
+
+  // Melt runs from the end of each city's precipitation, not the storm's start.
+  cities.forEach(c => {
+    c.meltLat = (c.lat === null || c.lat === undefined) ? medLat : c.lat;
+    c.meltSnow = (c.annualSnow === null || c.annualSnow === undefined) ? medSnow : c.annualSnow;
+    const stormEnd = (c.timeline && c.timeline.lastSnow) ? c.timeline.lastSnow : getStormDate();
+    const forMelt = { ...c, lat: c.meltLat, annualSnow: c.meltSnow };
+    c.melt = simulateMelt(forMelt, stormEnd);
+    c.persistenceMult = persistenceMultiplier(forMelt, stormEnd);
+  });
+}
+
 function generateProfile(rsiOverride) {
   // Radial direction needs a core city in the storm. Validate before any
   // timeline math so the user gets a clear, actionable error.
@@ -5186,22 +5240,7 @@ function generateProfile(rsiOverride) {
   // Compute timelines for all cities before rendering
   computeAllTimelines();
 
-  // Cities with no CITY_DB match have no latitude or annual snowfall, which the
-  // climatology needs. Borrow the storm's median rather than a global default.
-  const knownLats = cities.map(c => c.lat).filter(v => v !== null && v !== undefined).sort((a,b) => a-b);
-  const knownSnow = cities.map(c => c.annualSnow).filter(v => v !== null && v !== undefined).sort((a,b) => a-b);
-  const medLat = knownLats.length ? knownLats[Math.floor(knownLats.length/2)] : null;
-  const medSnow = knownSnow.length ? knownSnow[Math.floor(knownSnow.length/2)] : null;
-
-  // Melt runs from the end of each city's precipitation, not the storm's start.
-  cities.forEach(c => {
-    c.meltLat = (c.lat === null || c.lat === undefined) ? medLat : c.lat;
-    c.meltSnow = (c.annualSnow === null || c.annualSnow === undefined) ? medSnow : c.annualSnow;
-    const stormEnd = (c.timeline && c.timeline.lastSnow) ? c.timeline.lastSnow : getStormDate();
-    const forMelt = { ...c, lat: c.meltLat, annualSnow: c.meltSnow };
-    c.melt = simulateMelt(forMelt, stormEnd);
-    c.persistenceMult = persistenceMultiplier(forMelt, stormEnd);
-  });
+  prepareCityMelt();
 
   const sorted = [...cities].sort((a,b) => b.snow - a.snow);
   const maxSnow = sorted[0].snow;
@@ -11082,6 +11121,483 @@ const YOOP = (function () {
 YOOP.start();
 
 /* ======================================================================
+   CHALLENGE MODE: STORM ARCHITECT
+   Five levels, one snow, one heat and one severe brief each. A brief names
+   1-3 targets on the simulator's own ladders, a city cap and a shared pool;
+   every other input is free. Three runs per brief, the best run counts.
+   Targets score by ladder distance (exact 100, 1 step 70, 2 steps 40, else 0);
+   the average gives A-F, and C or better passes. The engine never changes:
+   the grader only reads what the simulator already computes.
+   ====================================================================== */
+window.SNOWSIM = window.SNOWSIM || {};
+SNOWSIM.CHALLENGE = (function () {
+  const C = {};
+  C.KEY = 'snowsim.challenge.v1';
+  C.RUNS = 3;
+  C.LEVELS = 5;
+  C.RANKS = ['Apprentice', 'Drafter', 'Builder', 'Engineer', 'Architect', 'Grand Architect of Storms'];
+  C.MODES = {
+    snow:   { input: 'detailed', icon: '❄️', name: 'Snow',   btn: 'generateBtn',       pool: 'snow',    unit: 'inches of snow' },
+    heat:   { input: 'heat',     icon: '🔥', name: 'Heat',   btn: 'heatGenerateBtn',   pool: 'heatF',   unit: '°F above 80' },
+    severe: { input: 'severe',   icon: '⛈️', name: 'Severe', btn: 'severeGenerateBtn', pool: 'windMph', unit: 'mph of gust + tornado' }
+  };
+  C.SNOW_DATE = '2027-01-15T06:00';
+  // getImpact's levels, lowest first (the self-test holds this to #impactLadder).
+  C.SNOW_LADDER = ['None', 'Dusting', 'Trace', 'Negligible', 'Minimal', 'Very Light', 'Light', 'Minor', 'Mild', 'Moderate',
+    'Notable', 'Considerable', 'High Impact', 'Significant', 'Grave', 'Severe', 'Oppressive', 'Major', 'Dire', 'Crippling',
+    'Devastating', 'Extreme', 'Cataclysmic', 'Catastrophic', 'Calamitous', 'City Paralysis', 'Historic', 'Apocalyptic',
+    'Dystopian', 'Civilization Ender', 'Post-Civilization', 'Ice Age Onset', 'Glacial Epoch', 'Extinction Event', 'World-Ender',
+    'Planet Killer', 'Planetary Cryogenesis', 'Biblical', 'Mythic Deluge', 'Snowpocalypse Omega', 'Heat Death of Snow',
+    'Big Freeze Singularity', 'Cosmic Snow Entropy', 'The White Void', 'Omega Point Frost'];
+  C.ladder = function (mode, kind) {
+    if (kind === 'rsi') return RSI_CATEGORIES.map(c => c.label);
+    if (kind === 'rhi') return RHI_CATEGORIES.map(c => c.label);
+    if (mode === 'snow') return C.SNOW_LADDER;
+    if (mode === 'heat') return HEAT_TIERS.map(t => t.level);
+    return SEVERE_TIERS.map(t => t.level);
+  };
+  C.BRIEFS = [];
+
+  /* ---- Grader (pure) ---- */
+  C.stepScore = d => d === 0 ? 100 : d === 1 ? 70 : d === 2 ? 40 : 0;
+  C.letter = s => s >= 90 ? 'A' : s >= 80 ? 'B' : s >= 70 ? 'C' : s >= 60 ? 'D' : 'F';
+  function dist(op, a, t) {
+    switch (op || 'eq') {
+      case 'lte': return Math.max(0, a - t);
+      case 'gte': return Math.max(0, t - a);
+      case 'lt':  return Math.max(0, a - (t - 1));
+      case 'gt':  return Math.max(0, t + 1 - a);
+      default:    return Math.abs(a - t);
+    }
+  }
+  function idxIn(ladder, name) {
+    const i = ladder.indexOf(name);
+    if (i < 0) throw new Error('Unknown ladder label: ' + name);
+    return i;
+  }
+  const catIndex = (cats, v) => { for (let i = cats.length - 1; i >= 0; i--) if (v >= cats[i].min) return i; return 0; };
+  // results: { cities: [{ city, tier }], rsi?: number, rhi?: number }. Same input, same grade.
+  C.grade = function (brief, results) {
+    const cs = (results && results.cities) || [];
+    const tl = C.ladder(brief.mode);
+    const ix = cs.map(c => idxIn(tl, c.tier));
+    const targets = brief.targets.map(tg => {
+      const miss = { score: 0, distance: Infinity, actual: null };
+      if (!cs.length) return miss;
+      let d, actual;
+      if (tg.kind === 'rsi' || tg.kind === 'rhi') {
+        const cats = tg.kind === 'rsi' ? RSI_CATEGORIES : RHI_CATEGORIES;
+        const a = catIndex(cats, results[tg.kind] || 0);
+        d = dist(tg.op, a, idxIn(C.ladder(brief.mode, tg.kind), tg.value));
+        actual = cats[a].label;
+      } else if (tg.kind === 'worst' || tg.kind === 'best') {
+        const a = tg.kind === 'worst' ? Math.max(...ix) : Math.min(...ix);
+        d = dist(tg.op, a, idxIn(tl, tg.value));
+        actual = tl[a];
+      } else if (tg.kind === 'others') {
+        const rest = ix.slice().sort((a, b) => b - a).slice(1);
+        if (!rest.length) return miss;
+        const t = idxIn(tl, tg.value);
+        d = Math.max(...rest.map(a => dist(tg.op, a, t)));
+        const off = rest.reduce((w, a) => dist(tg.op, a, t) > dist(tg.op, w, t) ? a : w, rest[0]);
+        actual = tl[off];
+      } else if (tg.kind === 'count') {
+        const t = idxIn(tl, tg.tier);
+        const n = ix.filter(a => dist(tg.tierOp, a, t) === 0).length;
+        d = Math.abs(n - tg.value);
+        actual = n;
+      } else throw new Error('Unknown target kind: ' + tg.kind);
+      return { score: C.stepScore(d), distance: d, actual };
+    });
+    const score = targets.length ? targets.reduce((s, x) => s + x.score, 0) / targets.length : 0;
+    const grade = C.letter(score);
+    return { score, grade, pass: score >= 70, targets };
+  };
+
+  /* ---- Budget ---- */
+  C.poolUsed = function (mode, sol) {
+    const sum = f => Math.round(sol.reduce((s, x) => s + f(x), 0) * 100) / 100;
+    if (mode === 'snow') return sum(x => computeDerivedPrecip(x.phases || []).snow);
+    if (mode === 'heat') return sum(x => Math.max(0, (x.temp || 0) - 80));
+    return sum(x => (x.gust || 0) + (x.tornado || 0));
+  };
+  C.checkBudget = function (brief, sol) {
+    const b = brief.budget, errors = [];
+    const pool = C.poolUsed(brief.mode, sol);
+    if (!sol.length) errors.push('Add at least one city first.');
+    else if (sol.length < (b.minCities || 1)) errors.push('Not enough cities for this brief.');
+    if (sol.length > b.maxCities) errors.push('Too many cities for this brief.');
+    if (pool > b.pool + 1e-9) errors.push('Over budget: the pool is overspent. Trim it before you run.');
+    return { ok: !errors.length, cities: sol.length, pool, errors };
+  };
+
+  /* ---- Engine bridge: solution inputs -> results ---- */
+  const nn = v => (v === undefined || v === null || v === '') ? null : v;
+  const dbName = n => { const db = CITY_DB.find(c => c.n.toLowerCase() === String(n).toLowerCase()); return db ? db.n : n; };
+  function snowCity(s) {
+    const db = lookupCity(s.city);
+    const phases = (s.phases || []).map(p => ({ ...p }));
+    const d = computeDerivedPrecip(phases);
+    return {
+      name: s.city, phases, snow: d.snow, snowEquivalent: d.snowEquivalent,
+      pop: db ? db.pop : null, region: db ? db.r : null, annualSnow: db ? db.snow : null,
+      lat: db ? db.lat : null, lon: db ? db.lon : null,
+      hasStormTemp: nn(s.stormTemp) !== null, stormTemp: nn(s.stormTemp),
+      warming: s.warming || { short: 'auto', medium: 'auto', long: 'auto' },
+      windSpeed: nn(s.wind), gustSpeed: nn(s.gust), pressure: nn(s.pressure), peakRate: nn(s.peakRate), sky: s.sky || null
+    };
+  }
+  // A storm city already through prepareCityMelt; the same read as the results table.
+  C.snowTier = c => isRainOnly(c.phases) ? 'None'
+    : getImpact(c.snow, c.annualSnow, c.hasStormTemp, c.stormTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure, c.persistenceMult, c.peakRate).level;
+  function snowResults() {
+    return { cities: cities.map(c => ({ city: c.name, tier: C.snowTier(c) })), rsi: calculateRSI().totalRSI };
+  }
+  function heatResults(rs) {
+    return { cities: rs.map(r => ({ city: r.n, tier: r.tier.level })), rhi: calculateRHI(rs).total };
+  }
+  function severeResults(rs) { return { cities: rs.map(r => ({ city: r.n, tier: r.tier.level })) }; }
+  const heatEntry = s => ({ n: dbName(s.city), temp: s.temp, dew: nn(s.dew), days: s.days || 1 });
+  const severeEntry = s => ({ n: dbName(s.city), temp: s.temp, dew: nn(s.dew), gust: nn(s.gust), hail: nn(s.hail), rain: nn(s.rain),
+    rainMin: nn(s.rainMin), startMb: nn(s.startMb), lowMb: nn(s.lowMb), fallMin: nn(s.fallMin), tornado: nn(s.tornado) });
+
+  // Runs a solution through the engine under the brief's fixed run settings and puts
+  // every bit of page state back afterwards.
+  C.evaluate = function (brief, sol) {
+    if (brief.mode === 'heat') return heatResults(sol.map(s => evaluateHeatCity(heatEntry(s), {}, null, { date: null, sky: null })));
+    if (brief.mode === 'severe') return severeResults(sol.map(s => evaluateSevereCity({ ...severeEntry(s), start: null })));
+    const saved = cities.slice();
+    const ids = ['stormDate', 'stormDirection', 'stormSpeed'];
+    const vals = ids.map(id => document.getElementById(id).value);
+    try {
+      document.getElementById('stormDate').value = (brief.setup && brief.setup.date) || C.SNOW_DATE;
+      document.getElementById('stormDirection').value = '0';
+      document.getElementById('stormSpeed').value = 'medium';
+      cities.splice(0, cities.length, ...sol.map(snowCity));
+      if (!cities.length) return { cities: [], rsi: 0 };
+      computeAllTimelines();
+      prepareCityMelt();
+      return snowResults();
+    } finally {
+      cities.splice(0, cities.length, ...saved);
+      ids.forEach((id, i) => { document.getElementById(id).value = vals[i]; });
+    }
+  };
+  C._snowCity = snowCity;
+  // What the player has entered in the brief's mode, in solution shape.
+  C.liveSolution = function (mode) {
+    if (mode === 'heat') return heatCities.map(h => ({ city: h.n, temp: h.temp, dew: h.dew, days: h.days }));
+    if (mode === 'severe') return severeCities.map(e => ({ city: e.n, temp: e.temp, dew: e.dew, gust: e.gust, hail: e.hail, rain: e.rain,
+      rainMin: e.rainMin, startMb: e.startMb, lowMb: e.lowMb, fallMin: e.fallMin, tornado: e.tornado }));
+    return cities.map(c => ({ city: c.name, phases: c.phases }));
+  };
+
+  /* ---- Progress and rank ---- */
+  C.freshProgress = () => ({ v: 1, best: {} });
+  C.loadProgress = function () {
+    try {
+      const p = JSON.parse(localStorage.getItem(C.KEY));
+      if (p && p.v === 1 && p.best && typeof p.best === 'object') return p;
+    } catch (e) {}
+    return C.freshProgress();
+  };
+  C.saveProgress = function (p) { try { localStorage.setItem(C.KEY, JSON.stringify(p)); } catch (e) {} };
+  C.briefsAt = lv => C.BRIEFS.filter(b => b.level === lv);
+  C.levelPassed = (p, lv) => { const bs = C.briefsAt(lv); return bs.length > 0 && bs.every(b => p.best[b.id] && p.best[b.id].score >= 70); };
+  C.beaten = p => { let n = 0; while (n < C.LEVELS && C.levelPassed(p, n + 1)) n++; return n; };
+  C.unlocked = (p, lv) => lv <= C.beaten(p) + 1;
+  C.rank = p => C.RANKS[C.beaten(p)];
+  C.isGrand = p => C.beaten(p) >= C.LEVELS;
+  // Keeps the better of the stored and new result. Returns true when it improved.
+  C.record = function (p, brief, g) {
+    const old = p.best[brief.id];
+    if (old && old.score >= g.score) return false;
+    p.best[brief.id] = { score: g.score, grade: g.grade };
+    return true;
+  };
+
+  /* ---- Snapshot and restore of every mode's inputs and outputs ---- */
+  const OUT_IDS = ['profileCard', 'meltCard', 'rsiCard', 'gapFillResults', 'heatProfileCard', 'heatRecoveryCard', 'heatRhiCard',
+    'heatGapResults', 'severeProfileCard'];
+  const DISPLAY_IDS = OUT_IDS.concat(['heatGapCard', 'radialCoreField', 'gapFillCard']);
+  const fields = () => [...document.querySelectorAll('.container input[id], .container select[id], .container textarea[id]')];
+  C.snapshot = function () {
+    syncPhaseInputs();
+    const out = {};
+    OUT_IDS.forEach(id => {
+      const el = document.getElementById(id), f = document.createDocumentFragment();
+      while (el.firstChild) f.appendChild(el.firstChild);
+      out[id] = f;
+    });
+    return {
+      mode: document.querySelector('.mode-btn.active').dataset.mode,
+      cities: cities.slice(), heatCities: heatCities.slice(), severeCities: severeCities.slice(),
+      inputPhases: inputPhases, gapFillEntries: gapFillEntries.slice(), gapFillUsed: gapFillUsedForStorm,
+      heatLast: heatLastResults, heatGap: heatGapResults,
+      fields: fields().map(el => [el.id, el.value, el.checked]),
+      display: DISPLAY_IDS.map(id => [id, document.getElementById(id).style.display]),
+      profileVisible: profileEl.classList.contains('visible'),
+      emptyDisplay: phasesEmpty.style.display,
+      out
+    };
+  };
+  C.restore = function (s) {
+    cities.splice(0, cities.length, ...s.cities);
+    heatCities.splice(0, heatCities.length, ...s.heatCities);
+    severeCities.splice(0, severeCities.length, ...s.severeCities);
+    gapFillEntries.splice(0, gapFillEntries.length, ...s.gapFillEntries);
+    gapFillUsedForStorm = s.gapFillUsed;
+    heatLastResults = s.heatLast; heatGapResults = s.heatGap;
+    inputPhases = s.inputPhases;
+    renderPhaseRows(); renderCityList(); heatRenderList(); severeRenderList(); renderGapFillEntries();
+    s.fields.forEach(([id, v, chk]) => { const el = document.getElementById(id); if (!el) return; el.value = v; el.checked = chk; });
+    coldField.classList.toggle('visible', coldCheck.checked);
+    document.getElementById('stormSpread').dispatchEvent(new Event('input'));
+    OUT_IDS.forEach(id => { const el = document.getElementById(id); el.textContent = ''; el.appendChild(s.out[id]); });
+    setInputMode(s.mode);
+    s.display.forEach(([id, v]) => { document.getElementById(id).style.display = v; });
+    profileEl.classList.toggle('visible', s.profileVisible);
+    phasesEmpty.style.display = s.emptyDisplay;
+  };
+  // A comparable picture of the state the snapshot covers (self-test round trip).
+  C.signature = function () {
+    syncPhaseInputs();
+    return JSON.stringify({
+      mode: document.querySelector('.mode-btn.active').dataset.mode,
+      cities: cities.map(c => c.name + ':' + JSON.stringify(c.phases)), heat: heatCities, severe: severeCities,
+      phases: inputPhases, gap: gapFillEntries.length,
+      fields: fields().map(el => [el.id, el.value, el.checked]),
+      display: DISPLAY_IDS.map(id => document.getElementById(id).style.display),
+      out: OUT_IDS.map(id => document.getElementById(id).innerHTML),
+      vis: profileEl.classList.contains('visible'),
+      lists: ['cityList', 'heatCityList', 'severeCityList'].map(id => document.getElementById(id).innerHTML),
+      phaseRows: [...phaseBuilder.querySelectorAll('.phase-row, .phase-companions')].map(e => e.outerHTML),
+      emptyShown: getComputedStyle(phasesEmpty).display
+    });
+  };
+
+  /* ---- Live game ---- */
+  const ST = { open: false, brief: null, snap: null, runsLeft: 0, last: null, best: null, msg: '', banner: '', resetArm: false };
+  C.state = ST;
+  let PROG = C.loadProgress();
+  C.progress = () => PROG;
+  const $ = id => document.getElementById(id);
+  const yp = () => YOOP.lang === 'yooper';
+  const pick = o => (o && (yp() ? (o.yooper || o.en) : o.en)) || '';
+  const titleOf = b => yp() ? (b.titleYooper || b.title) : b.title;
+  const num = v => `<span class="ch-num">${(Math.round(v * 100) / 100).toLocaleString()}</span>`;
+
+  function badge() { $('grandBadge').style.display = C.isGrand(PROG) ? '' : 'none'; }
+
+  function lockModes(on) {
+    document.querySelectorAll('.mode-btn').forEach(b => {
+      b.disabled = on && ST.brief && b.dataset.mode !== C.MODES[ST.brief.mode].input;
+    });
+  }
+
+  C.openBrief = function (id) {
+    const b = C.BRIEFS.find(x => x.id === id);
+    if (!b || !C.unlocked(PROG, b.level)) return;
+    if (!ST.snap) ST.snap = C.snapshot();
+    ST.brief = b; ST.runsLeft = C.RUNS; ST.last = null; ST.best = null; ST.msg = ''; ST.banner = '';
+    cities.length = 0; heatCities.length = 0; severeCities.length = 0; gapFillEntries.length = 0;
+    inputPhases = []; renderPhaseRows();
+    heatLastResults = []; heatGapResults = [];
+    $('stormDate').value = (b.setup && b.setup.date) || C.SNOW_DATE;
+    $('stormDirection').value = '0'; $('stormSpeed').value = 'medium';
+    ['heatStartDate', 'heatSky', 'severeStartTime', 'lake_superior', 'lake_michigan', 'lake_huron', 'lake_erie', 'lake_ontario']
+      .forEach(x => { $(x).value = ''; });
+    renderCityList(); heatRenderList(); severeRenderList(); renderGapFillEntries();
+    setInputMode(C.MODES[b.mode].input);
+    profileEl.classList.remove('visible');
+    lockModes(true);
+    render();
+  };
+  C.leaveBrief = function () {
+    if (ST.snap) { lockModes(false); C.restore(ST.snap); ST.snap = null; }
+    ST.brief = null; ST.last = null; ST.best = null; ST.msg = ''; ST.banner = '';
+    lockModes(false);
+    render();
+  };
+  C.retry = function () { ST.runsLeft = C.RUNS; ST.last = null; ST.best = null; ST.msg = ''; ST.banner = ''; render(); };
+  C.toggle = function (on) {
+    ST.open = on === undefined ? !ST.open : !!on;
+    if (!ST.open && ST.brief) C.leaveBrief();
+    ST.resetArm = false;
+    render();
+  };
+
+  function liveCheck() { return C.checkBudget(ST.brief, C.liveSolution(ST.brief.mode)); }
+  let pending = null;
+  function beforeRun(e) {
+    if (!ST.brief) return;
+    const chk = liveCheck();
+    const err = ST.runsLeft <= 0 ? 'No runs left. Hit Try again for three fresh runs.' : (chk.ok ? '' : chk.errors[0]);
+    if (err) {
+      e.stopImmediatePropagation(); e.preventDefault();
+      ST.msg = err; render();
+      $('challengeCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    if (ST.brief.mode === 'snow') { cities.forEach(c => { delete c.melt; }); pending = { mode: 'snow' }; }
+    else if (ST.brief.mode === 'heat') pending = { mode: 'heat', ref: heatLastResults };
+    else pending = { mode: 'severe' };
+  }
+  function afterRun() {
+    const p = pending; pending = null;
+    if (!p || !ST.brief) return;
+    let res = null;
+    if (p.mode === 'snow' && cities.length && cities.every(c => c.melt)) res = snowResults();
+    else if (p.mode === 'heat' && heatLastResults !== p.ref) res = heatResults(heatLastResults);
+    else if (p.mode === 'severe' && severeCities.length) res = severeResults(severeCities.map(c => evaluateSevereCity({ ...c, start: severeStart() })));
+    if (!res) { ST.msg = 'The run did not finish, so it did not count.'; render(); return; }
+    const g = C.grade(ST.brief, res);
+    ST.runsLeft--; ST.last = g; ST.msg = '';
+    if (!ST.best || g.score > ST.best.score) ST.best = g;
+    const was = C.beaten(PROG), wasGrand = C.isGrand(PROG);
+    if (C.record(PROG, ST.brief, g)) C.saveProgress(PROG);
+    ST.banner = C.isGrand(PROG) && !wasGrand ? 'You beat every level. The gold badge is yours.'
+      : (C.beaten(PROG) > was ? 'Level passed!' : '');
+    badge();
+    render();
+  }
+  Object.values(C.MODES).forEach(m => {
+    const b = $(m.btn);
+    b.addEventListener('click', beforeRun, true);
+    b.addEventListener('click', afterRun);
+  });
+
+  /* ---- Rendering ---- */
+  function gradePill(g) {
+    if (!g) return '';
+    return `<span class="ch-grade ${g.score >= 70 ? 'pass' : 'fail'}" data-noyoop>${g.grade}</span>`;
+  }
+  function renderPicker() {
+    const lv = [];
+    for (let L = 1; L <= C.LEVELS; L++) {
+      const open = C.unlocked(PROG, L), bs = C.briefsAt(L);
+      const btns = ['snow', 'heat', 'severe'].map(mode => {
+        const b = bs.find(x => x.mode === mode);
+        if (!b) return `<button type="button" class="ch-brief-btn" disabled>${C.MODES[mode].icon} <span>Coming soon</span></button>`;
+        return `<button type="button" class="ch-brief-btn" data-brief="${esc(b.id)}" ${open ? '' : 'disabled'}>${C.MODES[mode].icon} <span data-noyoop>${esc(titleOf(b))}</span>${gradePill(PROG.best[b.id])}</button>`;
+      }).join('');
+      lv.push(`<div class="ch-level ${open ? '' : 'locked'}"><span class="ch-level-name"><span>Level</span> ${num(L)}${open ? '' : ' 🔒'}</span>${btns}</div>`);
+    }
+    return `<h2>🏆 Storm Architect</h2>
+      <p class="ch-sub">Build a storm to the brief. Every target sits on one of the simulator's own ladders: hit it exactly for full marks, and each step off costs you. Stay inside the budget. Three runs per brief; the best run counts.</p>
+      <p class="ch-sub">Pass with a C or better. A level passes when all three of its briefs pass.</p>
+      <div class="ch-rank"><span>Rank</span>: <strong>${esc(C.rank(PROG))}</strong>${C.isGrand(PROG) ? ' 🏅' : ''}</div>
+      ${lv.join('')}
+      <div class="ch-actions">
+        <button type="button" class="btn-clear" id="chReset">${ST.resetArm ? 'Really reset? Click again.' : 'Reset progress'}</button>
+        <button type="button" class="btn-clear" id="chClose">Close</button>
+      </div>`;
+  }
+  function renderBrief() {
+    const b = ST.brief, m = C.MODES[b.mode], chk = liveCheck();
+    const pct = Math.min(100, b.budget.pool ? chk.pool / b.budget.pool * 100 : 0);
+    const over = chk.pool > b.budget.pool + 1e-9;
+    const capTxt = `${num(chk.cities)} / ${num(b.budget.maxCities)}`;
+    const targets = b.targets.map(tg => `<li data-noyoop>${esc(pick(tg.label))}</li>`).join('');
+    const report = g => `<table class="ch-report"><thead><tr><th>Target</th><th>Got</th><th>Score</th></tr></thead><tbody>${
+      b.targets.map((tg, i) => {
+        const t = g.targets[i];
+        const got = t.actual === null ? '<span>nothing yet</span>' : (typeof t.actual === 'number' ? num(t.actual) : `<span>${esc(t.actual)}</span>`);
+        return `<tr><td data-noyoop>${esc(pick(tg.label))}</td><td>${got}</td><td>${num(t.score)}</td></tr>`;
+      }).join('')}</tbody></table>
+      <div class="ch-budget" style="margin-top:8px"><span><span>Score</span>: ${num(g.score)}</span><span><span>Grade</span>: ${gradePill(g)}</span><span>${g.pass ? 'Passed' : 'Not yet'}</span></div>`;
+    return `<h2>🏆 Storm Architect &mdash; <span>Level</span> ${num(b.level)} ${m.icon}</h2>
+      <div class="ch-title" data-noyoop>${esc(titleOf(b))}</div>
+      <div class="ch-blurb" data-noyoop>${esc(pick(b.blurb))}</div>
+      <div class="ch-h3">Targets</div><ul class="ch-targets">${targets}</ul>
+      <div class="ch-h3">Budget</div>
+      <div class="ch-budget"><span><span>Cities</span>: ${capTxt}</span>
+        <span><span>Pool</span>: ${num(chk.pool)} / ${num(b.budget.pool)} <span>${m.unit}</span></span>
+        <span><span>Runs left</span>: ${num(ST.runsLeft)}</span></div>
+      <div class="ch-meter" id="chMeter"><div class="ch-meter-fill ${over ? 'over' : ''}" style="width:${pct}%"></div></div>
+      <div class="error-msg" id="chMsg">${ST.msg ? `<span>${esc(ST.msg)}</span>` : ''}</div>
+      ${ST.last ? `<div class="ch-h3">Last run</div>${report(ST.last)}` : ''}
+      ${ST.best && ST.best !== ST.last ? `<div class="ch-h3">Best run</div>${report(ST.best)}` : ''}
+      ${ST.banner ? `<div class="ch-banner"><span>${esc(ST.banner)}</span></div>` : ''}
+      <div class="ch-actions">
+        <button type="button" class="btn-clear" id="chRetry">Try again</button>
+        <button type="button" class="btn-clear" id="chBack">Back to levels</button>
+      </div>`;
+  }
+  function render() {
+    const card = $('challengeCard');
+    card.style.display = ST.open ? '' : 'none';
+    if (!ST.open) { card.innerHTML = ''; return; }
+    card.innerHTML = ST.brief ? renderBrief() : renderPicker();
+  }
+  C.render = render;
+  $('challengeCard').addEventListener('click', e => {
+    const bb = e.target.closest('[data-brief]');
+    if (bb && !bb.disabled) { C.openBrief(bb.dataset.brief); return; }
+    const id = e.target.closest('button') && e.target.closest('button').id;
+    if (id === 'chClose') C.toggle(false);
+    else if (id === 'chBack') C.leaveBrief();
+    else if (id === 'chRetry') C.retry();
+    else if (id === 'chReset') {
+      if (!ST.resetArm) { ST.resetArm = true; render(); return; }
+      ST.resetArm = false; PROG = C.freshProgress(); C.saveProgress(PROG); badge(); render();
+    }
+  });
+  $('challengeBtn').addEventListener('click', () => C.toggle());
+  $('langToggle').addEventListener('click', () => render());
+  // The pool meter follows the city lists as they change.
+  const meterObs = new MutationObserver(() => { if (ST.brief) render(); });
+  ['cityList', 'heatCityList', 'severeCityList'].forEach(id => meterObs.observe($(id), { childList: true }));
+  C.start = function () { PROG = C.loadProgress(); badge(); };
+  C.setProgress = p => { PROG = p; badge(); };
+
+  // Every English string the challenge UI writes (the self-test checks each has a Yooper entry).
+  C.STRINGS = ['Challenge', '🏆 Challenge', 'Grand Architect of Storms', '🏅 Grand Architect of Storms', 'Beat all five Storm Architect levels',
+    'Storm Architect', '🏆 Storm Architect', 'Apprentice', 'Drafter', 'Builder', 'Engineer', 'Architect',
+    "Build a storm to the brief. Every target sits on one of the simulator's own ladders: hit it exactly for full marks, and each step off costs you. Stay inside the budget. Three runs per brief; the best run counts.",
+    'Pass with a C or better. A level passes when all three of its briefs pass.',
+    'Rank', 'Level', 'Coming soon', 'Reset progress', 'Really reset? Click again.', 'Close', 'Targets', 'Budget', 'Cities', 'Pool',
+    'inches of snow', '°F above 80', 'mph of gust + tornado', 'Runs left', 'Last run', 'Best run', 'Target', 'Got', 'Score', 'Grade',
+    'Passed', 'Not yet', 'nothing yet', 'Try again', 'Back to levels', 'Level passed!', 'You beat every level. The gold badge is yours.',
+    'Add at least one city first.', 'Not enough cities for this brief.', 'Too many cities for this brief.',
+    'Over budget: the pool is overspent. Trim it before you run.', 'No runs left. Hit Try again for three fresh runs.',
+    'The run did not finish, so it did not count.'];
+  return C;
+})();
+
+// BEGIN CHALLENGE BRIEFS
+// Placeholder briefs (one per mode, Level 1) until the tuned set lands.
+SNOWSIM.CHALLENGE.BRIEFS = [
+  { id: 'L1-snow', level: 1, mode: 'snow', title: 'First Flakes', titleYooper: 'Da First Flakes',
+    blurb: { en: 'A Great Lakes snow that gets noticed without shutting anything down.', yooper: 'A Great Lakes snow dat folks notice, but nuttin\'s shut down, eh.' },
+    budget: { maxCities: 3, pool: 12, poolKind: 'snow' },
+    targets: [
+      { kind: 'rsi', value: 'Minor Event', label: { en: 'RSI exactly Minor Event', yooper: 'RSI right at Nuttin\' Much' } },
+      { kind: 'worst', value: 'Significant', label: { en: 'Worst city exactly Significant', yooper: 'Worst town right at Pretty Good Dump' } }
+    ],
+    solution: [
+      { city: 'Chicago, IL', phases: [{ type: 'snowball', amount: 6 }] },
+      { city: 'Milwaukee, WI', phases: [{ type: 'snowball', amount: 6 }] }
+    ] },
+  { id: 'L1-heat', level: 1, mode: 'heat', title: 'Warm Spell', titleYooper: 'Warm Spell, Eh',
+    blurb: { en: 'One sticky afternoon on the Plains. Warm, not dangerous.', yooper: 'One sticky afternoon out on da Plains. Warm, but nobody\'s in trouble.' },
+    budget: { maxCities: 1, pool: 20, poolKind: 'heatF' },
+    targets: [
+      { kind: 'worst', value: 'Sultry', label: { en: 'City exactly Sultry', yooper: 'Town right at Sultry' } }
+    ],
+    solution: [{ city: 'Tulsa, OK', temp: 92 }] },
+  { id: 'L1-severe', level: 1, mode: 'severe', title: 'Thunder Rumble', titleYooper: 'Thunder Rumblin\'',
+    blurb: { en: 'A gusty line of storms that rattles windows and nothing more.', yooper: 'A gusty line o\' storms dat rattles da windows and dat\'s it.' },
+    budget: { maxCities: 2, pool: 120, poolKind: 'windMph' },
+    targets: [
+      { kind: 'worst', value: 'Strong Storm', label: { en: 'Worst city exactly Strong Storm', yooper: 'Worst town right at Real Strong Storm' } }
+    ],
+    solution: [{ city: 'Tulsa, OK', temp: 88, gust: 52 }] }
+];
+// END CHALLENGE BRIEFS
+SNOWSIM.CHALLENGE.start();
+
+/* ======================================================================
    SELFTEST HARNESS
    Browser-run tests. Load index.html?selftest=1 and read the console.
    Tests are functions (t, approx) => {...} pushed onto window.__snowTests.
@@ -12581,6 +13097,175 @@ window.__snowTests.push((t) => {
   document.getElementById('heatProfileCard').innerHTML = '';
 });
 
+
+// CH Challenge Mode (Storm Architect): grader, budget, briefs, campaign, snapshot, Yooper.
+window.__snowTests.push((t) => {
+  const C = SNOWSIM.CHALLENGE;
+  // Grader units on a synthetic severe brief (ladder: Quiet, Rumble, Passing, Strong, Severe, Damaging, ...).
+  const mk = targets => ({ mode: 'severe', budget: { maxCities: 3, pool: 300, poolKind: 'windMph' }, targets });
+  const R = (...tiers) => ({ cities: tiers.map((tier, i) => ({ city: 'X' + i, tier })) });
+  const g1 = (tg, r) => C.grade(mk([tg]), r).targets[0].score;
+  t('CH exact scores 100', g1({ kind: 'worst', value: 'Severe Storm' }, R('Severe Storm')) === 100);
+  t('CH 1 step scores 70, both ways', g1({ kind: 'worst', value: 'Severe Storm' }, R('Damaging Storm')) === 70 && g1({ kind: 'worst', value: 'Severe Storm' }, R('Strong Storm')) === 70);
+  t('CH 2 steps scores 40', g1({ kind: 'worst', value: 'Severe Storm' }, R('Destructive Storm')) === 40);
+  t('CH 3 steps scores 0', g1({ kind: 'worst', value: 'Severe Storm' }, R('Tornado Touchdown')) === 0);
+  t('CH lte: under is exact, over counts steps', g1({ kind: 'worst', op: 'lte', value: 'Severe Storm' }, R('Rumble')) === 100
+    && g1({ kind: 'worst', op: 'lte', value: 'Severe Storm' }, R('Damaging Storm')) === 70);
+  t('CH gte on best', g1({ kind: 'best', op: 'gte', value: 'Severe Storm' }, R('Derecho-Class', 'Strong Storm')) === 70
+    && g1({ kind: 'best', op: 'gte', value: 'Severe Storm' }, R('Derecho-Class', 'Severe Storm')) === 100);
+  t('CH worst reads the highest city', C.grade(mk([{ kind: 'worst', value: 'Strong Storm' }]), R('Rumble', 'Strong Storm')).targets[0].actual === 'Strong Storm');
+  t('CH count scores the count distance', g1({ kind: 'count', tier: 'Severe Storm', tierOp: 'gte', value: 2 }, R('Severe Storm', 'Derecho-Class', 'Rumble')) === 100
+    && g1({ kind: 'count', tier: 'Severe Storm', tierOp: 'gte', value: 2 }, R('Rumble')) === 40
+    && g1({ kind: 'count', tier: 'Severe Storm', tierOp: 'gt', value: 1 }, R('Severe Storm', 'Derecho-Class')) === 100);
+  t('CH others skips the worst city', g1({ kind: 'others', value: 'Severe Storm' }, R('Tornado Touchdown', 'Severe Storm', 'Severe Storm')) === 100
+    && g1({ kind: 'others', value: 'Severe Storm' }, R('Tornado Touchdown', 'Severe Storm', 'Rumble')) === 0
+    && g1({ kind: 'others', value: 'Severe Storm' }, R('Tornado Touchdown')) === 0);
+  t('CH rsi and rhi read their own ladders', C.grade({ mode: 'snow', targets: [{ kind: 'rsi', value: 'Notable' }] }, { cities: [{ city: 'a', tier: 'Major' }], rsi: 2 }).score === 100
+    && C.grade({ mode: 'snow', targets: [{ kind: 'rsi', value: 'Notable' }] }, { cities: [{ city: 'a', tier: 'Major' }], rsi: 4 }).score === 70
+    && C.grade({ mode: 'heat', targets: [{ kind: 'rhi', value: 'Major Heat Wave' }] }, { cities: [{ city: 'a', tier: 'Hot' }], rhi: 7 }).score === 100);
+  t('CH empty attempt scores 0', C.grade(mk([{ kind: 'worst', value: 'Quiet' }]), { cities: [] }).score === 0);
+  const avg = C.grade(mk([{ kind: 'worst', value: 'Severe Storm' }, { kind: 'best', value: 'Severe Storm' }]), R('Damaging Storm', 'Severe Storm'));
+  t('CH average and letter', avg.score === 85 && avg.grade === 'B' && avg.pass);
+  t('CH letter cutoffs', [90, 89.9, 80, 70, 69.9, 60, 59].map(C.letter).join('') === 'ABBCDDF');
+  t('CH grade is pure', JSON.stringify(C.grade(mk([{ kind: 'worst', value: 'Severe Storm' }]), R('Rumble'))) === JSON.stringify(C.grade(mk([{ kind: 'worst', value: 'Severe Storm' }]), R('Rumble'))));
+  // The snow ladder is getImpact's, in the same order as the page's impact ladder.
+  const items = [...document.querySelectorAll('#impactLadder > *')];
+  const stop = items.findIndex((e, i) => i > 0 && e.classList.contains('ladder-title'));
+  const dom = items.slice(1, stop).map(e => e.textContent).reverse();
+  t('CH snow ladder matches #impactLadder', dom.join('|') === C.SNOW_LADDER.join('|'));
+  // Budget
+  const bb = { mode: 'heat', budget: { maxCities: 2, minCities: 2, pool: 20, poolKind: 'heatF' } };
+  t('CH heat pool counts °F above 80', C.poolUsed('heat', [{ temp: 95 }, { temp: 70 }, { temp: 85 }]) === 20);
+  t('CH severe pool counts gust + tornado', C.poolUsed('severe', [{ gust: 60, tornado: 90 }, { gust: 40, hail: 2 }]) === 190);
+  t('CH snow pool counts frozen inches only', C.poolUsed('snow', [{ phases: [{ type: 'snowball', amount: 6 }, { type: 'rain', amount: 1 }, { type: 'ice', amount: 0.5 }] }]) === 6.5);
+  t('CH budget passes when it fits', C.checkBudget(bb, [{ temp: 90 }, { temp: 90 }]).ok);
+  t('CH budget blocks an overspent pool', !C.checkBudget(bb, [{ temp: 95 }, { temp: 90 }]).ok);
+  t('CH budget blocks too many and too few cities', !C.checkBudget(bb, [{ temp: 81 }, { temp: 81 }, { temp: 81 }]).ok && !C.checkBudget(bb, [{ temp: 81 }]).ok && !C.checkBudget(bb, []).ok);
+  // Briefs
+  const B = C.BRIEFS;
+  t('CH briefs: unique ids, levels 1-5, pool matches mode', new Set(B.map(b => b.id)).size === B.length && B.length > 0
+    && B.every(b => b.level >= 1 && b.level <= 5 && C.MODES[b.mode] && b.budget.poolKind === C.MODES[b.mode].pool));
+  const CAP = { snow: 'Calamitous', heat: 'Mass-Casualty Heat', severe: 'Incredible Tornado' };
+  B.forEach(b => {
+    const sol = b.solution;
+    t('CH ' + b.id + ' solution fits its budget', C.checkBudget(b, sol).ok);
+    const r = C.evaluate(b, sol), g = C.grade(b, r);
+    if (g.grade !== 'A') console.log('CH ' + b.id + ' solution ' + g.score + ' ' + JSON.stringify(r));
+    t('CH ' + b.id + ' solution grades A', g.grade === 'A');
+    t('CH ' + b.id + ' empty attempt grades below C', C.grade(b, C.evaluate(b, [])).score < 70);
+    const pool = b.budget.pool, c0 = sol[0].city;
+    const naive = b.mode === 'snow' ? [{ city: c0, phases: [{ type: 'snowball', amount: pool }] }]
+      : b.mode === 'heat' ? [{ city: c0, temp: 80 + pool }] : [{ city: c0, temp: sol[0].temp, gust: pool }];
+    const ng = C.grade(b, C.evaluate(b, naive));
+    if (ng.score >= 70) console.log('CH ' + b.id + ' naive ' + ng.score);
+    t('CH ' + b.id + ' naive attempt grades below C', ng.score < 70);
+    if (b.level <= 4) {
+      const lad = C.ladder(b.mode);
+      const capOk = r.cities.every(c => lad.indexOf(c.tier) <= lad.indexOf(CAP[b.mode]))
+        && b.targets.every(tg => (tg.kind === 'rsi' ? RSI_CATEGORIES.findIndex(x => x.label === tg.value) <= RSI_CATEGORIES.findIndex(x => x.label === 'Extreme')
+          : tg.kind === 'rhi' ? true : lad.indexOf(tg.value || tg.tier) <= lad.indexOf(CAP[b.mode])));
+      t('CH ' + b.id + ' stays realistic', capOk);
+    }
+    t('CH ' + b.id + ' has every Yooper string', !!(b.titleYooper && b.blurb && b.blurb.en && b.blurb.yooper
+      && b.targets.every(tg => tg.label && tg.label.en && tg.label.yooper)));
+  });
+  // Campaign: play every brief's solution in level order on a scratch progress.
+  const p = C.freshProgress();
+  t('CH fresh progress: Apprentice, only Level 1 open', C.rank(p) === 'Apprentice' && C.unlocked(p, 1) && !C.unlocked(p, 2));
+  let order = true;
+  for (let L = 1; L <= C.LEVELS; L++) {
+    const bs = C.briefsAt(L);
+    if (!bs.length) break;
+    order = order && C.unlocked(p, L);
+    bs.forEach(b => C.record(p, b, C.grade(b, C.evaluate(b, b.solution))));
+    order = order && C.beaten(p) === L && C.rank(p) === C.RANKS[L];
+  }
+  t('CH campaign unlocks level by level', order);
+  const full = [1, 2, 3, 4, 5].every(L => C.briefsAt(L).length === 3);
+  t('CH campaign reaches Grand Architect of Storms' + (full ? '' : ' (skipped: briefs pending)'), !full || (C.isGrand(p) && C.rank(p) === 'Grand Architect of Storms'));
+  t('CH a worse run never replaces a better one', !C.record(p, B[0], { score: 10, grade: 'F' }) && p.best[B[0].id].score === 100);
+  // Storage: corrupt or unavailable storage falls back to fresh progress.
+  const key = C.KEY;
+  let had = null; try { had = localStorage.getItem(key); } catch (e) {}
+  try {
+    try { localStorage.setItem(key, '{not json'); } catch (e) {}
+    t('CH corrupt progress loads fresh', JSON.stringify(C.loadProgress()) === JSON.stringify(C.freshProgress()));
+    const gi = Storage.prototype.getItem, si = Storage.prototype.setItem;
+    Storage.prototype.getItem = () => { throw new Error('blocked'); };
+    Storage.prototype.setItem = () => { throw new Error('blocked'); };
+    let ok = true;
+    try { ok = JSON.stringify(C.loadProgress()) === JSON.stringify(C.freshProgress()); C.saveProgress(p); } catch (e) { ok = false; }
+    Storage.prototype.getItem = gi; Storage.prototype.setItem = si;
+    t('CH blocked storage still runs', ok);
+    // Badge: shows only with every level beaten.
+    const was = C.progress();
+    const all = C.freshProgress(); C.BRIEFS.forEach(b => { all.best[b.id] = { score: 100, grade: 'A' }; });
+    C.setProgress(all);
+    const shown = document.getElementById('grandBadge').style.display !== 'none';
+    C.setProgress(C.freshProgress());
+    const hidden = document.getElementById('grandBadge').style.display === 'none';
+    C.setProgress(was);
+    t('CH gold badge follows Grand Architect' + (full ? '' : ' (hide only: briefs pending)'), hidden && (!full || shown));
+    // Snapshot and restore round trip, through the real brief open/close and a live run.
+    cities.push(C._snowCity({ city: 'Tulsa, OK', phases: [{ type: 'snowball', amount: 3 }] }));
+    heatCities.push({ n: 'Dallas, TX', temp: 101, dew: null, days: 2 });
+    document.getElementById('stormName').value = 'Snapshot Test';
+    document.getElementById('heatSky').value = 'sunny';
+    inputPhases = [{ type: 'slush', amountStr: '4' }]; renderPhaseRows();
+    renderCityList(); heatRenderList();
+    const before = C.signature();
+    C.toggle(true);
+    ['snow', 'heat', 'severe'].forEach(mode => {
+      const b = B.find(x => x.mode === mode && x.level === 1);
+      if (!b) return;
+      localStorage.removeItem(key); C.setProgress(C.freshProgress());
+      C.openBrief(b.id);
+      const active = document.querySelector('.mode-btn.active').dataset.mode === C.MODES[mode].input;
+      const empty = !cities.length && !heatCities.length && !severeCities.length;
+      t('CH opening ' + b.id + ' switches mode and starts empty', active && empty);
+      // Overspend is blocked and costs no run.
+      const big = mode === 'snow' ? [{ city: 'Tulsa, OK', phases: [{ type: 'snowball', amount: b.budget.pool + 5 }] }]
+        : mode === 'heat' ? [{ city: 'Tulsa, OK', temp: 80 + b.budget.pool + 5 }] : [{ city: 'Tulsa, OK', temp: 90, gust: b.budget.pool + 5 }];
+      const load = sol => {
+        if (mode === 'snow') { cities.splice(0, cities.length, ...sol.map(C._snowCity)); renderCityList(); }
+        else if (mode === 'heat') { heatCities.splice(0, heatCities.length, ...sol.map(s => ({ n: s.city, temp: s.temp, dew: s.dew ?? null, days: s.days || 1 }))); heatRenderList(); }
+        else { severeCities.splice(0, severeCities.length, ...sol.map(s => ({ n: s.city, temp: s.temp, dew: s.dew ?? null, gust: s.gust ?? null, hail: s.hail ?? null,
+          rain: s.rain ?? null, rainMin: s.rainMin ?? null, startMb: s.startMb ?? null, lowMb: s.lowMb ?? null, fallMin: s.fallMin ?? null, tornado: s.tornado ?? null }))); severeRenderList(); }
+      };
+      load(big);
+      document.getElementById(C.MODES[mode].btn).click();
+      t('CH ' + b.id + ' overspent run is blocked', C.state.runsLeft === 3 && !!C.state.msg && !C.state.last);
+      load(b.solution);
+      document.getElementById(C.MODES[mode].btn).click();
+      t('CH ' + b.id + ' live run grades A and uses a run', C.state.last && C.state.last.grade === 'A' && C.state.runsLeft === 2);
+      t('CH ' + b.id + ' live run is saved', !!C.loadProgress().best[b.id]);
+      t('CH ' + b.id + ' report card renders', !!document.querySelector('#challengeCard .ch-report'));
+      C.leaveBrief();
+      const after = C.signature();
+      if (after !== before) {
+        const x = JSON.parse(before), y = JSON.parse(after);
+        const diff = Object.keys(x).filter(k => JSON.stringify(x[k]) !== JSON.stringify(y[k]));
+        window.__CH_DIFF = diff.map(k => [k, JSON.stringify(x[k]).slice(0, 400), JSON.stringify(y[k]).slice(0, 400)]);
+        console.log('CH restore differs in: ' + diff.join(', '));
+      }
+      t('CH leaving ' + b.id + ' restores every input exactly', after === before);
+    });
+    C.toggle(false);
+    t('CH challenge card closes', document.getElementById('challengeCard').style.display === 'none');
+  } finally {
+    cities.length = 0; heatCities.length = 0; renderCityList(); heatRenderList(); inputPhases = []; renderPhaseRows();
+    document.getElementById('stormName').value = ''; document.getElementById('heatSky').value = '';
+    try { if (had === null) localStorage.removeItem(key); else localStorage.setItem(key, had); } catch (e) {}
+    C.setProgress(C.loadProgress());
+  }
+  // Yooper: every challenge string has an entry, and the rendered picker changes words but keeps numbers.
+  const ui = (window.YOOPER && window.YOOPER.UI) || {};
+  const missing = C.STRINGS.filter(s => !Object.prototype.hasOwnProperty.call(ui, s));
+  if (missing.length) console.log('CH missing Yooper: ' + missing.join(' | '));
+  t('CH every challenge string has a Yooper entry', missing.length === 0);
+  t('CH rank names translate', C.RANKS.every(r => YOOP.withLang('yooper', () => YOOP.L(r)) !== r));
+});
+
 window.addEventListener('load', () => {
   if (!/(\?|&)selftest\b/.test(location.search)) return;
   let pass = 0, fail = 0;
@@ -12588,12 +13273,13 @@ window.addEventListener('load', () => {
   window.__snowTests.forEach((fn, i) => {
     const t = (name, cond) => {
       if (cond) pass++;
-      else { fail++; console.error('FAIL [' + i + '] ' + name); }
+      else { fail++; console.error('FAIL [' + i + '] ' + name); (window.__SELFTEST_FAILS = window.__SELFTEST_FAILS || []).push(i + ': ' + name); }
     };
     try { fn(t, approx); }
     catch (e) { fail++; console.error('THREW [' + i + '] ' + e.message); }
   });
-  console.log('SELFTEST ' + pass + '/' + (pass + fail) + ' ' + (fail ? 'FAIL' : 'PASS'));
+  window.__SELFTEST_RESULT = 'SELFTEST ' + pass + '/' + (pass + fail) + ' ' + (fail ? 'FAIL' : 'PASS');
+  console.log(window.__SELFTEST_RESULT);
 });
 </script>
 </body>
