@@ -11566,33 +11566,287 @@ SNOWSIM.CHALLENGE = (function () {
 })();
 
 // BEGIN CHALLENGE BRIEFS
-// Placeholder briefs (one per mode, Level 1) until the tuned set lands.
 SNOWSIM.CHALLENGE.BRIEFS = [
-  { id: 'L1-snow', level: 1, mode: 'snow', title: 'First Flakes', titleYooper: 'Da First Flakes',
-    blurb: { en: 'A Great Lakes snow that gets noticed without shutting anything down.', yooper: 'A Great Lakes snow dat folks notice, but nuttin\'s shut down, eh.' },
-    budget: { maxCities: 3, pool: 12, poolKind: 'snow' },
+  {
+    id: 'L1-snow', level: 1, mode: 'snow', title: 'First Flakes', titleYooper: "Da First Flakes",
+    blurb: {
+      en: 'Paint the first plowable snow of the season across the southern Plains and land the Regional Snowfall Index exactly on Category 1. Careful: in the South the index climbs fast once one city passes 15 inches, so pouring the whole pool into one town overshoots.',
+      yooper: "Lay down da first plowable snow o' da season across da southern Plains and get da Regional Snowfall Index to land right on Category 1. Watch it, dough: down Sout' da index takes off once one town gets past 15 inches, so dumpin' da whole pile on one town overshoots it, yah."
+    },
+    budget: { maxCities: 3, pool: 16, poolKind: 'snow' },
     targets: [
-      { kind: 'rsi', value: 'Minor Event', label: { en: 'RSI exactly Minor Event', yooper: 'RSI right at Nuttin\' Much' } },
-      { kind: 'worst', value: 'Significant', label: { en: 'Worst city exactly Significant', yooper: 'Worst town right at Pretty Good Dump' } }
+      { kind: 'rsi', value: 'Notable', op: 'eq',
+        label: { en: 'RSI exactly Category 1 (Notable)', yooper: "RSI right on Category 1 (Now Yer Talkin')" } }
     ],
     solution: [
-      { city: 'Chicago, IL', phases: [{ type: 'snowball', amount: 6 }] },
-      { city: 'Milwaukee, WI', phases: [{ type: 'snowball', amount: 6 }] }
-    ] },
-  { id: 'L1-heat', level: 1, mode: 'heat', title: 'Warm Spell', titleYooper: 'Warm Spell, Eh',
-    blurb: { en: 'One sticky afternoon on the Plains. Warm, not dangerous.', yooper: 'One sticky afternoon out on da Plains. Warm, but nobody\'s in trouble.' },
+      { city: 'Oklahoma City, OK', phases: [{ type: 'snowball', amount: 10 }] },
+      { city: 'Tulsa, OK', phases: [{ type: 'snowball', amount: 3 }] },
+      { city: 'Wichita, KS', phases: [{ type: 'snowball', amount: 3 }] }
+    ]
+  },
+  {
+    id: 'L1-heat', level: 1, mode: 'heat', title: 'Warm Spell', titleYooper: "Warm Spell, Eh",
+    blurb: {
+      en: 'Give Houston a hot afternoon, not a dangerous one. One city, and the heat index has to read exactly Hot. Gulf moisture does a lot of the work, so a full 100°F overshoots; watch the dewpoint.',
+      yooper: "Give Houston a hot afternoon, not a dangerous one. One town, and da heat index has to read Real Hot, no more, no less. Dat Gulf moisture does a lotta da work, so a full 100°F overshoots; keep an eye on da dewpoint, eh."
+    },
     budget: { maxCities: 1, pool: 20, poolKind: 'heatF' },
     targets: [
-      { kind: 'worst', value: 'Sultry', label: { en: 'City exactly Sultry', yooper: 'Town right at Sultry' } }
+      { kind: 'worst', value: 'Hot', op: 'eq',
+        label: { en: 'City exactly Hot', yooper: 'Town right at Real Hot' } }
     ],
-    solution: [{ city: 'Tulsa, OK', temp: 92 }] },
-  { id: 'L1-severe', level: 1, mode: 'severe', title: 'Thunder Rumble', titleYooper: 'Thunder Rumblin\'',
-    blurb: { en: 'A gusty line of storms that rattles windows and nothing more.', yooper: 'A gusty line o\' storms dat rattles da windows and dat\'s it.' },
+    solution: [
+      { city: 'Houston, TX', temp: 94, dew: 74, days: 1 }
+    ]
+  },
+  {
+    id: 'L1-severe', level: 1, mode: 'severe', title: 'Thunder Rumble', titleYooper: "Thunder Rumblin'",
+    blurb: {
+      en: 'A spring evening line rolls across Oklahoma. Make it loud, gusty and nothing more: the worst city has to land exactly on Strong Storm, short of a severe warning.',
+      yooper: "A spring evenin' line rolls across Oklahoma. Make it loud and gusty and dat's all: da worst town has to land right on Real Strong Storm, short of a severe warnin', eh."
+    },
     budget: { maxCities: 2, pool: 120, poolKind: 'windMph' },
     targets: [
-      { kind: 'worst', value: 'Strong Storm', label: { en: 'Worst city exactly Strong Storm', yooper: 'Worst town right at Real Strong Storm' } }
+      { kind: 'worst', value: 'Strong Storm', op: 'eq',
+        label: { en: 'Worst city exactly Strong Storm', yooper: 'Worst town right at Real Strong Storm' } }
     ],
-    solution: [{ city: 'Tulsa, OK', temp: 88, gust: 52 }] }
+    solution: [
+      { city: 'Tulsa, OK', temp: 88, dew: 68, gust: 55 },
+      { city: 'Oklahoma City, OK', temp: 90, dew: 66, gust: 45 }
+    ]
+  },
+  {
+    id: 'L2-snow', level: 2, mode: 'snow', title: 'Lake-Effect Lock', titleYooper: "Lake-Effect Lockdown",
+    blurb: {
+      en: 'Cold air over open Lake Michigan locks a snow band onto the southern shore. Bury one town to exactly Major, and keep the band narrow enough that the Regional Snowfall Index stays at Category 1 or lower. South Bend and Kalamazoo are not Syracuse: they cannot shrug off a full 30 inches.',
+      yooper: "Cold air over open Lake Michigan parks a snow band on da sout' shore. Bury one town right to Holy Wah, and keep dat band skinny enough so da Regional Snowfall Index stays at Category 1 or under. South Bend and Kalamazoo ain't Syracuse: dey can't just shrug off a full 30 inches, ya know."
+    },
+    budget: { maxCities: 2, pool: 30, poolKind: 'snow' },
+    targets: [
+      { kind: 'worst', value: 'Major', op: 'eq',
+        label: { en: 'Worst city exactly Major', yooper: 'Worst town right at Holy Wah' } },
+      { kind: 'rsi', value: 'Notable', op: 'lte',
+        label: { en: 'RSI no higher than Category 1 (Notable)', yooper: "RSI no higher dan Category 1 (Now Yer Talkin')" } }
+    ],
+    solution: [
+      { city: 'South Bend, IN', phases: [{ type: 'snowball', amount: 20 }] },
+      { city: 'Kalamazoo, MI', phases: [{ type: 'snowball', amount: 10 }] }
+    ]
+  },
+  {
+    id: 'L2-heat', level: 2, mode: 'heat', title: 'Muggy Corridor', titleYooper: "Muggy Corridor, Eh",
+    blurb: {
+      en: 'Tropical air parks over the I-95 corridor. The thermometer barely tops 90, but the dewpoints are brutal. Get all three cities to Muggy or worse and push the Regional Heat Index to exactly Category 1. A Category 1 needs one big city to sit in the heat for days, so lean on dewpoint and duration, not the thermometer.',
+      yooper: "Tropical air parks over da I-95 corridor. Da thermometer barely gets past 90, but dem dewpoints are brutal. Get all t'ree towns to Muggy as a Sauna Porch or worse and push da Regional Heat Index right to Category 1. Category 1 needs one big town sittin' in it for days, so lean on da dewpoint and how long it lasts, not da thermometer, eh."
+    },
+    budget: { maxCities: 3, pool: 30, poolKind: 'heatF' },
+    targets: [
+      { kind: 'count', tier: 'Muggy', tierOp: 'gte', value: 3, op: 'eq',
+        label: { en: 'Exactly 3 cities at Muggy or above', yooper: "Exactly t'ree towns at Muggy as a Sauna Porch or worse" } },
+      { kind: 'rhi', value: 'Notable Heat', op: 'eq',
+        label: { en: 'RHI exactly Category 1 (Notable Heat)', yooper: 'RHI right on Category 1 (Decent Heat)' } }
+    ],
+    solution: [
+      { city: 'New York, NY', temp: 90, dew: 78, days: 3 },
+      { city: 'Philadelphia, PA', temp: 88, dew: 72, days: 1 },
+      { city: 'Boston, MA', temp: 86, dew: 70, days: 1 }
+    ]
+  },
+  {
+    id: 'L2-severe', level: 2, mode: 'severe', title: 'Hail Alley', titleYooper: "Hail Alley, Holy Wah",
+    blurb: {
+      en: 'Afternoon supercells fire along the Front Range and drift onto the Plains. Hail does the damage here. The worst city has to be exactly a Damaging Storm, and every city has to reach at least Severe Storm.',
+      yooper: "Afternoon supercells pop up along da Front Range and drift out onto da Plains. Da hail does da damage here. Da worst town has to be right at Damagin' Storm, and every town has to get to at least Nasty Thunderstorm, yah."
+    },
+    budget: { maxCities: 3, pool: 220, poolKind: 'windMph' },
+    targets: [
+      { kind: 'worst', value: 'Damaging Storm', op: 'eq',
+        label: { en: 'Worst city exactly Damaging Storm', yooper: "Worst town right at Damagin' Storm" } },
+      { kind: 'best', value: 'Severe Storm', op: 'gte',
+        label: { en: 'No city below Severe Storm', yooper: 'No town under Nasty Thunderstorm' } }
+    ],
+    solution: [
+      { city: 'Denver, CO', temp: 84, dew: 55, gust: 60, hail: 2 },
+      { city: 'Cheyenne, WY', temp: 80, dew: 50, gust: 50, hail: 1.25 },
+      { city: 'Omaha, NE', temp: 88, dew: 64, gust: 55, hail: 1 }
+    ]
+  },
+  {
+    id: 'L3-snow', level: 3, mode: 'snow', title: 'The Crippler', titleYooper: "Da Crippler",
+    blurb: {
+      en: 'A Groundhog Day-style storm runs from Kansas City through Indianapolis to Detroit. Build a Category 3 (Major) Regional Snowfall Index, and make the worst-hit city exactly Crippling. Too much in one place tips a city into Devastating.',
+      yooper: "A Groundhog Day kinda storm runs from Kansas City t'rough Indianapolis up to Detroit. Build a Category 3 (Holy Wah) Regional Snowfall Index, and make da worst-hit town right at Stuck at Camp. Put too much in one spot and a town tips over into Roofs Cavin' In."
+    },
+    budget: { maxCities: 4, pool: 60, poolKind: 'snow' },
+    targets: [
+      { kind: 'rsi', value: 'Major', op: 'eq',
+        label: { en: 'RSI exactly Category 3 (Major)', yooper: 'RSI right on Category 3 (Holy Wah)' } },
+      { kind: 'worst', value: 'Crippling', op: 'eq',
+        label: { en: 'Worst city exactly Crippling', yooper: 'Worst town right at Stuck at Camp' } }
+    ],
+    solution: [
+      { city: 'Kansas City, MO', phases: [{ type: 'snowball', amount: 18 }] },
+      { city: 'Indianapolis, IN', phases: [{ type: 'snowball', amount: 18 }] },
+      { city: 'Chicago, IL', phases: [{ type: 'snowball', amount: 6 }] },
+      { city: 'Detroit, MI', phases: [{ type: 'snowball', amount: 15 }] }
+    ]
+  },
+  {
+    id: 'L3-heat', level: 3, mode: 'heat', title: 'Heat Dome', titleYooper: "Heat Dome, Sauna Weather",
+    blurb: {
+      en: 'A heat dome parks over the Southwest and the California coast. Push the Regional Heat Index to exactly Category 2, and make the worst city exactly Oppressive. The index only counts cities that reach Hot, and the West has few people per mile, so you need the big coastal metros.',
+      yooper: "A heat dome parks over da Sout'west and da California coast. Push da Regional Heat Index right to Category 2, and make da worst town right at Oppressive, Like a Sauna. Da index only counts towns dat get to Real Hot, and out West dere ain't many folks per mile, so ya need da big coast towns, eh."
+    },
+    budget: { maxCities: 4, pool: 70, poolKind: 'heatF' },
+    targets: [
+      { kind: 'rhi', value: 'Significant Heat Wave', op: 'eq',
+        label: { en: 'RHI exactly Category 2 (Significant Heat Wave)', yooper: 'RHI right on Category 2 (Big Heat Wave)' } },
+      { kind: 'worst', value: 'Oppressive', op: 'eq',
+        label: { en: 'Worst city exactly Oppressive', yooper: 'Worst town right at Oppressive, Like a Sauna' } }
+    ],
+    solution: [
+      { city: 'Los Angeles, CA', temp: 90, dew: 68, days: 1 },
+      { city: 'San Diego, CA', temp: 86, dew: 68, days: 1 },
+      { city: 'Phoenix, AZ', temp: 108, dew: 62, days: 1 },
+      { city: 'Sacramento, CA', temp: 100, dew: 58, days: 1 }
+    ]
+  },
+  {
+    id: 'L3-severe', level: 3, mode: 'severe', title: 'One Touchdown', titleYooper: "Just One Touchdown",
+    blurb: {
+      en: 'A supercell drops one brief tornado in central Oklahoma while the rest of the line just roars. Exactly one city gets a Tornado Touchdown, and every other city is exactly a Severe Storm: no more, no less.',
+      yooper: "A supercell drops one quick tornado in central Oklahoma while da rest o' da line just roars. Exactly one town gets Tornado on Da Ground, and every udder town is right at Nasty Thunderstorm: no more, no less, ya know."
+    },
+    budget: { maxCities: 3, pool: 260, poolKind: 'windMph' },
+    targets: [
+      { kind: 'count', tier: 'Tornado Touchdown', tierOp: 'eq', value: 1, op: 'eq',
+        label: { en: 'Exactly 1 city at Tornado Touchdown', yooper: 'Exactly one town at Tornado on Da Ground' } },
+      { kind: 'others', value: 'Severe Storm', op: 'eq',
+        label: { en: 'Every other city exactly Severe Storm', yooper: 'Every udder town right at Nasty Thunderstorm' } }
+    ],
+    solution: [
+      { city: 'Oklahoma City, OK', temp: 86, dew: 68, gust: 0, tornado: 80 },
+      { city: 'Tulsa, OK', temp: 84, dew: 66, gust: 60 },
+      { city: 'Wichita, KS', temp: 82, dew: 64, gust: 62 }
+    ]
+  },
+  {
+    id: 'L4-snow', level: 4, mode: 'snow', title: 'Wide but Shallow', titleYooper: "Wide but Not Deep",
+    blurb: {
+      en: 'A sprawling Great Lakes storm drops a foot or so almost everywhere and buries no one. Reach a Category 4 (Crippling) Regional Snowfall Index while no city goes above Major. Wet snow near freezing hits a city less hard than the same inches of cold powder.',
+      yooper: "A big sprawlin' Great Lakes storm drops a foot or so just about everywhere and buries nobody. Get da Regional Snowfall Index to Category 4 (Stuck at Camp) while no town goes past Holy Wah. Wet heart-attack snow near freezin' hits a town easier dan da same inches o' cold powder, yah."
+    },
+    budget: { maxCities: 6, pool: 80, poolKind: 'snow' },
+    targets: [
+      { kind: 'rsi', value: 'Crippling', op: 'eq',
+        label: { en: 'RSI exactly Category 4 (Crippling)', yooper: 'RSI right on Category 4 (Stuck at Camp)' } },
+      { kind: 'worst', value: 'Major', op: 'lte',
+        label: { en: 'No city above Major', yooper: 'No town past Holy Wah' } }
+    ],
+    solution: [
+      { city: 'Chicago, IL', phases: [{ type: 'snowball', amount: 18 }], stormTemp: 34 },
+      { city: 'Milwaukee, WI', phases: [{ type: 'snowball', amount: 14 }] },
+      { city: 'Detroit, MI', phases: [{ type: 'snowball', amount: 14 }] },
+      { city: 'Indianapolis, IN', phases: [{ type: 'snowball', amount: 12 }] },
+      { city: 'Rockford, IL', phases: [{ type: 'snowball', amount: 12 }] },
+      { city: 'Grand Rapids, MI', phases: [{ type: 'snowball', amount: 10 }] }
+    ]
+  },
+  {
+    id: 'L4-heat', level: 4, mode: 'heat', title: 'Spread the Swelter', titleYooper: "Spread Da Swelter Around",
+    blurb: {
+      en: 'Run a West Coast heat wave from Seattle to Phoenix. Get the Regional Heat Index to Category 4 (Crippling) with no city above Scorcher. Long, humid spells in big coastal cities count for more than one scorching desert town.',
+      yooper: "Run a West Coast heat wave from Seattle clear down to Phoenix. Get da Regional Heat Index to Category 4 (Crippling Heat Wave) wit' no town past Real Scorcher. Long, muggy spells in da big coast towns count for more dan one desert town cookin', eh."
+    },
+    budget: { maxCities: 6, pool: 90, poolKind: 'heatF' },
+    targets: [
+      { kind: 'rhi', value: 'Crippling Heat Wave', op: 'eq',
+        label: { en: 'RHI exactly Category 4 (Crippling Heat Wave)', yooper: 'RHI right on Category 4 (Crippling Heat Wave)' } },
+      { kind: 'worst', value: 'Scorcher', op: 'lte',
+        label: { en: 'No city above Scorcher', yooper: 'No town past Real Scorcher' } }
+    ],
+    solution: [
+      { city: 'Los Angeles, CA', temp: 91, dew: 66, days: 3 },
+      { city: 'San Diego, CA', temp: 85, dew: 68, days: 3 },
+      { city: 'San Francisco, CA', temp: 84, dew: 60, days: 3 },
+      { city: 'Seattle, WA', temp: 88, dew: 62, days: 3 },
+      { city: 'Portland, OR', temp: 92, dew: 62, days: 3 },
+      { city: 'Phoenix, AZ', temp: 106, dew: 62, days: 3 }
+    ]
+  },
+  {
+    id: 'L4-severe', level: 4, mode: 'severe', title: 'Derecho Line', titleYooper: "Derecho Line, Hang Onto Yer Hat",
+    blurb: {
+      en: 'A derecho races across Iowa into northern Illinois. Use exactly four cities, and make every one of them exactly Derecho-Class: gusts of 100 mph or more, short of anything beyond recorded winds.',
+      yooper: "A derecho tears across Iowa into nort'ern Illinois. Use exactly four towns, and make every one of 'em right at Derecho-Class Blow: gusts of 100 mph or more, but nuttin' past what's ever been measured."
+    },
+    budget: { maxCities: 4, minCities: 4, pool: 450, poolKind: 'windMph' },
+    targets: [
+      { kind: 'count', tier: 'Derecho-Class', tierOp: 'eq', value: 4, op: 'eq',
+        label: { en: 'All 4 cities exactly Derecho-Class', yooper: "All four towns right at Derecho-Class Blow" } }
+    ],
+    solution: [
+      { city: 'Cedar Rapids, IA', temp: 88, dew: 72, gust: 126 },
+      { city: 'Des Moines, IA', temp: 90, dew: 72, gust: 105 },
+      { city: 'Davenport, IA', temp: 88, dew: 70, gust: 110 },
+      { city: 'Chicago, IL', temp: 86, dew: 68, gust: 100 }
+    ]
+  },
+  {
+    id: 'L5-snow', level: 5, mode: 'snow', title: 'Historic', titleYooper: "One for da Grandkids",
+    blurb: {
+      en: 'A Gulf low throws a blizzard across Texas, from Dallas to the Rio Grande Valley. Make one city exactly Historic and the Regional Snowfall Index exactly Category 5 (Extreme), on a tight snow budget. The places that never see snow are the ones that break; cold, wind and a deep low do the rest.',
+      yooper: "A Gulf low t'rows a blizzard across Texas, from Dallas clear down to da Rio Grande Valley. Make one town right at One for da Grandkids and da Regional Snowfall Index right on Category 5 (Snowed In Till Spring), on a tight snow budget. Da places dat never see snow are da ones dat break; cold, wind and a deep low do da rest, eh."
+    },
+    budget: { maxCities: 5, pool: 22, poolKind: 'snow' },
+    targets: [
+      { kind: 'worst', value: 'Historic', op: 'eq',
+        label: { en: 'Worst city exactly Historic', yooper: 'Worst town right at One for da Grandkids' } },
+      { kind: 'rsi', value: 'Extreme', op: 'eq',
+        label: { en: 'RSI exactly Category 5 (Extreme)', yooper: 'RSI right on Category 5 (Snowed In Till Spring)' } }
+    ],
+    solution: [
+      { city: 'Brownsville, TX', phases: [{ type: 'snowball', amount: 6 }], stormTemp: 20, wind: 40, gust: 60, pressure: 965 },
+      { city: 'Dallas, TX', phases: [{ type: 'snowball', amount: 15 }] }
+    ]
+  },
+  {
+    id: 'L5-heat', level: 5, mode: 'heat', title: "Chicago '95", titleYooper: "Chicago '95, Holy Wah",
+    blurb: {
+      en: "Rebuild the July 1995 Chicago heat wave on a tight budget. Chicago has to land exactly on 1995 Chicago-Class, and it has to be the only city above Heat Emergency. The real one ran for days under dewpoints near 80; the thermometer alone will not get you there.",
+      yooper: "Build da July 1995 Chicago heat wave back up on a tight budget. Chicago has to land right on 1995 Chicago-Class, and it's gotta be da only town past Heat Emergency. Da real one went on for days under dewpoints near 80; da thermometer alone ain't gonna get ya dere."
+    },
+    budget: { maxCities: 3, pool: 38, poolKind: 'heatF' },
+    targets: [
+      { kind: 'worst', value: '1995 Chicago–Class', op: 'eq',
+        label: { en: 'Worst city exactly 1995 Chicago–Class', yooper: 'Worst town right at 1995 Chicago–Class' } },
+      { kind: 'count', tier: 'Heat Emergency', tierOp: 'gt', value: 1, op: 'eq',
+        label: { en: 'Exactly 1 city above Heat Emergency', yooper: 'Exactly one town past Heat Emergency' } }
+    ],
+    solution: [
+      { city: 'Chicago, IL', temp: 104, dew: 79, days: 3 },
+      { city: 'Milwaukee, WI', temp: 92, dew: 72, days: 3 }
+    ]
+  },
+  {
+    id: 'L5-severe', level: 5, mode: 'severe', title: 'Atmospheric Tear', titleYooper: "Rip in da Sky",
+    blurb: {
+      en: 'Inside a derecho, one city takes straight-line winds beyond anything ever measured. Make exactly one city Beyond EF5, and every other city Derecho-Class or worse, on a tight wind budget.',
+      yooper: "Inside a derecho, one town gets straight-line winds past anyt'ing ever measured. Make exactly one town Past EF5, and every udder town Derecho-Class Blow or worse, on a tight wind budget, yah."
+    },
+    budget: { maxCities: 4, pool: 410, poolKind: 'windMph' },
+    targets: [
+      { kind: 'count', tier: 'Beyond EF5', tierOp: 'eq', value: 1, op: 'eq',
+        label: { en: 'Exactly 1 city Beyond EF5', yooper: 'Exactly one town Past EF5' } },
+      { kind: 'others', value: 'Derecho-Class', op: 'gte',
+        label: { en: 'Every other city Derecho-Class or above', yooper: 'Every udder town Derecho-Class Blow or worse' } }
+    ],
+    solution: [
+      { city: 'Cedar Rapids, IA', temp: 90, dew: 74, gust: 205 },
+      { city: 'Des Moines, IA', temp: 90, dew: 72, gust: 100 },
+      { city: 'Davenport, IA', temp: 88, dew: 72, gust: 100 }
+    ]
+  }
 ];
 // END CHALLENGE BRIEFS
 SNOWSIM.CHALLENGE.start();
