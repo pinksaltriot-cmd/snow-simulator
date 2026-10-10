@@ -1,6 +1,6 @@
 # Challenge Mode — "Storm Architect" (spec + plan)
 
-**Date:** 2026-10-10 · **Status:** design approved; brief list pending approval
+**Date:** 2026-10-10 · **Status:** design approved; brief list approved 2026-10-10
 
 ## Game
 
