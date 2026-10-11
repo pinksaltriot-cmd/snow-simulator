@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Snow Event Profile Maker 3.6.0</title>
+<title>Snow Event Profile Maker 3.7.0</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -984,8 +984,8 @@
 
 <div class="container">
   <div style="text-align:right;margin-bottom:-6px"><span id="grandBadge" class="grand-badge" style="display:none" title="Beat all five Storm Architect levels">🏅 Grand Architect of Storms</span> <button type="button" id="challengeBtn" class="btn-clear">🏆 Challenge</button> <button type="button" id="langToggle" class="btn-clear" data-noyoop>🗣️ Yoopanese</button></div>
-  <h1 id="appTitle">Snow Event Profile Maker 3.6.0</h1>
-  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">13540 lines of code</p>
+  <h1 id="appTitle">Snow Event Profile Maker 3.7.0</h1>
+  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">15053 lines of code</p>
   <p class="subtitle">Powered by real NOAA RSI methodology with location-based impact scaling</p>
 
   <div class="card">
@@ -11824,8 +11824,7 @@ function fogGenerate() {
   fogEl('fogProfileCard').style.display = '';
   fogEl('fogProfileCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
-// Clearing timeline, gap fill and RFI. A separate fog-extras.js may supply them
-// (window.FOG_EXTRAS); otherwise the in-page versions below render.
+// Clearing timeline, gap fill and RFI (window.FOG_EXTRAS overrides them if it is ever defined).
 function fogRenderExtras(results) {
   fogLastResults = results;
   const X = window.FOG_EXTRAS;
@@ -14687,12 +14686,12 @@ window.__snowTests.push((t) => {
   const yp = s => YOOP.withLang('yooper', () => YOOP.L(s));
   t('selftest runs in English', YOOP.lang === 'en');
   t('English passes through untouched', YOOP.L('Storm Profile') === 'Storm Profile');
-  t('title and header stay English', document.title === 'Snow Event Profile Maker 3.6.0'
-    && document.getElementById('appTitle').textContent === 'Snow Event Profile Maker 3.6.0');
+  t('title and header stay English', document.title === 'Snow Event Profile Maker 3.7.0'
+    && document.getElementById('appTitle').textContent === 'Snow Event Profile Maker 3.7.0');
   t('toggle offers Yoopanese', document.getElementById('langToggle').textContent.includes('Yoopanese'));
   t('Yooper swaps a heading', yp('Storm Profile') === 'Da Storm Profile');
   t('Yooper swaps a tier name', yp('Crippling') === 'Stuck at Camp' && yp('Omega Point Frost') === 'Heikki Lunta Himself');
-  t('Yooper keeps the version string', yp('Snow Event Profile Maker 3.6.0').includes('3.6.0'));
+  t('Yooper keeps the version string', yp('Snow Event Profile Maker 3.7.0').includes('3.7.0'));
   t('Yooper keeps the line count', yp('12345 lines of code').startsWith('12345 '));
   t('Yooper sentence keeps its numbers', yp('💨 Windy winds of 30 mph, gusting to 52 mph amplify impact (×1.50)') !== '💨 Windy winds of 30 mph, gusting to 52 mph amplify impact (×1.50)'
     && nums(yp('💨 Windy winds of 30 mph, gusting to 52 mph amplify impact (×1.50)')) === '30|52|1.50');
@@ -15033,10 +15032,6 @@ window.__snowTests.push((t) => {
   })());
 });
 
-// Fog extras (clearing / gap fill / RFI) supplied by fog-extras.js, when present.
-window.__snowTests.push((t) => {
-  if (window.FOG_EXTRAS && typeof window.FOG_EXTRAS.selftests === 'function') window.FOG_EXTRAS.selftests(t);
-});
 
 window.addEventListener('load', () => {
   if (!/(\?|&)selftest\b/.test(location.search)) return;
@@ -15054,6 +15049,5 @@ window.addEventListener('load', () => {
   console.log(window.__SELFTEST_RESULT);
 });
 </script>
-<script src="fog-extras.js"></script>
 </body>
 </html>
