@@ -1,6 +1,6 @@
 # Fog / Haze / Mist Mode + Party Blower War (v3.7.0) — spec + plan
 
-**Date:** 2026-10-10 · **Status:** design approved; fog impact ladder pending approval
+**Date:** 2026-10-10 · **Status:** design approved; fog impact ladder approved 2026-10-10
 **Next release:** Wind mode + Kite War = v3.8.0 (separate spec, after this ships).
 
 ## 1. Fog mode
