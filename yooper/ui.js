@@ -1203,8 +1203,8 @@ window.YOOPER.UI = Object.assign(window.YOOPER.UI || {}, {
 
 // Context overrides: the same English word reads differently depending on where it sits.
 window.YOOPER.UI_CTX = Object.assign(window.YOOPER.UI_CTX || {}, {
-  // snow-resilience ladder and pills (how well a town handles snow)
-  '#resilienceLadder, .res-pill, .gf-impact-pill[class*=" res-"], .city-meta, #gapFillResults .gf-impact-pill': {
+  // snow-resilience pills (how well a town handles snow)
+  '.res-pill, .gf-impact-pill[class*=" res-"], .city-meta, #gapFillResults .gf-impact-pill': {
     'Extreme': 'Houghton Tough', 'Moderate': "Gettin' By", 'Minimal': 'Barely a Shovel',
     'Trace': 'One Shovel in Town', 'None': 'No Choppers, No Chook', 'Low': 'Troll Country',
     'Unknown': 'Who Knows'

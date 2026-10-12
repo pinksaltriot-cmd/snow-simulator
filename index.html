@@ -10,7 +10,7 @@
     font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
     background: linear-gradient(135deg, #0b1a3e 0%, #1a3a6e 40%, #2d5a8e 100%);
     color: #e8edf5; min-height: 100vh;
-    padding: 24px 154px;
+    padding: 24px;
   }
   h1 { text-align: center; font-size: 2rem; margin-bottom: 4px; letter-spacing: -0.5px; }
   .subtitle { text-align: center; opacity: 0.6; font-size: 0.85rem; margin-bottom: 28px; }
@@ -642,64 +642,9 @@
     .war-row .wt-depth { min-width: 62px; font-size: 0.68rem; }
   }
 
-  /* Color-coded tier ladders anchored to the viewport margins */
-  .tier-ladder {
-    position: fixed; top: 0; bottom: 0;
-    width: 138px; z-index: 5;
-    padding: 14px 8px;
-    overflow-y: auto;
-    font-size: 0.62rem;
-    line-height: 1.1;
-    background: rgba(8,14,32,0.55);
-    backdrop-filter: blur(6px);
-    display: flex; flex-direction: column; gap: 2px;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(255,255,255,0.2) transparent;
-  }
-  .tier-ladder::-webkit-scrollbar { width: 6px; }
-  .tier-ladder::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
-  .tier-ladder.left  { left: 0;  border-right: 1px solid rgba(255,255,255,0.08); }
-  .tier-ladder.right { right: 0; border-left:  1px solid rgba(255,255,255,0.08); }
-  .ladder-title {
-    text-align: center; font-size: 0.66rem; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 1.2px;
-    color: #e8edf5; opacity: 0.85;
-    padding: 4px 2px 8px; position: sticky; top: 0;
-    background: rgba(8,14,32,0.85); backdrop-filter: blur(4px);
-    border-bottom: 1px solid rgba(255,255,255,0.08);
-    margin-bottom: 4px;
-  }
-  .ladder-item {
-    padding: 4px 6px; border-radius: 5px;
-    text-align: center; font-weight: 600;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    font-size: 0.62rem; letter-spacing: 0.2px;
-  }
-
-  /* Shrink ladders + content padding in lockstep on narrower viewports
-     so the ladders remain visible no matter the screen width. */
-  @media (max-width: 1180px) {
-    body { padding: 24px 124px; }
-    .tier-ladder { width: 112px; font-size: 0.58rem; padding: 12px 6px; }
-    .ladder-item { font-size: 0.58rem; padding: 3px 4px; }
-  }
-  @media (max-width: 900px) {
-    body { padding: 20px 92px; }
-    .tier-ladder { width: 84px; font-size: 0.54rem; padding: 10px 4px; }
-    .ladder-title { font-size: 0.58rem; letter-spacing: 0.8px; padding: 4px 2px 6px; }
-    .ladder-item { font-size: 0.54rem; padding: 3px 3px; border-radius: 4px; }
-  }
+  /* Content padding on narrower viewports */
   @media (max-width: 640px) {
-    body { padding: 16px 64px; }
-    .tier-ladder { width: 58px; padding: 8px 3px; }
-    .ladder-title { font-size: 0.5rem; letter-spacing: 0.3px; }
-    .ladder-item { font-size: 0.48rem; padding: 2px 2px; letter-spacing: 0; }
-  }
-  @media (max-width: 420px) {
-    body { padding: 14px 48px; }
-    .tier-ladder { width: 44px; padding: 6px 2px; }
-    .ladder-title { font-size: 0.46rem; }
-    .ladder-item { font-size: 0.44rem; padding: 2px 1px; }
+    body { padding: 16px; }
   }
   /* Heat Index Mode */
   .heat-num { width: 130px; }
@@ -858,168 +803,16 @@
   .impact-sev15 { background: #1e1b4b; color: #c7d2fe; }
   .impact-sev16 { background: #000; color: #a78bfa; }
   /* Yoopanese names run longer than the English ones: wrap them instead of clipping. */
-  html[data-lang="yooper"] .tier-ladder .ladder-item { white-space: normal; text-overflow: clip; line-height: 1.15; }
 </style>
 </head>
 <body>
 <div class="snowflakes" id="snowflakes"></div>
 
-<aside class="tier-ladder left" id="resilienceLadder" aria-label="Resilience tier ladder">
-  <div class="ladder-title">Resilience</div>
-  <div class="ladder-item res-absolute-zero">Absolute Zero</div>
-  <div class="ladder-item res-cryogenic">Cryogenic</div>
-  <div class="ladder-item res-transcendent">Transcendent</div>
-  <div class="ladder-item res-mythic">Mythic</div>
-  <div class="ladder-item res-cosmic">Cosmic</div>
-  <div class="ladder-item res-legendary">Legendary</div>
-  <div class="ladder-item res-extreme-res">Extreme</div>
-  <div class="ladder-item res-elite">Elite</div>
-  <div class="ladder-item res-very-high-plus">Very High+</div>
-  <div class="ladder-item res-very-high">Very High</div>
-  <div class="ladder-item res-high-plus">High+</div>
-  <div class="ladder-item res-high">High</div>
-  <div class="ladder-item res-above-avg-plus">Above Avg+</div>
-  <div class="ladder-item res-above-avg">Above Avg</div>
-  <div class="ladder-item res-moderate-plus">Moderate+</div>
-  <div class="ladder-item res-moderate">Moderate</div>
-  <div class="ladder-item res-below-avg-plus">Below Avg+</div>
-  <div class="ladder-item res-below-avg">Below Avg</div>
-  <div class="ladder-item res-low-plus">Low+</div>
-  <div class="ladder-item res-low">Low</div>
-  <div class="ladder-item res-very-low-plus">Very Low+</div>
-  <div class="ladder-item res-very-low">Very Low</div>
-  <div class="ladder-item res-minimal-plus">Minimal+</div>
-  <div class="ladder-item res-minimal">Minimal</div>
-  <div class="ladder-item res-trace-res">Trace</div>
-  <div class="ladder-item res-near-zero">Near Zero</div>
-  <div class="ladder-item res-virtually-none">Virtually None</div>
-  <div class="ladder-item res-none">None</div>
-  <div class="ladder-item res-subtropical">Subtropical</div>
-  <div class="ladder-item res-tropical-margin">Tropical Margin</div>
-  <div class="ladder-item res-outer-tropical">Outer Tropical</div>
-  <div class="ladder-item res-tropical">Tropical</div>
-  <div class="ladder-item res-deep-tropical">Deep Tropical</div>
-  <div class="ladder-item res-equatorial">Equatorial</div>
-
-  <div class="ladder-title" style="margin-top:14px">Rain Resilience</div>
-  <div class="ladder-item res-rain-mariana">Mariana Trench</div>
-  <div class="ladder-item res-rain-monsoon">Monsoon Forge</div>
-  <div class="ladder-item res-rain-hurricane">Hurricane Coast</div>
-  <div class="ladder-item res-rain-cyclone">Cyclone Hardened</div>
-  <div class="ladder-item res-rain-bayou">Bayou Adapted</div>
-  <div class="ladder-item res-rain-subtropwet">Gulf Saturated</div>
-  <div class="ladder-item res-rain-humid">Humid Coastal</div>
-  <div class="ladder-item res-rain-wettemp">Drip-Tested</div>
-  <div class="ladder-item res-rain-above-avg">Sodden</div>
-  <div class="ladder-item res-rain-average">Soaked Standard</div>
-  <div class="ladder-item res-rain-mild-wet">Damp Belt</div>
-  <div class="ladder-item res-rain-modest">Mistlands</div>
-  <div class="ladder-item res-rain-light">Dryweather</div>
-  <div class="ladder-item res-rain-semiarid">Semi-Arid</div>
-  <div class="ladder-item res-rain-steppe">Steppe</div>
-  <div class="ladder-item res-rain-arid">Arid</div>
-  <div class="ladder-item res-rain-desert">Desert</div>
-  <div class="ladder-item res-rain-hyper-arid">Hyper-Arid</div>
-  <div class="ladder-item res-rain-atacama">Atacama-Class</div>
-</aside>
-
-<aside class="tier-ladder right" id="impactLadder" aria-label="Impact tier ladder">
-  <div class="ladder-title">Impact</div>
-  <div class="ladder-item impact-omega-point">Omega Point Frost</div>
-  <div class="ladder-item impact-white-void">The White Void</div>
-  <div class="ladder-item impact-cosmic-entropy">Cosmic Snow Entropy</div>
-  <div class="ladder-item impact-singularity">Big Freeze Singularity</div>
-  <div class="ladder-item impact-heat-death">Heat Death of Snow</div>
-  <div class="ladder-item impact-omega">Snowpocalypse Omega</div>
-  <div class="ladder-item impact-mythic-deluge">Mythic Deluge</div>
-  <div class="ladder-item impact-biblical">Biblical</div>
-  <div class="ladder-item impact-cryogenesis">Planetary Cryogenesis</div>
-  <div class="ladder-item impact-planet-killer">Planet Killer</div>
-  <div class="ladder-item impact-world-ender">World-Ender</div>
-  <div class="ladder-item impact-extinction">Extinction Event</div>
-  <div class="ladder-item impact-glacial-epoch">Glacial Epoch</div>
-  <div class="ladder-item impact-ice-age">Ice Age Onset</div>
-  <div class="ladder-item impact-post-civilization">Post-Civilization</div>
-  <div class="ladder-item impact-civilization-ender">Civilization Ender</div>
-  <div class="ladder-item impact-dystopian">Dystopian</div>
-  <div class="ladder-item impact-apocalyptic">Apocalyptic</div>
-  <div class="ladder-item impact-historic-impact">Historic</div>
-  <div class="ladder-item impact-paralysis">City Paralysis</div>
-  <div class="ladder-item impact-calamitous">Calamitous</div>
-  <div class="ladder-item impact-catastrophic">Catastrophic</div>
-  <div class="ladder-item impact-cataclysmic">Cataclysmic</div>
-  <div class="ladder-item impact-extreme">Extreme</div>
-  <div class="ladder-item impact-devastating">Devastating</div>
-  <div class="ladder-item impact-crippling">Crippling</div>
-  <div class="ladder-item impact-dire">Dire</div>
-  <div class="ladder-item impact-major">Major</div>
-  <div class="ladder-item impact-oppressive">Oppressive</div>
-  <div class="ladder-item impact-severe">Severe</div>
-  <div class="ladder-item impact-grave">Grave</div>
-  <div class="ladder-item impact-significant">Significant</div>
-  <div class="ladder-item impact-high-impact">High Impact</div>
-  <div class="ladder-item impact-considerable">Considerable</div>
-  <div class="ladder-item impact-notable-impact">Notable</div>
-  <div class="ladder-item impact-moderate">Moderate</div>
-  <div class="ladder-item impact-mild">Mild</div>
-  <div class="ladder-item impact-minor">Minor</div>
-  <div class="ladder-item impact-light-impact">Light</div>
-  <div class="ladder-item impact-very-light">Very Light</div>
-  <div class="ladder-item impact-minimal">Minimal</div>
-  <div class="ladder-item impact-negligible">Negligible</div>
-  <div class="ladder-item impact-trace-impact">Trace</div>
-  <div class="ladder-item impact-dusting">Dusting</div>
-  <div class="ladder-item impact-none-impact">None</div>
-
-  <div class="ladder-title" style="margin-top:14px">Rain Impact</div>
-  <div class="ladder-item impact-rain-omega-flood">Ocean Singularity</div>
-  <div class="ladder-item impact-rain-cosmic-deluge">Cosmic Deluge Entropy</div>
-  <div class="ladder-item impact-rain-abyssal">Abyssal Epoch</div>
-  <div class="ladder-item impact-rain-panthalassa">Panthalassa Reborn</div>
-  <div class="ladder-item impact-rain-floodpoc-omega">Floodpocalypse Omega</div>
-  <div class="ladder-item impact-rain-mythic-deluge">Antediluvian Cataclysm</div>
-  <div class="ladder-item impact-rain-biblical">Noachian Flood</div>
-  <div class="ladder-item impact-rain-hydrosphere">Hydrosphere Failure</div>
-  <div class="ladder-item impact-rain-tethys">Tethys Resurgence</div>
-  <div class="ladder-item impact-rain-inland-sea">Inland Sea Onset</div>
-  <div class="ladder-item impact-rain-post-civ">Drowned Era</div>
-  <div class="ladder-item impact-rain-civ-ender">Atlantis Event</div>
-  <div class="ladder-item impact-rain-dystopian">Aqualyptic Plunge</div>
-  <div class="ladder-item impact-rain-harvey">Harvey-Class</div>
-  <div class="ladder-item impact-rain-apocalyptic">Drowning of Records</div>
-  <div class="ladder-item impact-rain-historic">Centurial Surge</div>
-  <div class="ladder-item impact-rain-submersion">Aquapolis</div>
-  <div class="ladder-item impact-rain-submetro">Submerged Metro</div>
-  <div class="ladder-item impact-rain-calamitous">Riverine Wrath</div>
-  <div class="ladder-item impact-rain-catastrophic">Maelstrom</div>
-  <div class="ladder-item impact-rain-devastating">Cataract</div>
-  <div class="ladder-item impact-rain-critical">Overspill</div>
-  <div class="ladder-item impact-rain-severe-flood">Deluge</div>
-  <div class="ladder-item impact-rain-quagmire">Quagmire</div>
-  <div class="ladder-item impact-rain-major-flood">Inundation</div>
-  <div class="ladder-item impact-rain-flash">Torrent</div>
-  <div class="ladder-item impact-rain-flood-watch">Surge Watch</div>
-  <div class="ladder-item impact-rain-gully">Gully Washer</div>
-  <div class="ladder-item impact-rain-drenching">Cloudburst</div>
-  <div class="ladder-item impact-rain-heavy">Downpour</div>
-  <div class="ladder-item impact-rain-soaking">Sluice</div>
-  <div class="ladder-item impact-rain-notable">Wet Cycle</div>
-  <div class="ladder-item impact-rain-moderate">Splash Zone</div>
-  <div class="ladder-item impact-rain-steady">Steady Rain</div>
-  <div class="ladder-item impact-rain-light">Steady Drip</div>
-  <div class="ladder-item impact-rain-light">Pitter-Patter</div>
-  <div class="ladder-item impact-rain-lshower">Light Shower</div>
-  <div class="ladder-item impact-rain-drizzle">Drizzle</div>
-  <div class="ladder-item impact-rain-sprinkle">Spitting</div>
-  <div class="ladder-item impact-rain-trace">Mist</div>
-  <div class="ladder-item impact-rain-dew">Dewfall</div>
-  <div class="ladder-item impact-rain-none">Bone Dry</div>
-</aside>
 
 <div class="container">
   <div style="text-align:right;margin-bottom:-6px"><span id="grandBadge" class="grand-badge" style="display:none" title="Beat all five Storm Architect levels">🏅 Grand Architect of Storms</span> <button type="button" id="challengeBtn" class="btn-clear">🏆 Challenge</button> <button type="button" id="langToggle" class="btn-clear" data-noyoop>🗣️ Yoopanese</button></div>
   <h1 id="appTitle">Snow Event Profile Maker 3.8.0</h1>
-  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">16548 lines of code</p>
+  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">16338 lines of code</p>
   <p class="subtitle">Powered by real NOAA RSI methodology with location-based impact scaling</p>
 
   <div class="card">
@@ -13872,7 +13665,7 @@ SNOWSIM.CHALLENGE = (function () {
     severe: { input: 'severe',   icon: '⛈️', name: 'Severe', btn: 'severeGenerateBtn', pool: 'windMph', unit: 'mph of gust + tornado' }
   };
   C.SNOW_DATE = '2027-01-15T06:00';
-  // getImpact's levels, lowest first (the self-test holds this to #impactLadder).
+  // getImpact's levels, lowest first.
   C.SNOW_LADDER = ['None', 'Dusting', 'Trace', 'Negligible', 'Minimal', 'Very Light', 'Light', 'Minor', 'Mild', 'Moderate',
     'Notable', 'Considerable', 'High Impact', 'Significant', 'Grave', 'Severe', 'Oppressive', 'Major', 'Dire', 'Crippling',
     'Devastating', 'Extreme', 'Cataclysmic', 'Catastrophic', 'Calamitous', 'City Paralysis', 'Historic', 'Apocalyptic',
@@ -16112,11 +15905,8 @@ window.__snowTests.push((t) => {
   t('CH average and letter', avg.score === 85 && avg.grade === 'B' && avg.pass);
   t('CH letter cutoffs', [90, 89.9, 80, 70, 69.9, 60, 59].map(C.letter).join('') === 'ABBCDDF');
   t('CH grade is pure', JSON.stringify(C.grade(mk([{ kind: 'worst', value: 'Severe Storm' }]), R('Rumble'))) === JSON.stringify(C.grade(mk([{ kind: 'worst', value: 'Severe Storm' }]), R('Rumble'))));
-  // The snow ladder is getImpact's, in the same order as the page's impact ladder.
-  const items = [...document.querySelectorAll('#impactLadder > *')];
-  const stop = items.findIndex((e, i) => i > 0 && e.classList.contains('ladder-title'));
-  const dom = items.slice(1, stop).map(e => e.textContent).reverse();
-  t('CH snow ladder matches #impactLadder', dom.join('|') === C.SNOW_LADDER.join('|'));
+  // The snow ladder is getImpact's level list, lowest first, with no repeats.
+  t('CH snow ladder is 45 unique levels from None', C.SNOW_LADDER.length === 45 && new Set(C.SNOW_LADDER).size === 45 && C.SNOW_LADDER[0] === 'None');
   // Budget
   const bb = { mode: 'heat', budget: { maxCities: 2, minCities: 2, pool: 20, poolKind: 'heatF' } };
   t('CH heat pool counts °F above 80', C.poolUsed('heat', [{ temp: 95 }, { temp: 70 }, { temp: 85 }]) === 20);
