@@ -224,7 +224,7 @@ window.YOOPER.UI = Object.assign(window.YOOPER.UI || {}, {
   "Ocean Singularity": "Gitche Gumee Singularity",
   "Final hydric singularity; every molecule of water joined into one event.": "Final hydric singularity; every molecule of water joined into one big event.",
   "∞ flood days; end of all narrative.": "∞ flood days; end of all da stories, ya know.",
-  "Snow Event Profile Maker 3.7.0": "Da Snow Event Profile Maker, Eh? 3.7.0",
+  "Snow Event Profile Maker 3.8.0": "Da Snow Event Profile Maker, Eh? 3.8.0",
   "Powered by real NOAA RSI methodology with location-based impact scaling": "Runs on da real NOAA RSI method, scaled for how tough yer town is",
   "Resilience": "How Tough Ya Are",
   "Rain Resilience": "How Tough Ya Are in Rain",

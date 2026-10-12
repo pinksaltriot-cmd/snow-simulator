@@ -541,15 +541,15 @@ window.YOOPER.KITE_WAR_TIERS = Object.assign(window.YOOPER.KITE_WAR_TIERS || {},
  },
  "Massed Launch Ranks": {
   "label": "Massed Launch Ranks, Eh",
-  "desc": "Flyers quit workin’ alone an’ get bunched up into 2 ranks of 15 along da upwind windbreak, puttin’ kites up on a called count in a steady 32 mph wind. One big launch puts 30 lines across a 20-foot square of sky inside 2 seconds, which no one flyer ever managed, on account of a lone kite in dis wind gets tore or crossed before it even climbs. Gettin’ good enough takes 9 sessions, an’ about a third never get dere, mostly da ones who let go on da count instead of after it, ya know."
+  "desc": "Flyers quit workin’ alone an’ get bunched up into 2 ranks of 15 Launchers along da upwind windbreak, t’rowin’ on a called count into da 3-second lull behind every gust, steady 33 mph wit’ gusts to 51. One big launch puts 30 lines across a 20-foot square of sky inside 2 seconds, which no one flyer ever managed, on account of a lone kite in dis wind gets tore or crossed before it even climbs. Gettin’ good enough takes 9 sessions, an’ about a third never get dere, mostly da ones who let go on da count instead of after it, ya know."
  },
  "Launcher Corps": {
   "label": "Da Launcher Corps",
-  "desc": "Launchin’ turns into a trade wit’ its own crews: 9 operators in a rollin’ line along da upwind windbreak, every Launcher held down by its 2 tent stakes an’ t’rowin’ a fresh kite every 20 seconds. Togedder dey lay a solid 40-foot front of flyin’ kites over a bare strip of lawn everybody’s fightin’ over in under 4 minutes, in a 35 mph wind dat tears a paper diamond in about 3. Flyers grab deir lines off kites da Launchers t’rew now instead of off a runnin’ start, an’ da lucky gust ain’t da only supplier no more, eh."
+  "desc": "Launchin’ turns into a trade wit’ its own crews: 9 operators in a rollin’ line along da upwind windbreak, every Launcher held down by its 2 tent stakes an’ t’rowin’ a fresh sled kite every 20 seconds, timed to da lulls. Togedder dey lay a solid 40-foot front of flyin’ kites over a bare strip of lawn everybody’s fightin’ over in under 4 minutes, in gusts to 52 mph dat tear a sled kite in about 3 minutes. Flyers grab deir lines off kites da Launchers t’rew now instead of off a runnin’ start, an’ da lucky gust ain’t da only supplier no more, eh."
  },
  "The First Kite Engine": {
   "label": "Da First Kite Engine",
-  "desc": "Da first engine gets put togedder from a 4-foot box kite made of dowels an’ a bedsheet, a fence post, an’ 4 bungee cords took widout askin’ an’ missed inside a day, tied in as a shock absorber between da line an’ da post. Anchored like dat, it carries a waxed cutter line 110 feet downwind in a 38 mph gale, about triple da reach of anyt’ing flown by hand, den falls apart on da second big gust. Puttin’ it togedder took 2 hours an’ 5 people, an’ nobody holds da line, nope."
+  "desc": "Da first engine gets put togedder from a 4-foot box kite made of dowels an’ a bedsheet, a fence post, an’ 4 bungee cords took widout askin’ an’ missed inside a day, tied in as a shock absorber between da line an’ da post. Anchored like dat, an’ flown from da lee of da windbreak, it carries a waxed cutter line 110 feet downwind in gusts to 52 mph, about triple da 40 feet a Launcher t’rows, den falls apart on da second big gust. Puttin’ it togedder took 2 hours an’ 5 people, an’ nobody holds da line, nope."
  },
  "Launcher Liaison": {
   "label": "Da Launcher Runner",
@@ -561,15 +561,15 @@ window.YOOPER.KITE_WAR_TIERS = Object.assign(window.YOOPER.KITE_WAR_TIERS || {},
  },
  "Windsock Tower": {
   "label": "Da Windsock Tower",
-  "desc": "A tower of stacked pallets stands up 12 feet next to da works, 6 feet square at da bottom an’ 3 at da top, wit’ a platform for 1 spotter clipped to da rail wit’ a dog leash an’ 3 windsocks at 4, 8, an’ 12 feet. From up dere da spotter can see every kite on da block an’ hollers corrections down to da engines. Da first tower, built straight up, gets shoved over by a 41 mph gust on day 2. Da second one’s tapered, guyed on 4 sides, an’ stands 19 days, eh."
+  "desc": "A tower of stacked pallets stands up 12 feet next to da works, 6 feet square at da bottom an’ 3 at da top, wit’ a platform for 1 spotter clipped to da rail wit’ a dog leash an’ 3 windsocks at 4, 8, an’ 12 feet. From up dere da spotter can see every kite on da block an’ hollers corrections down to da engines. Da first tower, built straight up, gets shoved over by a 53 mph gust on day 2. Da second one’s tapered, guyed on 4 sides, an’ stands 19 days, eh."
  },
  "Counter-Battery Kites": {
   "label": "Counter-Battery Kites",
-  "desc": "Engines get flown now just to cut da lines of udder engines, at reaches out to 140 feet downwind. Four are workin’ across da block, an’ 3 get cut loose inside a week, 2 of ’em by udder engines an’ 1 by a 46 mph gust nobody can take credit for. Da middle-of-da-road life of a kite engine drops to 9 flights. A cut box kite in a gale don’t come down anywhere close, ya know; da record’s 3 blocks, into a church parkin’ lot."
+  "desc": "Engines get flown now just to cut da lines of udder engines, at reaches out to 140 feet downwind. Four are workin’ across da block, an’ 3 get cut loose inside a week, 2 of ’em by udder engines an’ 1 by a 54 mph gust nobody can take credit for. Da middle-of-da-road life of a kite engine drops to 9 flights. A cut box kite in a gale don’t come down anywhere close, ya know; da record’s 3 blocks, into a church parkin’ lot."
  },
  "Launch-and-Catch Cycle": {
   "label": "Launch-an’-Catch Cycle",
-  "desc": "Da two trades get hooked togedder official: a Launcher crew t’rows a fresh kite, a flyer grabs da line inside 3 seconds while da kite’s still climbin’, an’ tore kites go right back to da patchin’ table. Launches get better, an’ ya can measure it, on account of a kite caught at 3 seconds holds its climb in a 35 mph wind, while one caught at 10 already fell off da wind an’ got dragged 30 feet across da lawn on its face. Output per person per day about doubles an’ don’t drop again, eh."
+  "desc": "Da two trades get hooked togedder official: a Launcher crew t’rows a fresh kite, a flyer grabs da line inside 3 seconds while da kite’s still climbin’, an’ tore kites go right back to da patchin’ table. Launches get better, an’ ya can measure it, on account of a kite caught at 3 seconds holds its climb in da lull behind a 50 mph gust, while one caught at 10 already fell off da wind an’ got dragged 30 feet across da lawn on its face. Output per person per day about doubles an’ don’t drop again, eh."
  },
  "Deadman Box Kite": {
   "label": "Da Deadman Box Kite",
@@ -577,7 +577,7 @@ window.YOOPER.KITE_WAR_TIERS = Object.assign(window.YOOPER.KITE_WAR_TIERS || {},
  },
  "Kite Factory": {
   "label": "Da Kite Factory",
-  "desc": "A real production line opens up in a garage wit’ a foreman an’ 6 workers cuttin’ 30-inch paper diamonds, gluin’ spars, an’ tyin’ bridles. Dey turn out 60 to 90 kites an hour, da stockpile passes 2,000, an’ every kite gets checked for a square spar, a centered bridle, an’ a fit in da 10-by-14-inch Launcher cradle before it goes in a bin weighed down wit’ bricks. About 1 in 8 gets tossed. Da rejects go to da littlest kids, who fly ’em anyhow, for a little while, eh."
+  "desc": "A real production line opens up in a garage wit’ a foreman an’ 6 workers cuttin’ small sled kites outta heavy kraft paper, gluin’ spars, an’ tyin’ bridles, on account of nuttin’ bigger survives da t’row in dis wind. Dey turn out 60 to 90 kites an hour, da stockpile passes 2,000, an’ every kite gets checked for 2 straight spars, a centered bridle, an’ a fit in da 10-by-14-inch Launcher cradle before it goes in a bin weighed down wit’ bricks. About 1 in 8 gets tossed. Da rejects go to da littlest kids, who fly ’em anyhow, for a little while, eh."
  },
  "Relaunch Line": {
   "label": "Da Relaunch Line",
@@ -585,11 +585,11 @@ window.YOOPER.KITE_WAR_TIERS = Object.assign(window.YOOPER.KITE_WAR_TIERS || {},
  },
  "Kite Engine Shops": {
   "label": "Kite Engine Shops",
-  "desc": "Engines quit gettin’ built where dey get flown: 2 shops get set up in garages behind da line, holdin’ box-kite frames, spare spars, bedsheet sails, an’ cut surgical tubin’ for da Launchers. Buildin’ one drops from 9 hours to 3, an’ an engine dat comes back tore up gets rebuilt instead of written off. Spares on hand run to 4 whole frames an’ 60 feet of tubin’. Da garage doors stay shut, on account of if ya open one into a 40 mph wind it turns into a kite itself, eh."
+  "desc": "Engines quit gettin’ built where dey get flown: 2 shops get set up in garages behind da line, holdin’ box-kite frames, spare spars, bedsheet sails, an’ cut surgical tubin’ for da Launchers. Buildin’ one drops from 9 hours to 3, an’ an engine dat comes back tore up gets rebuilt instead of written off. Spares on hand run to 4 whole frames an’ 60 feet of tubin’. Da garage doors stay shut, on account of if ya open one into a 52 mph gust it turns into a kite itself, eh."
  },
  "The Launcher Works": {
   "label": "Da Launcher Works",
-  "desc": "A works gets set up to turn Launcher uprights outta ash instead of cuttin’ ’em from pine 2×2s, on account of pine snaps at da knot when a 60-inch draw meets a 44 mph gust, an’ dat gust is da whole operatin’ condition. Output goes from 4 Launchers a week to 60, every one still 4 feet tall wit’ uprights 30 inches apart. Da material gets decided once, by somebody who hangs a bucket of sand off 2 samples till one breaks, an’ nobody ever brings it up again. Da tubin’ still rots out every season, an’ no works can fix dat, nope."
+  "desc": "A works gets set up to turn Launcher uprights outta ash instead of cuttin’ ’em from pine 2×2s, on account of pine snaps at da knot when a 60-inch draw meets a 55 mph gust, an’ dat gust is da whole operatin’ condition. Output goes from 4 Launchers a week to 60, every one still 4 feet tall wit’ uprights 30 inches apart. Da material gets decided once, by somebody who hangs a bucket of sand off 2 samples till one breaks, an’ nobody ever brings it up again. Da tubin’ still rots out every season, an’ no works can fix dat, nope."
  },
  "Spar and Paper Sources": {
   "label": "Spar an’ Paper Sources",
@@ -597,7 +597,7 @@ window.YOOPER.KITE_WAR_TIERS = Object.assign(window.YOOPER.KITE_WAR_TIERS || {},
  },
  "Bale Casemates": {
   "label": "Bale Casemates",
-  "desc": "Windbreaks are 4 feet t’ick now, enough to hollow out, so flyin’ rooms get cut right into da wall itself: roofed rooms 6 feet wide wit’ an 18-inch-square port facin’ downwind. A crew works an anchored line from inside, outta da 42 mph wind, wit’ 3 feet of bales overhead. Eleven get cut along da main front in a week. Engine crews lost to counter-battery drop by two thirds, an’ every room fills up wit’ chaff an’ grit exactly da way da keep does, ya know."
+  "desc": "Windbreaks are 4 feet t’ick now, enough to hollow out, so flyin’ rooms get cut right into da wall itself: roofed rooms 6 feet wide wit’ an 18-inch-square port facin’ downwind. A crew works an anchored line from inside, outta gusts to 55 mph, wit’ 3 feet of bales overhead. Eleven get cut along da main front in a week. Engine crews lost to counter-battery drop by two thirds, an’ every room fills up wit’ chaff an’ grit exactly da way da Shed Keep does, ya know."
  },
  "Ranging Tape": {
   "label": "Rangin’ Tape",
@@ -609,7 +609,7 @@ window.YOOPER.KITE_WAR_TIERS = Object.assign(window.YOOPER.KITE_WAR_TIERS || {},
  },
  "The Four-Block Windbreak": {
   "label": "Da Four-Block Windbreak",
-  "desc": "Da fight’s outgrown one block an’ runs across 4 now, about 2,000 feet of front everybody’s fightin’ over, under a nort’west wind dat’s blown 30 to 45 mph for 3 days behind a cold front. Da main windbreak gets beefed up to bales an’ snow fence 6 feet high, 3 feet t’ick, an’ 220 feet long, 1 to each two-fort alliance; 3 alliances put 660 feet of da front behind it. Da territory gets mapped on notebook paper by 1 person a side an’ fixed up every time da wind shifts, about 9 times a day. Over 60 are in it now, an’ dere’s about 1 engine every 400 feet of front, ya know."
+  "desc": "Da fight’s outgrown one block an’ runs across 4 now, about 2,000 feet of front everybody’s fightin’ over, under a nort’west wind dat’s blown a steady 30 to 40 mph, gustin’ to 56, for 3 days behind a cold front. Da main windbreak gets beefed up to bales an’ snow fence 6 feet high, 3 feet t’ick, an’ 220 feet long, 1 to each two-fort alliance; 3 alliances put 660 feet of da front behind it. Da territory gets mapped on notebook paper by 1 person a side an’ fixed up every time da wind shifts, about 9 times a day. Over 60 are in it now, an’ dere’s about 1 engine every 400 feet of front, ya know."
  },
  "Launcher Reconnaissance": {
   "label": "Launcher Scoutin’",
@@ -625,7 +625,7 @@ window.YOOPER.KITE_WAR_TIERS = Object.assign(window.YOOPER.KITE_WAR_TIERS || {},
  },
  "Counter-Launcher Fire": {
   "label": "Counter-Launcher Fire",
-  "desc": "Batteries start rangin’ on Launcher crews like dey’re a target all deir own, figurin’ a front dat can’t relaunch can’t hang onto its sky. It’s da first time in da war da gear’s worth more dan da ground. Launchers lost in da first mont’ come to 31, mostly tubin’ cut by cutter lines an’ 1 cradle tore right off its drawer slide an’ carried over 2 fences by a 47 mph gust, an’ every one gets replaced from da works inside a week, eh."
+  "desc": "Batteries start rangin’ on Launcher crews like dey’re a target all deir own, figurin’ a front dat can’t relaunch can’t hang onto its sky. It’s da first time in da war da gear’s worth more dan da ground. Launchers lost in da first mont’ come to 31, mostly tubin’ cut by cutter lines an’ 1 cradle tore right off its drawer slide an’ carried over 2 fences by a 56 mph gust, an’ every one gets replaced from da works inside a week, eh."
  },
  "Continuous Cutting": {
   "label": "Cuttin’ Nonstop",
@@ -657,7 +657,7 @@ window.YOOPER.KITE_WAR_TIERS = Object.assign(window.YOOPER.KITE_WAR_TIERS || {},
  },
  "Mobile Kite Batteries": {
   "label": "Kite Batteries on Wheels",
-  "desc": "Engines get mounted on wagons loaded wit’ 600 pounds of sandbags instead of a buried deadman, an’ moved every night, 4 to a battery, so no anchor spot gets used twice. Movin’ takes 20 minutes in da dark an’ cuts counter-battery losses by t’ree quarters. Da catch is aim: da first flight from a new spot comes down 60 feet off on average, sometimes across a power line, which is da one place da rules say ya leave a kite right where it is an’ call da utility, nope, don’t touch it."
+  "desc": "Engines get mounted on wagons loaded wit’ 600 pounds of sandbags instead of a buried deadman, an’ moved every night, 4 to a battery, so no anchor spot gets used twice. Movin’ takes 20 minutes in da dark an’ cuts counter-battery losses by t’ree quarters. Da catch is aim: da first flight from a new spot comes down 60 feet off on average, which is why every new spot gets paced off at least 100 feet from da nearest power line before one stake goes in, yah."
  },
  "Forward Windbreaks": {
   "label": "Forward Windbreaks",
@@ -673,11 +673,11 @@ window.YOOPER.KITE_WAR_TIERS = Object.assign(window.YOOPER.KITE_WAR_TIERS || {},
  },
  "Gale Conscription": {
   "label": "Gale Draft",
-  "desc": "Gettin’ in da war ain’t voluntary no more. Every household across 4 blocks gets counted at 1 body per 2 kids, which makes a roll of 140. Ya get out of it for bein’ hurt, for weighin’ under 60 pounds after 3 of ’em get blown flat at da muster spot, an’ for da 11 crews already workin’ engines. About 70 percent show up, droppin’ to 50 on days da gusts go over 45 mph, eh."
+  "desc": "Gettin’ in da war ain’t voluntary no more. Every household across 4 blocks gets counted at 1 body per 2 kids, which makes a roll of 140. Ya get out of it for bein’ hurt, for weighin’ under 60 pounds after 3 of ’em get blown flat at da muster spot, an’ for da 11 crews already workin’ engines. About 70 percent show up, droppin’ to 50 on days da gusts go over 55 mph, eh."
  },
  "Heavy Box Kites": {
   "label": "Heavy Box Kites",
-  "desc": "Heavy engines get scaled up to 12-foot box kites dat pull about 400 pounds in a 45 mph gale, on 400 feet of 1,000-pound-test line wound on a boat winch an’ staked down by a crew of 9. Dey reach 400 feet downwind, an’ one sweep of da line drops every lighter kite it crosses. Two get built, an’ each one ties up its crew a whole day every time it moves. Da one rule nobody breaks: no bare hand ever touches dat line, nope."
+  "desc": "Heavy engines get scaled up to 12-foot box kites dat pull about 400 pounds in a 45 mph gale, on 400 feet of 1,000-pound-test line wound on a hand-cranked boat winch staked down by a crew of 9 in da lee of da main windbreak. Dey reach 400 feet downwind, an’ one sweep of da line drops every lighter kite it crosses. Two get built, an’ each one ties up its crew a whole day every time it moves. Da one rule nobody breaks: no bare hand ever touches dat line, nope."
  },
  "The Windbreaker Army": {
   "label": "Da Windbreaker Army",
@@ -989,23 +989,23 @@ window.YOOPER.KITE_WAR_TIERS = Object.assign(window.YOOPER.KITE_WAR_TIERS || {},
  },
  "The Lift Grid": {
   "label": "Da Lift Grid, Eh",
-  "desc": "Flyin’ gets planned as one big continuous system across da hegemony: numbered windbreaks of half-porous snow fence on steel posts every 50 feet, a Launcher in da lee of each one, 1 t’row per post per minute, an’ a standin’ canopy of kites held just under da wall-tops over 400,000 square miles. Da wind, which everybody calls da Blow now, ain’t dropped under 160 mph in 11 years, so da canopy’s exactly as high as da fences an’ not 1 inch higher, ya know. Wind turns into an input to da schedule instead of a source of weather. In an average year da grid puts more kites in da air dan da continent’s got birds, an’ dey report dat like it’s nuttin’."
+  "desc": "Flyin’ gets planned as one big continuous system across da hegemony: numbered windbreaks of half-porous snow fence on steel posts every 50 feet, a Launcher in da lee of each one, 1 t’row per post per minute, an’ a standin’ canopy of kites held just under da wall-tops over 400,000 square miles. Da wind, which everybody calls da Blow now, been runnin’ past da speed of sound at 775 mph fer 11 years, so da canopy’s exactly as high as da fences an’ not 1 inch higher, ya know. Wind turns into an input to da schedule instead of a source of weather. In an average year da grid puts more kites in da air dan da continent’s got birds, an’ dey report dat like it’s nuttin’."
  },
  "The Upwind Hegemony": {
   "label": "Da Upwind Hegemony",
-  "desc": "One outfit gets enough of a leg up to call da shots fer all da udders: 62 percent of da standin’ line crews an’ 70 percent of da cable capacity in da whole realm. Dey hold da upwind coast too, an’ in a 165 mph wind dat’s da same t’ing as holdin’ everybody downwind of it, eh. Da udder 4 states keep dere flags, dere spools, an’ none of dere foreign policy. Da deal holds 200 days."
+  "desc": "One outfit gets enough of a leg up to call da shots fer all da udders: 62 percent of da standin’ line crews an’ 70 percent of da cable capacity in da whole realm. Dey hold da upwind coast too, claimed in t’rows of 40 feet like everyt’ing else, an’ in a 790 mph wind dat’s da same t’ing as holdin’ everybody downwind of it, eh. Da udder 4 states keep dere flags, dere spools, an’ none of dere foreign policy. Da deal holds 200 days."
  },
  "The Lee City": {
   "label": "Da City in da Lee",
-  "desc": "Da hegemon’s capital gets built as one single windbreak so nuttin’ in it ever blows away: 1 wall of snow fence on steel posts backed wit’ plywood, 11 miles long an’ 900 feet tall, set square across da Blow. At 5 wall heights, its lee runs 4,500 feet deep, an’ 3 million folks live in it. Wit’ 170 mph on da upwind face, da lee holds at a breeze of 12 mph, da best flyin’ weather left anyplace on da planet, an’ da folks spend da whole first year flyin’ paper diamonds off da back porches, which nobody under 60 ever done before, ya know. Da biggest fuss on record is between districts over who gets da 12 mph an’ who gets stuck wit’ da 9, eh."
+  "desc": "Da hegemon’s capital gets built as one single windbreak so nuttin’ in it ever blows away: 1 wall of snow fence on steel posts backed wit’ plywood, 11 miles long an’ 900 feet tall, set square across da Blow. At 5 wall heights, its lee runs 4,500 feet deep, an’ 3 million folks live in it. Wit’ 800 mph on da upwind face, da lee holds at a breeze of 12 mph, da best flyin’ weather left anyplace on da planet, an’ da folks spend da whole first year flyin’ kites off da back porches, which nobody under 60 ever done before, ya know. Da biggest fuss on record is between districts over who gets da 12 mph an’ who gets stuck wit’ da 9, eh."
  },
  "The Launcher Fleet": {
   "label": "Da Launcher Fleet",
-  "desc": "Flyin’ gets sent out by sea: 1,100 ships haulin’ Launchers, crews, spare tubin’, an’ replacement cradles to any shore da hegemony wants to see kites over. At 175 mph every ship carries its own windbreak fer a bow wall, snow fence on steel posts backed wit’ plywood, an’ flies its kites in da lee behind it, never higher dan da wall-top, eh. When a fleet pulls in, everybody understands it’s sayin’ who owns da sky over da beach. Not one landin’ in 200 years gets opposed, ’cause opposin’ it would take a fleet, an’ dere’s 1 fleet."
+  "desc": "Flyin’ gets sent out by sea: 1,100 ships haulin’ Launchers, crews, spare tubin’, an’ replacement cradles to any shore da hegemony wants to see kites over. At 815 mph every ship carries its own windbreak fer a bow wall, snow fence on steel posts backed wit’ plywood, an’ flies its kites in da lee behind it, never higher dan da wall-top, eh. When a fleet pulls in, everybody understands it’s sayin’ who owns da sky over da beach. Not one landin’ in 200 years gets opposed, ’cause opposin’ it would take a fleet, an’ dere’s 1 fleet."
  },
  "The Still Archive": {
   "label": "Da Still Archive",
-  "desc": "A vault 40 feet down holds da whole record: 9,000 volumes, 300 wind charts, an’ da master spool census. It’s da only room in da realm where da air don’t move, an’ da archivists keep a feather on da readin’ table to prove it, ya know. Da Blow up on da surface overhead runs at 180 mph. Gettin’ in takes 2 keys held by different offices, an’ both get used every week, mostly by folks who just wanna hear demselves t’ink, eh."
+  "desc": "A vault 40 feet down holds da whole record: 9,000 volumes, 300 wind charts, an’ da master spool census. It’s da only room in da realm where da air don’t move, an’ da archivists keep a feather on da readin’ table to prove it, ya know. Da Blow up on da surface overhead runs at 830 mph. Gettin’ in takes 2 keys held by different offices, an’ both get used every week, mostly by folks who just wanna hear demselves t’ink, eh."
  },
  "The Cradle Vault": {
   "label": "Da Cradle Vault",
@@ -1013,43 +1013,43 @@ window.YOOPER.KITE_WAR_TIERS = Object.assign(window.YOOPER.KITE_WAR_TIERS || {},
  },
  "The Siege of the Lee Fort": {
   "label": "Da Siege of da Lee Fort",
-  "desc": "One windbreak fort gets surrounded an’ holds. Da besiegers put up a windbreak of dere own upwind, an’ da siege gets fought fer 840 days in da skinny strip where da 2 lees overlap, somewhere around 4 million cutter kites flown off 9 standin’ crank winches dat never once come down. Any kite dat gets up over eider wall-top meets da 190 mph Blow an’ lands about 4 miles downwind, usually on somebody neutral, ya know. Da siege outlasts da government dat ordered it. Da garrison rotates 11 times an’ da besiegers 9, an’ neider original commander’s around to see how it ends."
+  "desc": "One windbreak fort gets surrounded an’ holds. Da besiegers put up a windbreak of dere own upwind, an’ da siege gets fought fer 840 days in da skinny strip where da 2 lees overlap, somewhere around 4 million cutter kites flown off 9 standin’ crank winches dat never once come down. Any kite dat gets up over eider wall-top meets da 845 mph Blow an’ lands about 4 miles downwind, usually on somebody neutral, ya know. Da siege outlasts da government dat ordered it. Da garrison rotates 11 times an’ da besiegers 9, an’ neider original commander’s around to see how it ends."
  },
  "Perpetual Kite Engines": {
   "label": "Kite Engines Dat Never Come Down",
-  "desc": "Kite engines dat never once come down pass outta livin’ memory an’ into inheritance: 11 crank winches, da oldest holdin’ its kite in da lee of da same wall fer 240 years on a line dat gets replaced 1 strand at a time while it’s still flyin’. Over da wall-top da Blow never drops under 195 mph, so da whole trick is keepin’ a kite 1 foot under da edge fer a lifetime, eh. Crews get born into dere spots, handed a spool at birth, an’ trained up from age 6. Da splicin’ logs run longer dan da stories of da campaigns da winches got built fer."
+  "desc": "Kite engines dat never once come down pass outta livin’ memory an’ into inheritance: 11 crank winches, da oldest holdin’ its kite in da lee of da same wall fer 240 years on a line dat gets replaced 1 strand at a time while it’s still flyin’. Over da wall-top da Blow never drops under 860 mph, so da whole trick is keepin’ a kite 1 foot under da edge fer a lifetime, eh. Crews get born into dere spots, handed a spool at birth, an’ trained up from age 6. Da splicin’ logs run longer dan da stories of da campaigns da winches got built fer."
  },
  "Cathedral Launchers": {
   "label": "Cat’edral Launchers",
-  "desc": "Launchers get built right into da halls dey keep flyin’, uprights runnin’ up inside da pillars an’ cradles set into da roof, t’rowin’ a kite off every spire on a set cycle of 10 at dawn. Nobody pulls ’em back; da tubin’ gets stretched by a roof vane dat da 200 mph Blow spins about 1 time a minute. Da kites get renewed every day fer 900 years wit’out an operator ever openin’ da casin’, an’ da tubin’, which perishes every season like it always done, gets fed in fresh off a spool down in da crypt. Every one still passes da Guild test, 10 of 10 up an’ da line taut inside 3 seconds, which in dat wind takes a good bit less dan 3 seconds, ya know."
+  "desc": "Launchers get built right into da halls dey keep flyin’, uprights runnin’ up inside da pillars an’ cradles set into da roof, t’rowin’ a kite off every spire on a set cycle of 10 at dawn. Nobody pulls ’em back; da tubin’ gets stretched by a roof vane dat da 875 mph Blow spins about 1 time a minute. Da kites get renewed every day fer 900 years wit’out an operator ever openin’ da casin’, an’ da tubin’, which perishes every season like it always done, gets fed in fresh off a spool down in da crypt. Every one still passes da Guild test, 10 of 10 up an’ da line taut inside 3 seconds, which in dat wind takes a good bit less dan 3 seconds, ya know."
  },
  "Calm Cathedrals": {
   "label": "Calm Cat’edrals",
-  "desc": "Buildin’ turns to halls wit’ no military use at all: 9 of ’em, da tallest 90 feet up to da vault, each one takin’ 4 to 6 years. Dey get built against da wind, walls 12 feet t’ick at da bottom an’ faced wit’ 1 inch of polished stone redone every season, so inside, wit’ 205 mph on da walls, da air sits dead still, eh. All togedder da labor runs over 200,000 person-hours. Da calm in dere is so complete ya can’t fly a kite in it, an’ da faithful say dat’s da whole point."
+  "desc": "Buildin’ turns to halls wit’ no military use at all: 9 of ’em, da tallest 90 feet up to da vault, each one takin’ 4 to 6 years. Dey get built against da wind, walls 12 feet t’ick at da bottom an’ faced wit’ 1 inch of polished stone redone every season, so inside, wit’ 890 mph on da walls, da air sits dead still, eh. All togedder da labor runs over 200,000 person-hours. Da calm in dere is so complete ya can’t fly a kite in it, an’ da faithful say dat’s da whole point."
  },
  "The Launcher Houses": {
   "label": "Da Launcher Houses",
-  "desc": "Comin’ down from a Launcher crew turns into a claim to power, an’ 4 houses trace demselves back to named crews of da classical days. 2 of da 4 lines got papers an’ 2 are just sayin’ so. Who goes first at court gets decided by how many kites an ancestor’s on record as t’rowin’, at 40 feet a t’row, a number took from a registry started back when dere was 406 Launchers in da world. Court sits in da lee of a 210 mph Blow, an’ da heralds call out who goes first by flag, ’cause nobody can hear ’em, ya know."
+  "desc": "Comin’ down from a Launcher crew turns into a claim to power, an’ 4 houses trace demselves back to named crews of da classical days. 2 of da 4 lines got papers an’ 2 are just sayin’ so. Who goes first at court gets decided by how many kites an ancestor’s on record as t’rowin’, at 40 feet a t’row, a number took from a registry started back when dere was 406 Launchers in da world. Court sits in da lee of a 900 mph Blow, an’ da heralds call out who goes first by flag, ’cause nobody can hear ’em, ya know."
  },
  "The Hollow Ridge": {
   "label": "Da Hollow Ridge",
-  "desc": "Da Blow’s sanded every mountain down into a yardang, a long smoot’ ridge pointin’ downwind, an’ one of ’em gets hollowed out from inside into a fortress. Its upwind face is bare rock 1,100 feet high, polished smoot’ by 215 mph of grit; inside dere’s 400 halls, 2 dozen kite galleries openin’ out da lee side t’rough hidden ports, an’ supplies fer 9 years. 12,000 folks live in dere. From outside, da only sign anybody’s home is da line of kites streamin’ off da downwind end, eh."
+  "desc": "Da Blow’s sanded every mountain down into a yardang, a long smoot’ ridge pointin’ downwind, an’ one of ’em gets hollowed out from inside into a fortress. Its upwind face is bare rock 1,100 feet high, polished smoot’ by 915 mph of grit; inside dere’s 400 halls, 2 dozen kite galleries openin’ out da lee side t’rough hidden ports, an’ supplies fer 9 years. 12,000 folks live in dere. From outside, da only sign anybody’s home is da line of kites streamin’ off da downwind end, eh."
  },
  "The Spool Dynasties": {
   "label": "Da Spool Dynasties",
-  "desc": "Rule gets passed down t’rough lines on record goin’ 6 to 9 generations, at an average reign of 14 years. Succession gets wrote down, fought out in court instead of in da field, an’ settled by da archive in 8 cases outta 10. A new ruler gets sworn in by takin’ da dynasty spool an’ hangin’ onto it fer 1 minute out in da open, in a 220 mph Blow, so heirs get picked partly on grip, ya know. Da longest unbroken line’s held its capital 110 years an’ never once let go of dat spool."
+  "desc": "Rule gets passed down t’rough lines on record goin’ 6 to 9 generations, at an average reign of 14 years. Succession gets wrote down, fought out in court instead of in da field, an’ settled by da archive in 8 cases outta 10. A new ruler gets sworn in by takin’ da dynasty spool an’ hangin’ onto it fer 1 minute up at da wall-top, wit’ a 930 mph Blow goin’ by 1 foot overhead, so heirs get picked partly on grip, ya know. Da longest unbroken line’s held its capital 110 years an’ never once let go of dat spool."
  },
  "Launchers in the Lee": {
   "label": "Launchers Down in da Lee",
-  "desc": "Da surface gets scoured bare at 225 mph, so da realm moves down into da Lee: trenches an’ galleries cut down under da wind, which skims over da rims an’ leaves da air underneat’ turnin’ in a slow eddy. Deep down in dere, Launchers t’row kites up da shafts into dat eddy, about 40 feet, an’ da rim is da ceilin’, same as every wall-top always been. In a crosswind dat close to da Blow a kite gets yanked outta da cradle before da clothespin even opens, so da trigger springs get set at a third of regular tension to let it go clean, eh. 900 units work down under da surface an’ not one ever gets brought back up."
+  "desc": "Da surface gets scoured bare at 945 mph, so da realm moves down into da Lee: trenches an’ galleries cut down under da wind, which skims over da rims an’ leaves da air underneat’ turnin’ in a slow eddy. Deep down in dere, Launchers t’row kites up da shafts into dat eddy, about 40 feet, an’ da rim is da ceilin’, same as every wall-top always been. In a crosswind dat close to da Blow a kite gets yanked outta da cradle before da clothespin even opens, so da trigger springs get set at a third of regular tension to let it go clean, eh. 900 units work down under da surface an’ not one ever gets brought back up."
  },
  "Shaft Kite Batteries": {
   "label": "Kite Batteries Down da Shafts",
-  "desc": "Kite engines get set deep in da Lee an’ fly up da shafts to just under da rim: 60 crank winches across da realm, at depths around 90 feet. Where 2 enemy shafts break into da same trench, dere lines cross in da shared eddy wit’out nobody on eider side ever seein’ da udder. Ya can’t see ’em, can’t cut ’em back, an’ can’t move ’em. Every shaft gets re-cut each season ’cause da 230 mph Blow grinds da surface down around it at about 2 feet a year, ya know."
+  "desc": "Kite engines get set deep in da Lee an’ fly up da shafts to just under da rim: 60 crank winches across da realm, at depths around 90 feet. Where 2 enemy shafts break into da same trench, dere lines cross in da shared eddy wit’out nobody on eider side ever seein’ da udder. Ya can’t see ’em, can’t cut ’em back, an’ can’t move ’em. Every shaft gets re-cut each season ’cause da 960 mph Blow grinds da surface down around it at about 2 feet a year, ya know."
  },
  "The Lee Interior": {
   "label": "Da Inside of da Lee",
-  "desc": "Da Lee’s deep enough now to hold a place to live: 1,100 miles of mapped passage, 400 chambers, an’ a steady population of 90,000 who never once stood out in da wind. Overhead da Blow runs at 235 mph, an’ goin’ up top turns into da exception, done on a rope. Da air inside holds at a light breeze of 4 mph every season, just enough to lift a tissue-paper kite down da main gallery, an’ da word gust only gets used in stories meant to scare da kids, eh."
+  "desc": "Da Lee’s deep enough now to hold a place to live: 1,100 miles of mapped passage, 400 chambers, an’ a steady population of 90,000 who never once stood out in da wind. Overhead da Blow runs at 970 mph, an’ nobody goes up top at all no more. Da air inside holds at a light breeze of 4 mph every season, just enough to lift a tissue-paper kite down da main gallery, an’ da word gust only gets used in stories meant to scare da kids, eh."
  },
  "Launchers Beneath the Blow": {
   "label": "Launchers Way Down Under da Blow",
@@ -1057,15 +1057,15 @@ window.YOOPER.KITE_WAR_TIERS = Object.assign(window.YOOPER.KITE_WAR_TIERS || {},
  },
  "Nations of the Lee": {
   "label": "Nations of da Lee",
-  "desc": "Separate peoples turn up in da Lee, 7 of ’em, split up by rock instead of distance, in spots by as little as 40 feet of it, wit’ every border marked by a windsock in da gallery. Da way dey talk drifts past understandin’ each udder inside 3 generations, dough all 7 keep da same word fer calm. Gettin’ between da 2 farthest apart takes a 9-day walk t’rough neutral passage, or about 2 minutes up top in da 245 mph Blow, if da wind happens to be goin’ dat way, which it ain’t, eh."
+  "desc": "Separate peoples turn up in da Lee, 7 of ’em, split up by rock instead of distance, in spots by as little as 40 feet of it, wit’ every border marked by a windsock in da gallery. Da way dey talk drifts past understandin’ each udder inside 3 generations, dough all 7 keep da same word fer calm. Gettin’ between da 2 farthest apart takes a 9-day walk t’rough neutral passage, or about 2 minutes up top in da 985 mph Blow, if da wind happens to be goin’ dat way, which it ain’t, eh."
  },
  "The Tubing Nations": {
   "label": "Da Tubin’ Nations",
-  "desc": "Who ya are settles on da machine instead of on land: peoples get counted by what pattern of upright dey hold an’ what tubin’ table dey go by. Dere’s 4 nations, 11 upright patterns, an’ no borders ya could draw on a surface map, ’cause da surface got sanded flat at 250 mph. War between ’em gets fought pretty much all by keepin’ surgical tubin’ away from each udder, which still perishes every season, an’ a nation down to its last 2 bands sues fer peace, ya know."
+  "desc": "Who ya are settles on da machine instead of on land: peoples get counted by what pattern of upright dey hold an’ what tubin’ table dey go by. Dere’s 4 nations, 11 upright patterns, an’ no borders ya could draw on a surface map, ’cause da surface got sanded flat at 1,000 mph, where da wind pushes 2,560 pounds on every square foot. War between ’em gets fought pretty much all by keepin’ surgical tubin’ away from each udder, which still perishes every season, an’ a nation down to its last 2 bands sues fer peace, ya know."
  },
  "The Blown-Away Age": {
   "label": "Da Age Dat Blew Away",
-  "desc": "Everyt’ing from before da Blow got blown away or buried under da sand it carries: every original fort, da first snow-fence windbreak, da early kite engines, da old memorials, at depths of 160 feet. Diggin’ ’em up turns into a real profession employin’ 4,000. 11 original sites get recovered, 3,000 kites in ’em still rolled up around dere spars, an’ 9 get buried back on purpose. Wit’ 255 mph at da dig sites, every excavation gets done inside a tent wit’ no door on da upwind side, eh."
+  "desc": "Everyt’ing from before da Blow got blown away or buried under da sand it carries: every original fort, da first snow-fence windbreak, da early kite engines, da old memorials, at depths of 160 feet. Diggin’ ’em up turns into a real profession employin’ 4,000. 11 original sites get recovered, 3,000 kites in ’em still rolled up around dere spars, an’ 9 get buried back on purpose. Wit’ 1,010 mph at da dig sites, every excavation gets done inside a tent wit’ no door on da upwind side, eh."
  },
  "The Sanded Workshop": {
   "label": "Da Sanded-Over Workshop",
@@ -1073,75 +1073,75 @@ window.YOOPER.KITE_WAR_TIERS = Object.assign(window.YOOPER.KITE_WAR_TIERS || {},
  },
  "The Shaft Keep": {
   "label": "Da Shaft Keep",
-  "desc": "A keep gets built goin’ down instead of up: a shaft 60 feet across sunk 3,300 feet into da rock under da Blow, wit’ a floor every 14 feet. Da mout’ is da only place da wind gets in, at 265 mph, so da top floors are a gale an’ da command post at da bottom sits in dead calm. Anybody attackin’ has gotta take every one of da 235 floors in order goin’ down, against defenders who been droppin’ kites on folks’ heads fer 1,000 years, eh. Orders go down by message kite on da downdraft an’ take 11 minutes to hit bottom."
+  "desc": "A keep gets built goin’ down instead of up: a shaft 60 feet across sunk 3,300 feet into da rock under da Blow, wit’ a floor every 14 feet. Da mout’ is da only place da wind gets in, at 1,025 mph, so da top floors are a gale an’ da command post at da bottom sits in dead calm. Anybody attackin’ has gotta take every one of da 235 floors in order goin’ down, against defenders who been droppin’ kites on folks’ heads fer 1,000 years, eh. Orders go down by message kite on da downdraft an’ take 11 minutes to hit bottom."
  },
  "The Lee Polity": {
   "label": "Da Lee Polity",
-  "desc": "One single administration runs da whole Lee: 200,000 square miles of passage, a census of 1.4 million, an’ a standin’ force of 200,000 line crews. Orders take 19 days to get to da far frontier underground. Kite output gets measured in tons a day instead of kites an hour, against a standin’ park of 40,000 crank winches. Overhead da Blow hits 270 mph, a hair faster dan da edge of Jupiter’s Great Red Spot, an’ da census office writes dat down as a point of national pride, ya know."
+  "desc": "One single administration runs da whole Lee: 200,000 square miles of passage, a census of 1.4 million, an’ a standin’ force of 200,000 line crews. Orders take 19 days to get to da far frontier underground. Kite output gets measured in tons a day instead of kites an hour, against a standin’ park of 40,000 crank winches. Overhead da Blow hits 1,040 mph an’ carries a Jupiter-class storm da size of da Great Red Spot, about 10,000 miles across, which is wider dan da planet it’s sittin’ on. It’s been spinnin’ fer 190 years, an’ da census office counts it as a resident, ya know."
  },
  "Margin Launchers": {
   "label": "Launchers on da Margin",
-  "desc": "Flyin’ works at da size of da Blow itself, Launchers walkin’ da edges where da Lee opens onto da last sheltered ground an’ t’rowin’ kites into country da wind’s took over. A fleet of 11,000 Launchers runs a continuous circuit of 4,000 miles, 10 t’rows at every post. Da circuit takes a whole lifetime to go around once, an’ crews inherit dere spot on it along wit’ da cradle. Da wind on da margin, 280 mph now, goes up about 1 mph a year, so every generation’s kites leave da cradle a little faster dan dere parents’ did, eh."
+  "desc": "Flyin’ works at da size of da Blow itself, Launchers walkin’ da edges where da Lee opens onto da last sheltered ground an’ t’rowin’ kites into country da wind’s took over. A fleet of 11,000 Launchers runs a continuous circuit of 4,000 miles, 10 t’rows at every post. Da circuit takes a whole lifetime to go around once, an’ crews inherit dere spot on it along wit’ da cradle. Da wind on da margin, 1,050 mph now, goes up about 1 mph a year, so every generation’s kites leave da cradle a little faster dan dere parents’ did, eh."
  },
  "Weather Inside the Blow": {
   "label": "Weather Inside da Blow",
-  "desc": "Da Blow turns into a planet-wide system wit’ its own weather, spinnin’ off storms dat got nuttin’ to do wit’ da one dat started it: 41 on record in one single year, every one sittin’ inside a 300 mph background. Da storms lift da sand layer 230 feet higher every year. Down in da Lee da only sign of ’em is a change in da note da shafts make, ya know. Da original breeze, just steady enough to lift a paper diamond, is just a little entry now in a record it don’t drive no more."
+  "desc": "Da Blow turns into a planet-wide system wit’ its own weather, spinnin’ off storms dat got nuttin’ to do wit’ da one dat started it: 41 on record in one single year, every one sittin’ inside a 1,060 mph background. Da storms lift da sand layer 230 feet higher every year. Down in da Lee da only sign of ’em is a change in da note da shafts make, ya know. Da original breeze, just steady enough to lift a paper diamond, is just a little entry now in a record it don’t drive no more."
  },
  "Wind Engineering": {
   "label": "Wind Engineerin’",
-  "desc": "Da line between flyin’ kites an’ runnin’ da climate falls apart. A kite takes energy outta da wind it’s flyin’ in, an’ 90 billion kites up at once take enough of it to steer da Blow, so da schedule dat decides where da Launchers t’row also decides where da world’s calm. Da Blow matches Jupiter’s fastest jet stream now, about 335 mph, an’ every kite on da schedule still leaves a cradle 10 by 14 inches, eh. Da office dat sets it comes down, in unbroken succession, from 2 siblings who once argued all afternoon over which way to point da Launcher."
+  "desc": "Da line between flyin’ kites an’ runnin’ da climate falls apart. A kite takes energy outta da wind it’s flyin’ in, an’ 90 billion kites up at once take enough of it to steer da Blow, so da schedule dat decides where da Launchers t’row also decides where da world’s calm. Da Blow runs at 1,075 mph now, its storms Jupiter-class an’ centuries old, an’ every kite on da schedule still leaves a cradle 10 by 14 inches, eh. Da office dat sets it comes down, in unbroken succession, from 2 siblings who once argued all afternoon over which way to point da Launcher."
  },
  "Planetary Kite Order": {
   "label": "Da Planet-Wide Kite Order",
-  "desc": "Government comes togedder under one charter of 900 articles, an’ da first one still says: Never stand in front of da cradle. Population sits at 90 million, 96 percent of it in da Lee, an’ da standin’ force at 4 million. Da Blow runs at 360 mph everyplace at once, an’ dere ain’t no upwind ground left to hold, ya know. Da last independent fort, a windbreak of 6 hay bales up on a high plateau dat sheltered 1 family fer centuries wit’out nobody askin’, signs on after a 7-year negotiation done entirely by message kite."
+  "desc": "Government comes togedder under one charter of 900 articles, stamped on sheet aluminum, an’ da first one still says: Never stand in front of da cradle. Population sits at 90 million, 96 percent of it in da Lee, an’ da standin’ force at 4 million. Da Blow runs at 1,090 mph everyplace at once, an’ dere ain’t no upwind ground left to hold, ya know. Da last independent fort, a windbreak of 6 hay bales up on a high plateau dat sheltered 1 family fer centuries wit’out nobody askin’, signs on after a 7-year negotiation done entirely by message kite."
  },
  "The Equatorial Windbreak": {
   "label": "Da Equator Windbreak",
-  "desc": "One single windbreak gets built clear around da planet at da equator, 24,901 miles long an’ 90 feet high, so each half’s wind quits blowin’ into da udder’s. It don’t work, ’cause at 400 mph da Blow runs mostly east to west along da wall instead of across it, but it does give every mile of da equator a lee, an’ fer da first time in 1,000 years kites fly da whole way around, eh. Buildin’ it runs 212 years an’ employs 11 million. Da lee swaps sides every time da wind wobbles, an’ both halves claim it."
+  "desc": "One single windbreak gets built clear around da planet at da equator, 24,901 miles long an’ 90 feet high, so each half’s wind quits blowin’ into da udder’s. It don’t work, ’cause at 1,100 mph da Blow runs mostly east to west along da wall instead of across it, but it does give every mile of da equator a lee, an’ fer da first time in 1,000 years kites fly da whole way around, eh. Buildin’ it runs 212 years an’ employs 11 million. Da lee swaps sides every time da wind wobbles, an’ both halves claim it."
  },
  "Planetary Launcher Order": {
   "label": "Da Planet-Wide Launcher Order",
-  "desc": "One aut’ority holds every upright pattern, every tubin’ mill, an’ every Launcher crew on da planet, an’ puts out one single t’rowin’ schedule fer da whole Blow. Everybody goes along, ’cause a district dat skips its turn gets no replacement tubin’, an’ da tubin’ still perishes every season, ya know. Da schedule gets published 100 years ahead an’ been revised 11 times in 4,000 years, every revision by less dan 1 t’row. Every unit on it still gotta pass da Guild test, 10 of 10 up an’ da line taut inside 3 seconds, which at 450 mph is just a formality, eh."
+  "desc": "One aut’ority holds every upright pattern, every tubin’ mill, an’ every Launcher crew on da planet, an’ puts out one single t’rowin’ schedule fer da whole Blow. Everybody goes along, ’cause a district dat skips its turn gets no replacement tubin’, an’ da tubin’ still perishes every season, ya know. Da schedule gets published 100 years ahead an’ been revised 11 times in 4,000 years, every revision by less dan 1 t’row. Every unit on it still gotta pass da Guild test, 10 of 10 up an’ da line taut inside 3 seconds, which at 1,115 mph is just a formality, eh, an’ every crew still calls it out da old way: line’s taut in t’ree."
  },
  "The Long Lull Compact": {
   "label": "Da Long Lull Compact",
-  "desc": "A treaty gets signed to end da war fer good, runnin’ to 11,000 articles, 900 of ’em on decommissionin’ crank winches, an’ ratified by every polity in da Lee. It holds 31 years, da longest peace on record, before da first violation: 4 folks an’ 9 line crossin’s at a shaft mout’ in a 500 mph Blow, where both sides claimed dey was da upwind flyer an’ so had da right of way, eh. Da fightin’ starts back up inside a mont’."
+  "desc": "A treaty gets signed to end da war fer good, runnin’ to 11,000 articles, 900 of ’em on decommissionin’ crank winches, an’ ratified by every polity in da Lee. It holds 31 years, da longest peace on record, before da first violation: 4 folks an’ 9 line crossin’s at a shaft mout’ in a 1,130 mph Blow, where both sides claimed dey was da upwind flyer an’ so had da right of way, eh. Da fightin’ starts back up inside a mont’."
  },
  "The Airless Launcher": {
   "label": "Da Launcher Wit’ No Air",
-  "desc": "Launchers get built fer orbit, 250 miles up over a 550 mph Blow, in a place wit’ no ground to stake ’em to an’ no air to t’row a kite into. Dat breaks 2 t’ings da design’s took fer granted since da first t’row out in da yard: dat da base stays put ’cause 2 tent stakes hold it down, an’ dat a kite t’rown up will get caught by da wind. 9 designs get put up. Da one dey go wit’ keeps da 60-inch draw, clamped to a rail instead of staked, just so da cradle still quits when da t’row quits. Up dere a kite leaves da cradle an’ just keeps on goin’, line slack, same direction, forever, ya know."
+  "desc": "Launchers get built fer orbit, 250 miles up over a 1,145 mph Blow, in a place wit’ no ground to stake ’em to an’ no air to t’row a kite into. Dat breaks 2 t’ings da design’s took fer granted since da first t’row out in da yard: dat da base stays put ’cause 2 tent stakes hold it down, an’ dat a kite t’rown up will get caught by da wind. 9 designs get put up. Da one dey go wit’ keeps da 60-inch draw, clamped to a rail instead of staked, just so da cradle still quits when da t’row quits. Up dere a kite leaves da cradle an’ just keeps on goin’, line slack, same direction, forever, ya know."
  },
  "Orbital Launchers": {
   "label": "Launchers Up in Orbit",
-  "desc": "Flyin’ leaves da ground, or anyhow da Launchers do. Platforms get hauled up to 250 miles an’ let 400-meter sections of snow fence down on tethers into da top of da 600 mph Blow, every one wit’ a kite flyin’ in its lee an’ never higher dan its top, ’cause da rule ain’t changed since da back fence. Da platform’s movin’ at 17,500 mph an’ da fence an’ kite trail along behind an’ under it, so every orbital kite flies backwards, which da crews find embarrassin’ an’ don’t talk about, eh. Every tether is 250 miles of waxed line wound by hand, ’cause da charter says spools get wound by hand. From a flyin’ order to a kite over da target takes 19 minutes, an’ nobody ever sees da operators."
+  "desc": "Flyin’ leaves da ground, or anyhow da Launchers do. Platforms get hauled up to 250 miles an’ let 400-meter sections of snow fence down on tethers into da top of da 1,160 mph Blow, every one wit’ a kite flyin’ in its lee an’ never higher dan its top, ’cause da rule ain’t changed since da back fence. Da platform’s movin’ at 17,500 mph an’ da fence an’ kite trail along behind an’ under it, so every orbital kite flies backwards, which da crews find embarrassin’ an’ don’t talk about, eh. Every tether is 250 miles of waxed line wound by hand, ’cause da charter says spools get wound by hand. From a flyin’ order to a kite over da target takes 19 minutes, an’ nobody ever sees da operators."
  },
  "Drop-Launching": {
   "label": "Drop-Launchin’",
-  "desc": "Kites get delivered from orbit by droppin’ instead of t’rowin’: folded-up box kites let go in measured batches, timed to pop open in da upper air an’ catch da 650 mph Blow on da way down. Where dey end up varies by 40 percent, against what da first Launcher got checked to in da yard: 1 kid up on da garage roof wit’ a hand up every time a kite went by, ya know. Dey use da trick fer 100 years, never get it workin’ right, an’ give it up fer platforms dat stay up an’ fly slow. A belt of 2 million torn-up kites gets left downwind of where most of ’em opened."
+  "desc": "Kites get delivered from orbit by droppin’ instead of t’rowin’: folded-up box kites let go in measured batches, timed to pop open in da upper air an’ catch da 1,175 mph Blow on da way down. Where dey end up varies by 40 percent, against what da first Launcher got checked to in da yard: 1 kid up on da garage roof wit’ a hand up every time a kite went by, ya know. Dey use da trick fer 100 years, never get it workin’ right, an’ give it up fer platforms dat stay up an’ fly slow. A belt of 2 million torn-up kites gets left downwind of where most of ’em opened."
  },
  "Suborbital Kites": {
   "label": "Kites Clear Up Past da Air",
-  "desc": "Kites go clear outta da atmosphere an’ come back down, at ranges of 900 miles an’ flight times of 11 minutes, every one a regular 30-inch diamond wit’ a heat shield glued over da paper. A kite needs air, so fer da 9 minutes it spends up over da atmosphere it ain’t technically a kite, an’ da Guild keeps a committee on what it is instead, eh. Every one comes back down into a 700 mph Blow an’ nobody sees it again. Launch sites are set, hardened, an’ known to both sides, so knockin’ ’em flat is da only target worth goin’ after. 400 are in service an’ not one’s been moved in 10 years."
+  "desc": "Kites go clear outta da atmosphere an’ come back down, at ranges of 900 miles an’ flight times of 11 minutes, every one a regular 30-inch diamond in sheet aluminum wit’ a heat shield riveted over da face. A kite needs air, so fer da 9 minutes it spends up over da atmosphere it ain’t technically a kite, an’ da Guild keeps a committee on what it is instead, eh. Every one comes back down into a 1,190 mph Blow an’ nobody sees it again. Launch sites are set, hardened, an’ known to both sides, so knockin’ ’em flat is da only target worth goin’ after. 400 are in service an’ not one’s been moved in 10 years."
  },
  "Ring Launchers": {
   "label": "Ring Launchers",
-  "desc": "Da orbital Launchers get hooked togedder into continuous rings, platforms butted end to end clear around da planet, dere fence sections trailin’ into da 800 mph Blow an’ joined into 1 windbreak dat closes back on itself, wit’ kites flyin’ in its lee da whole way around. 3 rings at 3 angles cover da whole surface on a 19-day cycle, 10 kites to da mile. From da ground da rings show up at dusk like a faint line, an’ in 4 languages da word fer dat line is da word fer kite string, ya know. Da tubin’ on all of ’em perishes on da side facin’ da sun, which in orbit is da same side all day long."
+  "desc": "Da orbital Launchers get hooked togedder into continuous rings, platforms butted end to end clear around da planet, dere fence sections trailin’ into da 1,205 mph Blow an’ joined into 1 windbreak dat closes back on itself, wit’ kites flyin’ in its lee da whole way around. 3 rings at 3 angles cover da whole surface on a 19-day cycle, 10 kites to da mile. From da ground da rings show up at dusk like a faint line, an’ in 4 languages da word fer dat line is da word fer kite string, ya know. Da tubin’ on all of ’em perishes on da side facin’ da sun, which in orbit is da same side all day long."
  },
  "The Orbital Windbreak": {
   "label": "Da Windbreak Up in Orbit",
-  "desc": "A windbreak gets built in orbit da backyard way: half-porous snow fence on steel posts, backed wit’ plywood, wit’ a row of hay bales along da bottom like da original along da back fence. Every measurement’s exactly 100 times da original, an’ da bales get pressed outta straw grown down in da Lee, 250 miles under a 900 mph Blow. It measures out 5 wall heights of lee wit’ nuttin’ in it to get out of, since dere ain’t no wind in orbit, an’ nobody can say which side’s upwind, eh. Dey follow da drawin’ anyhow. It takes 2 years an’ gets run by 1 person who read about it someplace."
+  "desc": "A windbreak gets built in orbit da backyard way: half-porous snow fence on steel posts, backed wit’ plywood, wit’ a row of hay bales along da bottom like da original along da back fence. Every measurement’s exactly 100 times da original, an’ da bales get pressed outta straw grown down in da Lee, 250 miles under a 1,220 mph Blow. It measures out 5 wall heights of lee wit’ nuttin’ in it to get out of, since dere ain’t no wind in orbit, an’ nobody can say which side’s upwind, eh. Dey follow da drawin’ anyhow. It takes 2 years an’ gets run by 1 person who read about it someplace."
  },
  "The Half-Planet Line": {
   "label": "Da Half-Planet Line",
-  "desc": "One half of da planet falls all da way under one single command; da udder half organizes against it inside 2 years. Da front runs da whole equator, 25,000 miles, held at an average of 900 folks an’ 4 crank winches per mile in da lee of da equator windbreak, wit’ a 1,000 mph Blow goin’ over da top. Both sides claim dey’re upwind, since da upwind flyer gets da right of way. Neider side’s gained a net mile in 10 years, an’ in dat wind a mile goes by in 3.6 seconds, so nobody bodders countin’ ’em, ya know."
+  "desc": "One half of da planet falls all da way under one single command; da udder half organizes against it inside 2 years. Da front runs da whole equator, 25,000 miles, held at an average of 900 folks an’ 4 crank winches per mile in da lee of da equator windbreak, wit’ a 1,240 mph Blow goin’ over da top. Both sides claim dey’re upwind, since da upwind flyer gets da right of way. Neider side’s gained a net mile in 10 years, an’ in dat wind a mile goes by in 2.9 seconds, so nobody bodders countin’ ’em, ya know."
  },
  "No Calm Rear": {
   "label": "No Calm Back Line",
-  "desc": "Da fightin’ reaches every spot on da planet all at once, an’ dere’s no calm back line anyplace. 400 million are signed up on one side or da udder, an’ da neutral population, last represented by a windsock attendant who quit fillin’ out reports, stands at 0, eh. Daily use runs past 9 billion kites, pretty near all of ’em t’rough pneumatic Launchers firin’ nonstop over da wall-tops into a 1,050 mph Blow. Every kite gets tore off its line inside 4 seconds of leavin’ da cradle an’ gets logged as t’rown, since ya can’t really say any of ’em flew."
+  "desc": "Da fightin’ reaches every spot on da planet all at once, an’ dere’s no calm back line anyplace. 400 million are signed up on one side or da udder, an’ da neutral population, last represented by a windsock attendant who quit fillin’ out reports, stands at 0, eh. Daily use runs past 9 billion kites, pretty near all of ’em t’rough pneumatic Launchers firin’ nonstop over da wall-tops into a 1,255 mph Blow. Every kite gets tore off its line inside 4 seconds of leavin’ da cradle an’ gets logged as t’rown, since ya can’t really say any of ’em flew."
  },
  "Sky Launchers": {
   "label": "Sky Launchers, Yah",
-  "desc": "Launchers quit t’rowin’ kites at da enemy an’ start t’rowin’ ’em into da circulation, cradles 14 miles long an’ still let go by a clothespin trigger scaled up to fit, meterin’ lift into da Blow so da wind shows up where it’s scheduled. From da order to da wind takes 11 days, an’ da target area’s a continent. Da Blow runs at 1,100 mph along da equator now, fast as da jet on Saturn, an’ nobody on da ground’s stood up straight outdoors in 900 years, ya know. It’s da first flyin’ in da war’s whole history dat makes somet’ing nobody on eider side can tell apart, by any test dey come up wit’, from a real wind."
+  "desc": "Launchers quit t’rowin’ kites at da enemy an’ start t’rowin’ ’em into da circulation, cradles 14 miles long an’ still let go by a clothespin trigger scaled up to fit, meterin’ lift into da Blow so da wind shows up where it’s scheduled. From da order to da wind takes 11 days, an’ da target area’s a continent. Da Blow runs at 1,275 mph along da equator now, way past da 1,100 mph jet on Saturn, an’ nobody on da ground’s stood up straight outdoors in 900 years, ya know. It’s da first flyin’ in da war’s whole history dat makes somet’ing nobody on eider side can tell apart, by any test dey come up wit’, from a real wind."
  },
  "Pressure Launch Batteries": {
   "label": "Pressure Launch Batteries, Eh",
