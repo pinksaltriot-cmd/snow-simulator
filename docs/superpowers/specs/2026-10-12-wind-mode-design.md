@@ -1,6 +1,6 @@
 # Wind Mode + Kite War (v3.8.0) — spec + plan
 
-**Date:** 2026-10-12 · **Status:** design approved (1a 2b 3a 4a); wind impact ladder pending approval
+**Date:** 2026-10-12 · **Status:** design approved (1a 2b 3a 4a); wind impact ladder approved 2026-10-12
 **Pattern:** a copy of the Fog mode + Party Blower War build (v3.7.0, spec 2026-10-10-fog-mode-design.md).
 
 ## 1. Wind mode
