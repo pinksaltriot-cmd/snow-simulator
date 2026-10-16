@@ -812,7 +812,7 @@
 <div class="container">
   <div style="text-align:right;margin-bottom:-6px"><span id="grandBadge" class="grand-badge" style="display:none" title="Beat all five Storm Architect levels">🏅 Grand Architect of Storms</span> <button type="button" id="challengeBtn" class="btn-clear">🏆 Challenge</button> <button type="button" id="langToggle" class="btn-clear" data-noyoop>🗣️ Yoopanese</button></div>
   <h1 id="appTitle">Snow Event Profile Maker 3.9.0</h1>
-  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">16552 lines of code</p>
+  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">16577 lines of code</p>
   <p class="subtitle">Powered by real NOAA RSI methodology with location-based impact scaling</p>
 
   <div class="card">
@@ -16530,6 +16530,31 @@ window.__snowTests.push((t) => {
   t('dry day: calm deep cold gets an Extreme Cold Warning, no snow alerts', (a => /Extreme Cold Warning/.test(a) && /State of Emergency/.test(a) && !SNOWY.test(a))(dry(-35)));
   t('snow day still gets its Winter Storm Warning', /Winter Storm Warning/.test(hazardAlerts({ phases: [{ type: 'snowball', amount: 8 }], hasStormTemp: false, lat: 36.15 },
     getImpact(8, 9, false, null, 8, 0, 0, 36.15, null, 1, null))));
+});
+
+// FROST-3 Yooper strings for the frost / humidity / flash-freeze additions.
+window.__snowTests.push((t) => {
+  const yp = x => YOOP.withLang('yooper', () => YOOP.L(x));
+  const nums = x => (x.match(/\d+(?:[.,]\d+)*/g) || []).join('|');
+  const ok = x => { const y = yp(x); return y !== x && nums(y) === nums(x); };
+  const strings = [
+    'Humidity', 'Temp before the front',
+    'Optional. With a storm temp, humid calm nights frost over; humid air also melts snow faster, dry air slower.',
+    'Optional. A drop of 15\u00b0F+ through freezing onto wet roads is a flash freeze.',
+    'Enter a humidity from 0 to 100%.', 'Enter a valid temperature before the front.',
+    '\u{1F4A7} 92% RH', '\u2B07\uFE0F from 50\u00b0F',
+    '\u{1F9CA} Flash freeze: 50\u00b0F to 24\u00b0F (a 26\u00b0F drop) on wet roads \u2014 standing water and slush lock into black ice within hours',
+    '\u{1F9CA} Flash freeze: 50\u00b0F to 24\u00b0F (a 26\u00b0F drop) on wet roads \u2014 standing water and slush lock into black ice within hours; the flash freeze drives the impact',
+    '\u{1F9E3} Impact driven by the chill of 40\u00b0F alone \u2014 a raw day, coats and heaters on, nothing freezes',
+    '\u{1F9E3} Impact driven by the chill of 40\u00b0F alone \u2014 a raw day, coats and heaters on, nothing freezes',
+  ];
+  FROST_TIERS.forEach(f => {
+    strings.push(`\u2744\uFE0F ${f.label} at 34\u00b0F and 92% humidity: ground near 30\u00b0F, below the 32\u00b0F frost point \u2014 ${f.what}`);
+    strings.push(`\u2744\uFE0F ${f.label} at 34\u00b0F and 92% humidity: ground near 30\u00b0F, below the 32\u00b0F frost point \u2014 ${f.what}; the frost drives the impact`);
+  });
+  const missing = strings.filter(x => !ok(x));
+  t('every frost/flash/humidity string has a Yooper version, numbers kept (' + missing.length + ' missing)', missing.length === 0);
+  if (missing.length) console.warn('Yooper missing:', missing);
 });
 
 window.addEventListener('load', () => {

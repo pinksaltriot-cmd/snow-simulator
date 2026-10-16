@@ -384,6 +384,10 @@ window.YOOPER.UI = Object.assign(window.YOOPER.UI || {}, {
   "…in (min)": "…in how long (min)",
   "Storm temp?": "Storm temp, eh?",
   "Storm temp": "How cold durin' da storm",
+  "Humidity": "How damp it is",
+  "Temp before the front": "Temp before da front comes t'rough",
+  "Optional. With a storm temp, humid calm nights frost over; humid air also melts snow faster, dry air slower.": "If ya want. Wit' a storm temp, damp calm nights frost right over; damp air eats da snow quicker too, dry air slower.",
+  "Optional. A drop of 15°F+ through freezing onto wet roads is a flash freeze.": "If ya want. Drop 15°F+ down t'rough freezin' on wet roads and dat's a flash freeze.",
   "Days 1–2": "Days 1–2 out",
   "Days 3–7": "Days 3–7 out",
   "Days 8+": "Days 8+ out",
@@ -772,6 +776,8 @@ window.YOOPER.UI = Object.assign(window.YOOPER.UI || {}, {
   "Add at least one precipitation phase, or a storm temp or wind for a dry day.": "Add at least one phase, or a storm temp or wind for a dry day.",
   "Enter a valid peak rate (inches per hour).": "Put in a good peak rate (inches per hour).",
   "Enter a valid storm temperature.": "Put in a good storm temperature.",
+  "Enter a humidity from 0 to 100%.": "Put in a humidity from 0 to 100%, eh.",
+  "Enter a valid temperature before the front.": "Put in a good temperature for before da front.",
   "Enter a valid wind speed.": "Put in a good wind speed.",
   "Enter a valid gust speed.": "Put in a good gust speed.",
   "Enter a valid barometric pressure (mb).": "Put in a good barometric pressure (mb).",
@@ -1269,6 +1275,23 @@ window.YOOPER.UI_CTX = Object.assign(window.YOOPER.UI_CTX || {}, {
     [/^(\S+) Warming outlook holds the pack( [\d.]+×)? longer than expected \(×([\d.]+)\)$/, m => `${m[1]} Warm-up outlook keeps da snowpack around${m[2] || ''} longer dan ya'd think (×${m[3]})`],
     [/^(\S+) Warming outlook clears the pack( [\d.]+×)? faster than expected \(×([\d.]+)\)$/, m => `${m[1]} Warm-up outlook clears da snowpack${m[2] || ''} quicker dan ya'd think (×${m[3]})`],
     ['🥶 Wind chill {}°F', '🥶 Wind chill {=1}°F — bundle up'],
+    // frost, chill, flash freeze, and the humidity / temp-before tags
+    [/^(\S+) ([\d.,-]+)% RH$/, m => `${m[1]} ${m[2]}% damp`],
+    [/^(\S+) from (-?[\d.,]+)°F$/, m => `${m[1]} down from ${m[2]}°F`],
+    [/^(\S+) Impact driven by the chill of (\S+)°F alone — a raw day, coats and heaters on, nothing freezes$/,
+      m => `${m[1]} Just da chill doin' it at ${m[2]}°F — a raw one, choppers on and da furnace kickin', but nuttin' freezes`],
+    [/^(\S+) Flash freeze: (\S+)°F to (\S+)°F \(a (\S+)°F drop\) on wet roads — standing water and slush lock into black ice within hours(; the flash freeze drives the impact)?$/,
+      m => `${m[1]} Flash freeze: ${m[2]}°F down to ${m[3]}°F (dropped ${m[4]}°F) on wet roads — puddles and slush set up into black ice in a couple hours${m[5] ? `; da flash freeze is what's doin' it` : ''}`],
+    [/^(\S+) (Light frost|Frost|Heavy frost|Hoarfrost) at (\S+)°F and (\S+)% humidity: ground near (\S+)°F, below the (\S+)°F frost point — (.+?)(; the frost drives the impact)?$/, (m) => {
+      const LBL = { 'Light frost': 'Little frost', 'Frost': 'Frost', 'Heavy frost': 'Heavy frost', 'Hoarfrost': 'Hoarfrost, real pretty' };
+      const WHAT = {
+        'a thin film on rooftops and windshields': 'just a skim on da roofs and windshields',
+        'white lawns, iced windshields, slick bridge decks': 'white lawns, iced-up windshields, slick bridges',
+        'scraping every windshield, glazed bridges and overpasses, tender plants killed': "scrapin' every windshield, bridges and overpasses glazed, da garden's done for",
+        'feathery ice crystals on every surface, treacherous bridges, crops and plants lost': "feathery ice on everyt'ing, bridges real treacherous, crops and plants gone",
+      };
+      return `${m[1]} ${LBL[m[2]]} at ${m[3]}°F and ${m[4]}% damp: ground's down near ${m[5]}°F, under da ${m[6]}°F frost point — ${WHAT[m[7]] || m[7]}${m[8] ? `; da frost is what's doin' it` : ''}`;
+    }],
     ['❄️ Peak rate of {}″/hr: whiteout bursts outrun the plows (×{})', "❄️ Comin' down {=1}″/hr at da peak: whiteout bursts outrun da plows (×{=2})"],
     ['🌪️ {} tornado ({} mph), on the ground about {} minutes: {}', '🌪️ {1} tornado ({=2} mph), on da ground about {=3} minutes: {4}'],
     ['(Snow-equivalent impact: {})', '(Hits like {=1} o\' snow)'],
