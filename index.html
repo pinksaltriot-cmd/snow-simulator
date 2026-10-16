@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Snow Event Profile Maker 3.8.0</title>
+<title>Snow Event Profile Maker 3.9.0</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -811,8 +811,8 @@
 
 <div class="container">
   <div style="text-align:right;margin-bottom:-6px"><span id="grandBadge" class="grand-badge" style="display:none" title="Beat all five Storm Architect levels">🏅 Grand Architect of Storms</span> <button type="button" id="challengeBtn" class="btn-clear">🏆 Challenge</button> <button type="button" id="langToggle" class="btn-clear" data-noyoop>🗣️ Yoopanese</button></div>
-  <h1 id="appTitle">Snow Event Profile Maker 3.8.0</h1>
-  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">16338 lines of code</p>
+  <h1 id="appTitle">Snow Event Profile Maker 3.9.0</h1>
+  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">16552 lines of code</p>
   <p class="subtitle">Powered by real NOAA RSI methodology with location-based impact scaling</p>
 
   <div class="card">
@@ -1137,6 +1137,22 @@
           <input type="number" id="coldInput" placeholder="e.g. 18">
         </div>
         <span class="unit">&deg;F</span>
+      </div>
+      <div class="cold-field visible">
+        <div>
+          <label for="rhInput">Humidity</label>
+          <input type="number" id="rhInput" placeholder="e.g. 85" min="0" max="100">
+        </div>
+        <span class="unit">%</span>
+        <span class="help-text">Optional. With a storm temp, humid calm nights frost over; humid air also melts snow faster, dry air slower.</span>
+      </div>
+      <div class="cold-field visible">
+        <div>
+          <label for="beforeInput">Temp before the front</label>
+          <input type="number" id="beforeInput" placeholder="e.g. 50">
+        </div>
+        <span class="unit">&deg;F</span>
+        <span class="help-text">Optional. A drop of 15&deg;F+ through freezing onto wet roads is a flash freeze.</span>
       </div>
     </div>
     <div class="warming-row">
@@ -3405,7 +3421,81 @@ function capMultiplierStack(m, plausible) {
   return Math.min(STACK_MAX, STACK_KNEE + (m - STACK_KNEE) * STACK_SLOPE);
 }
 
-function getImpact(snow, annualSnow, hasStormTemp, stormTemp, snowEquivalent, windSpeed, gustSpeed, lat, pressure, persistenceMult, peakRate) {
+/* Frost. On a calm night the ground radiates heat away and runs a few degrees
+   colder than the air, so frost forms with the air as warm as ~38°F. It needs
+   the ground at or below 32°F AND at or below the frost point (the dewpoint
+   over ice), so dry air gives a hard freeze but no frost. Wind of 10 mph or
+   more mixes the air and stops the cooling; clouds blunt it. Strength comes
+   from how far the ground runs below the frost point. Needs a humidity, so
+   storms without one are unchanged. */
+const FROST_SKY_COOLING = { sunny: 5, partly: 3, cloudy: 1 };
+const FROST_TIERS = [
+  { maxMargin: 1,   label: 'Light frost', score: 0.08, what: 'a thin film on rooftops and windshields' },
+  { maxMargin: 2.5, label: 'Frost',       score: 0.15, what: 'white lawns, iced windshields, slick bridge decks' },
+  { maxMargin: 4.5, label: 'Heavy frost', score: 0.30, what: 'scraping every windshield, glazed bridges and overpasses, tender plants killed' },
+  { maxMargin: Infinity, label: 'Hoarfrost', score: 0.45, what: 'feathery ice crystals on every surface, treacherous bridges, crops and plants lost' },
+];
+function frostPointF(T, rh) {
+  const tc = (T - 32) * 5 / 9;
+  const e = (rh / 100) * 6.112 * Math.exp(17.62 * tc / (243.12 + tc));
+  const x = Math.log(e / 6.112);
+  return (272.62 * x / (22.46 - x)) * 9 / 5 + 32;
+}
+function getFrost(T, rh, windSpeed, sky) {
+  if (T === null || T === undefined || isNaN(T) || rh === null || rh === undefined || isNaN(rh) || rh <= 0) return null;
+  const w = windSpeed || 0;
+  let cooling = FROST_SKY_COOLING[sky] !== undefined ? FROST_SKY_COOLING[sky] : 4;
+  if (w >= 10) cooling = 0;
+  else if (w >= 5) cooling *= 0.5;
+  const ground = T - cooling;
+  const fp = frostPointF(T, Math.min(100, rh));
+  if (cooling === 0 || ground > 32 || ground > fp) return null;
+  const margin = fp - ground;
+  const tier = FROST_TIERS.find(x => margin < x.maxMargin);
+  return { ...tier, ground, frostPoint: fp };
+}
+
+/* Flash freeze: wet roads locking into black ice when the temperature crashes
+   through freezing behind a front. Needs the temp before the front at 34°F or
+   warmer, the storm temp at 30°F or colder, a drop of 15°F or more, and wet
+   surfaces (rain, drizzle, freezing rain, sleet or slush, or 85%+ humidity).
+   Bigger drops lock the water in faster and hit harder. */
+const FLASH_WET_TYPES = ['rain', 'drizzle', 'thunderstorm', 'ice', 'sleet', 'slush', 'mist'];
+function getFlashFreeze(c) {
+  const before = c.tempBefore, T = c.hasStormTemp ? c.stormTemp : null;
+  if (before === null || before === undefined || isNaN(before) || T === null || T === undefined || isNaN(T)) return null;
+  const drop = before - T;
+  if (before < 34 || T > 30 || drop < 15) return null;
+  const wetPhase = (c.phases || []).some(p => FLASH_WET_TYPES.includes(p.type));
+  const humid = c.rh !== null && c.rh !== undefined && c.rh >= 85;
+  if (!wetPhase && !humid) return null;
+  return { before, after: T, drop, score: Math.min(1.0, 0.4 + 0.02 * (drop - 15)) };
+}
+
+/* Growing season. The NWS only issues Frost Advisories and Freeze / Hard
+   Freeze Warnings between the last spring freeze and the first fall freeze.
+   Season length is estimated from latitude (about 220 days at Tulsa, 155 at
+   Minneapolis), centered on mid-July (mid-January south of the equator); 290+
+   days counts as year-round. With no date or latitude the alerts always go out. */
+function inGrowingSeason(lat, date) {
+  if (lat === null || lat === undefined || isNaN(lat) || !date || isNaN(date.getTime())) return true;
+  const len = 220 - (Math.abs(lat) - 36) * 7.2;
+  if (len >= 290) return true;
+  if (len <= 0) return false;
+  const doy = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / 86400000);
+  const center = lat >= 0 ? 198 : 15;
+  const d = Math.abs(doy - center), dist = Math.min(d, 365 - d);
+  return dist <= len / 2;
+}
+function freezeProduct(c, frost, date) {
+  if (!c.hasStormTemp || c.stormTemp === null || c.stormTemp === undefined || isNaN(c.stormTemp)) return null;
+  if (!inGrowingSeason(c.lat, date)) return null;
+  if (c.stormTemp <= 28) return 'Hard Freeze Warning';
+  if (c.stormTemp <= 32) return 'Freeze Warning';
+  return frost ? 'Frost Advisory' : null;
+}
+
+function getImpact(snow, annualSnow, hasStormTemp, stormTemp, snowEquivalent, windSpeed, gustSpeed, lat, pressure, persistenceMult, peakRate, rh, sky, flashFreeze) {
   const persistMult = (persistenceMult === undefined || persistenceMult === null) ? 1.0 : persistenceMult;
   const factor = getResilienceFactor(annualSnow, lat);
   const coldMult = hasStormTemp ? getColdMultiplier(stormTemp) : 1.0;
@@ -3418,9 +3508,12 @@ function getImpact(snow, annualSnow, hasStormTemp, stormTemp, snowEquivalent, wi
   // low-resilience regions (Florida, Caribbean, Deep South) where infrastructure
   // and population are unprepared for freezing temperatures.
   let coldBaseline = 0;
+  // Above freezing a raw, chilly day still registers faintly (a 40°F day in
+  // Tulsa is Very Light); it fades out at 50°F and hands over to the freeze
+  // slope just below 32°F.
   if (hasStormTemp && stormTemp !== null && stormTemp !== undefined) {
     const degBelow = Math.max(0, 32 - stormTemp);
-    const rawCold = degBelow * 0.1;
+    const rawCold = Math.max(degBelow * 0.1, Math.max(0, 50 - stormTemp) * 0.006);
     coldBaseline = rawCold / factor;
   }
 
@@ -3428,7 +3521,13 @@ function getImpact(snow, annualSnow, hasStormTemp, stormTemp, snowEquivalent, wi
   const stackMult = capMultiplierStack(coldMult * windMult * pressureMult * persistMult * rateMult,
     impactInputsPlausible(stormTemp, windSpeed, gustSpeed, pressure));
   const snowEffective = (effectiveSnow / factor) * stackMult;
-  const effective = Math.max(snowEffective, coldBaseline * pressureMult);  // Whichever is worse
+  const frost = hasStormTemp ? getFrost(stormTemp, rh, windSpeed, sky) : null;
+  const frostBaseline = frost ? frost.score / factor : 0;
+  // Black ice comes on top of the cold itself: a flash-frozen 24°F day is worse than a dry one.
+  const flashBaseline = flashFreeze ? coldBaseline * pressureMult + flashFreeze.score / factor : 0;
+  const effective = Math.max(snowEffective, coldBaseline * pressureMult, frostBaseline, flashBaseline);  // Whichever is worse
+  const flashDriven = flashBaseline > 0 && flashBaseline >= effective;
+  const frostDriven = !flashDriven && frostBaseline > 0 && frostBaseline >= snowEffective && frostBaseline >= coldBaseline * pressureMult;
 
   let result;
   if (effective === 0)          result = { level:'None',              css:'none-impact',         desc:'No precipitation of any kind. Clear skies.', alerts:'No alerts in effect.',                                          school:'0-minute delay; normal schedule.' };
@@ -3484,7 +3583,11 @@ function getImpact(snow, annualSnow, hasStormTemp, stormTemp, snowEquivalent, wi
   result.pressureMult = pressureMult;
   result.persistenceMult = persistMult;
   result.rateMult = rateMult;
-  result.coldDriven = coldBaseline > 0 && coldBaseline >= snowEffective;
+  result.coldDriven = !frostDriven && !flashDriven && coldBaseline > 0 && coldBaseline >= snowEffective;
+  result.flashFreeze = flashFreeze || null;
+  result.flashDriven = flashDriven;
+  result.frost = frost;
+  result.frostDriven = frostDriven;
   return result;
 }
 
@@ -5774,6 +5877,8 @@ const gustInput = document.getElementById('gustInput');
 const pressureInput = document.getElementById('pressureInput');
 const peakRateInput = document.getElementById('peakRateInput');
 const skyInput = document.getElementById('skyInput');
+const rhInput = document.getElementById('rhInput');
+const beforeInput = document.getElementById('beforeInput');
 const addBtn = document.getElementById('addBtn');
 const phaseBuilder = document.getElementById('phaseBuilder');
 const phasesEmpty = document.getElementById('phasesEmpty');
@@ -6102,6 +6207,10 @@ function addCity() {
   const peakRate = peakRateInput.value ? parseFloat(peakRateInput.value) : null;
   if (peakRate !== null && (isNaN(peakRate) || peakRate < 0)) { inputError.textContent = 'Enter a valid peak rate (inches per hour).'; return; }
   const sky = skyInput.value || null;
+  const rh = rhInput.value ? parseFloat(rhInput.value) : null;
+  if (rh !== null && (isNaN(rh) || rh < 0 || rh > 100)) { inputError.textContent = 'Enter a humidity from 0 to 100%.'; return; }
+  const tempBefore = beforeInput.value ? parseFloat(beforeInput.value) : null;
+  if (tempBefore !== null && isNaN(tempBefore)) { inputError.textContent = 'Enter a valid temperature before the front.'; return; }
   const db = lookupCity(name);
   const hasStormTemp = coldCheck.checked;
   const stormTemp = hasStormTemp ? parseFloat(coldInput.value) : null;
@@ -6120,9 +6229,9 @@ function addCity() {
     hasStormTemp, stormTemp,
     warming: { short: warmShort.value, medium: warmMedium.value, long: warmLong.value },
     windSpeed, gustSpeed: gustSpeedVal,
-    pressure, peakRate, sky
+    pressure, peakRate, sky, rh, tempBefore
   });
-  cityInput.value = ''; clearPhaseBuilder(); coldCheck.checked = false; coldField.classList.remove('visible'); coldInput.value = ''; windInput.value = ''; gustInput.value = ''; pressureInput.value = ''; peakRateInput.value = ''; skyInput.value = ''; cityInput.focus();
+  cityInput.value = ''; clearPhaseBuilder(); coldCheck.checked = false; coldField.classList.remove('visible'); coldInput.value = ''; windInput.value = ''; gustInput.value = ''; pressureInput.value = ''; peakRateInput.value = ''; skyInput.value = ''; rhInput.value = ''; beforeInput.value = ''; cityInput.focus();
   warmShort.value = 'auto'; warmMedium.value = 'auto'; warmLong.value = 'auto';
   acList.classList.remove('open');
   renderCityList();
@@ -6147,6 +6256,8 @@ function renderCityList() {
     const coldTag = c.hasStormTemp ? ` <span style="color:#93c5fd;font-size:0.8rem">${(tempLbl && tempLbl.icon) || '\u{1F321}\ufe0f'} ${c.stormTemp}\u00b0F</span>` : '';
     const windTag = c.windSpeed ? ` <span style="color:#a5b4fc;font-size:0.8rem">\u{1F4A8} ${c.windSpeed}${c.gustSpeed ? '/G'+c.gustSpeed : ''} mph</span>` : '';
     const pressTag = (c.pressure !== null && c.pressure !== undefined) ? ` <span style="color:#fbbf24;font-size:0.8rem">\u{1F32A}\ufe0f ${c.pressure} mb</span>` : '';
+    const rhTag = (c.rh !== null && c.rh !== undefined) ? ` <span style="color:#7dd3fc;font-size:0.8rem">\u{1F4A7} ${c.rh}% RH</span>` : '';
+    const beforeTag = (c.tempBefore !== null && c.tempBefore !== undefined) ? ` <span style="color:#93c5fd;font-size:0.8rem">\u2B07\uFE0F from ${c.tempBefore}\u00b0F</span>` : '';
     const wp = c.warming || {};
     const warmPicks = ['short','medium','long'].map(k => wp[k]).filter(v => v && v !== 'auto');
     const warmTag = warmPicks.length
@@ -6154,7 +6265,7 @@ function renderCityList() {
       : '';
     const phaseSummary = formatPhasesSummary(c.phases);
     return `<div class="city-item">
-      <span>${esc(c.name)} &mdash; ${phaseSummary}${coldTag}${windTag}${pressTag}${warmTag} <span class="city-meta">${meta}</span></span>
+      <span>${esc(c.name)} &mdash; ${phaseSummary}${coldTag}${beforeTag}${rhTag}${windTag}${pressTag}${warmTag} <span class="city-meta">${meta}</span></span>
       <button class="btn-remove" onclick="removeCity(${i})">&times;</button>
     </div>`;
   }).join('');
@@ -6476,8 +6587,15 @@ function hazardAlerts(c, imp) {
     if (ws >= 40 || gs >= 58) products.push('High Wind Warning');
     else if (ws >= 30 || gs >= 45) products.push('Wind Advisory');
   }
-  const cold = coldProduct(windChillF(c.hasStormTemp ? c.stormTemp : null, ws), c.region, c.lat);
+  // Calm air has no wind chill, but the NWS still warns on the air temperature itself.
+  const airT = c.hasStormTemp && c.stormTemp !== null && c.stormTemp !== undefined && !isNaN(c.stormTemp) ? c.stormTemp : null;
+  const wcNow = windChillF(airT, ws);
+  const cold = coldProduct(wcNow !== null ? wcNow : airT, c.region, c.lat);
   if (cold) products.push(cold);
+  if (imp.flashFreeze) products.push('Flash Freeze Warning');
+  const dateVal = document.getElementById('stormDate').value;
+  const freeze = freezeProduct(c, imp.frost, dateVal ? new Date(dateVal) : null);
+  if (freeze) products.push(freeze);
   // Keep the ladder's own products unless they contradict the type: no Blizzard
   // Warning without blizzard wind, no snow products for an ice event, and no
   // flood watch for a short thunderstorm burst.
@@ -6485,6 +6603,10 @@ function hazardAlerts(c, imp) {
   if (!blizzardWind) base = base.replace(/Blizzard Warning if winds are high/g, '').replace(/Blizzard Warning/g, snowy > 0 ? 'Winter Storm Warning' : '');
   if (iceEvent) base = base.replace(/Winter Storm Warning|Winter Weather Advisory|Special Weather Statement|localized /g, '');
   if (!phases.length) base = base.replace(/No alerts in effect\.?/g, '');
+  // A dry day has no snow or ice, so the ladder's winter-storm products don't
+  // apply; cold products, freeze warnings and emergency declarations stay.
+  if (!phases.length) base = base.replace(/Blizzard Warning \+ /g, '').split(/;\s*/)
+    .filter(x => !/Special Weather Statement|Winter Weather Advisory|Winter Storm|Blizzard|travel ban|winter warnings maxed/i.test(x)).join('; ');
   const liquid = phaseSum(phases, LIQUID_PRECIP_TYPES);
   if (convective && liquid < 1) base = base.replace(/Flash Flood Watch|Flood Watch/g, '').replace(/Flood Advisory possible for low-lying areas/g, 'Flood Advisory possible (urban ponding)');
   const parts = [...products, ...base.split(/;\s*/)].map(x => x.replace(/^[\s.;]+|[\s.;]+$/g, '')).filter(Boolean);
@@ -6625,10 +6747,11 @@ function generateProfile(rsiOverride) {
   }
 
   const rows = sorted.map(c => {
-    const rainOnly = isRainOnly(c.phases);
+    // Rain that flash-freezes is an ice event, so it takes the winter impact path.
+    const rainOnly = isRainOnly(c.phases) && !getFlashFreeze(c);
     const imp = rainOnly
       ? getRainImpact(totalRainInchesRated(c.phases), c.lat, c.windSpeed, c.gustSpeed, c.pressure)
-      : getImpact(c.snow, c.annualSnow, c.hasStormTemp, c.stormTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure, c.persistenceMult, c.peakRate);
+      : getImpact(c.snow, c.annualSnow, c.hasStormTemp, c.stormTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure, c.persistenceMult, c.peakRate, c.rh, c.sky, getFlashFreeze(c));
     const res = rainOnly
       ? getRainResilienceLabel(estimateAnnualRain(c.lat, c.lon, c.region), c.lat)
       : getResilienceLabel(c.annualSnow, c.lat);
@@ -6662,6 +6785,14 @@ function generateProfile(rsiOverride) {
     });
     const wc = windChillF(c.hasStormTemp ? c.stormTemp : null, c.windSpeed);
     if (wc !== null && wc < c.stormTemp - 1) detail += ` <em style="color:#93c5fd">🥶 Wind chill ${Math.round(wc)}°F</em>`;
+    if (!rainOnly && imp.flashFreeze) {
+      const ff = imp.flashFreeze;
+      detail += ` <em style="color:#a5f3fc">\u{1F9CA} Flash freeze: ${ff.before}\u00b0F to ${ff.after}\u00b0F (a ${ff.drop}\u00b0F drop) on wet roads \u2014 standing water and slush lock into black ice within hours${imp.flashDriven ? '; the flash freeze drives the impact' : ''}</em>`;
+    }
+    if (!rainOnly && imp.frost) {
+      const f = imp.frost;
+      detail += ` <em style="color:#bae6fd">❄️ ${f.label} at ${c.stormTemp}°F and ${c.rh}% humidity: ground near ${Math.round(f.ground)}°F, below the ${Math.round(f.frostPoint)}°F frost point \u2014 ${f.what}${imp.frostDriven ? '; the frost drives the impact' : ''}</em>`;
+    }
     if (imp.rateMult && imp.rateMult > 1) detail += ` <em style="color:#e0e7ff">❄️ Peak rate of ${c.peakRate}″/hr: whiteout bursts outrun the plows (×${imp.rateMult.toFixed(2)})</em>`;
     if (rainOnly) {
       if (imp.latMult > 1.0) {
@@ -6682,6 +6813,7 @@ function generateProfile(rsiOverride) {
     } else if (c.phases && !c.phases.length) {
       // A dry day: nothing fell, so snow-handling and precipitation multipliers
       // have nothing to act on. Wind chill and products are reported above.
+      if (imp.coldDriven && c.stormTemp > 32) detail += ` <em style="color:#93c5fd">\u{1F9E3} Impact driven by the chill of ${c.stormTemp}\u00b0F alone \u2014 a raw day, coats and heaters on, nothing freezes</em>`;
     } else {
       if (c.annualSnow !== null && imp.factor !== 1.0) {
         if (imp.factor <= 0.3) detail += ` <em style="opacity:0.6">(Massively amplified \u2014 this area almost never sees snow)</em>`;
@@ -6693,10 +6825,12 @@ function generateProfile(rsiOverride) {
       if (c.phases && c.phases.length > 1 && c.snowEquivalent !== c.snow) {
         detail += ` <em style="opacity:0.6">(Snow-equivalent impact: ${formatSnow(c.snowEquivalent)})</em>`;
       }
-      if (c.hasStormTemp) {
+      if (c.hasStormTemp && !imp.flashDriven && !imp.frostDriven) {
         const tl = getColdLabel(c.stormTemp);
         if (imp.coldDriven) {
-          detail += ` <em style="color:#93c5fd">${(tl && tl.icon) || '\u{1F976}'} Impact driven by the storm temp of ${c.stormTemp}\u00b0F alone \u2014 extreme freeze in an unprepared area</em>`;
+          detail += c.stormTemp > 32
+            ? ` <em style="color:#93c5fd">${(tl && tl.icon) || '\u{1F9E3}'} Impact driven by the chill of ${c.stormTemp}\u00b0F alone \u2014 a raw day, coats and heaters on, nothing freezes</em>`
+            : ` <em style="color:#93c5fd">${(tl && tl.icon) || '\u{1F976}'} Impact driven by the storm temp of ${c.stormTemp}\u00b0F alone \u2014 extreme freeze in an unprepared area</em>`;
         } else if (imp.coldMult > 1.0) {
           detail += ` <em style="color:#93c5fd">${(tl && tl.icon) || '\u{1F976}'} ${(tl && tl.label) || 'Storm'} storm temp of ${c.stormTemp}\u00b0F amplifies impact (\u00d7${imp.coldMult.toFixed(2)})</em>`;
         } else if (imp.coldMult < 1.0) {
@@ -6760,9 +6894,9 @@ function generateProfile(rsiOverride) {
 
   // Peak impact across all cities (drives record-shattering fun facts)
   const peakCity = sorted.reduce((best, c) => {
-    const imp = isRainOnly(c.phases)
+    const imp = (isRainOnly(c.phases) && !getFlashFreeze(c))
       ? getRainImpact(totalRainInchesRated(c.phases), c.lat, c.windSpeed, c.gustSpeed, c.pressure)
-      : getImpact(c.snow, c.annualSnow, c.hasStormTemp, c.stormTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure, c.persistenceMult, c.peakRate);
+      : getImpact(c.snow, c.annualSnow, c.hasStormTemp, c.stormTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure, c.persistenceMult, c.peakRate, c.rh, c.sky, getFlashFreeze(c));
     return imp.effective > best.eff ? { eff: imp.effective, level: imp.level, name: c.name } : best;
   }, { eff: 0, level: 'None', name: '' });
   const peakEffective = peakCity.eff;
@@ -7968,11 +8102,18 @@ function shouldSample(day) {
 // Both default to 1, so a call without options is the plain open-ground melt.
 // Sunshine after a storm speeds melt; overcast slows it.
 const SKY_MELT_FACTOR = { sunny: 1.25, partly: 1.0, cloudy: 0.85 };
+// Humid air melts snow faster (vapor condensing on the pack gives up its heat);
+// dry air melts it slower (the pack sublimates and cools itself). Neutral at
+// 60%, up to ×1.15 at 90%+ and down to ×0.85 at 30% or drier.
+function rhMeltFactor(rh) {
+  if (rh === null || rh === undefined || isNaN(rh)) return 1;
+  return 1 + 0.15 * Math.max(-1, Math.min(1, (rh - 60) / 30));
+}
 
 function simulateMelt(city, stormEnd, opts) {
   const o = opts || {};
   const sweMult = (o.sweMult === undefined) ? 1 : o.sweMult;
-  const rateFactor = ((o.rateFactor === undefined) ? 1 : o.rateFactor) * (SKY_MELT_FACTOR[city.sky] || 1);
+  const rateFactor = ((o.rateFactor === undefined) ? 1 : o.rateFactor) * (SKY_MELT_FACTOR[city.sky] || 1) * rhMeltFactor(city.rh);
   // A pure ice glaze has no snowpack for ground heat to eat into; it goes when
   // the air (or road treatment) gets above freezing, not before.
   const frozen = (city.phases || []).filter(p => !NON_FROZEN_TYPES.includes(p.type));
@@ -13771,8 +13912,8 @@ SNOWSIM.CHALLENGE = (function () {
     };
   }
   // A storm city already through prepareCityMelt; the same read as the results table.
-  C.snowTier = c => isRainOnly(c.phases) ? 'None'
-    : getImpact(c.snow, c.annualSnow, c.hasStormTemp, c.stormTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure, c.persistenceMult, c.peakRate).level;
+  C.snowTier = c => (isRainOnly(c.phases) && !getFlashFreeze(c)) ? 'None'
+    : getImpact(c.snow, c.annualSnow, c.hasStormTemp, c.stormTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure, c.persistenceMult, c.peakRate, c.rh, c.sky, getFlashFreeze(c)).level;
   function snowResults() {
     return { cities: cities.map(c => ({ city: c.name, tier: C.snowTier(c) })), rsi: calculateRSI().totalRSI };
   }
@@ -15834,12 +15975,12 @@ window.__snowTests.push((t) => {
   const yp = s => YOOP.withLang('yooper', () => YOOP.L(s));
   t('selftest runs in English', YOOP.lang === 'en');
   t('English passes through untouched', YOOP.L('Storm Profile') === 'Storm Profile');
-  t('title and header stay English', document.title === 'Snow Event Profile Maker 3.8.0'
-    && document.getElementById('appTitle').textContent === 'Snow Event Profile Maker 3.8.0');
+  t('title and header stay English', document.title === 'Snow Event Profile Maker 3.9.0'
+    && document.getElementById('appTitle').textContent === 'Snow Event Profile Maker 3.9.0');
   t('toggle offers Yoopanese', document.getElementById('langToggle').textContent.includes('Yoopanese'));
   t('Yooper swaps a heading', yp('Storm Profile') === 'Da Storm Profile');
   t('Yooper swaps a tier name', yp('Crippling') === 'Stuck at Camp' && yp('Omega Point Frost') === 'Heikki Lunta Himself');
-  t('Yooper keeps the version string', yp('Snow Event Profile Maker 3.8.0').includes('3.8.0'));
+  t('Yooper keeps the version string', yp('Snow Event Profile Maker 3.9.0').includes('3.9.0'));
   t('Yooper keeps the line count', yp('12345 lines of code').startsWith('12345 '));
   t('Yooper sentence keeps its numbers', yp('💨 Windy winds of 30 mph, gusting to 52 mph amplify impact (×1.50)') !== '💨 Windy winds of 30 mph, gusting to 52 mph amplify impact (×1.50)'
     && nums(yp('💨 Windy winds of 30 mph, gusting to 52 mph amplify impact (×1.50)')) === '30|52|1.50');
@@ -16317,6 +16458,79 @@ window.__snowTests.push((t) => {
   })());
 });
 
+// FROST-1 Frost and humidity in Detailed Input: frost needs a storm temp and a
+// humidity, forms only on calm nights, and humidity speeds or slows the melt.
+window.__snowTests.push((t, approx) => {
+  t('frost: 34°F at 90% RH, calm, forms Frost', (getFrost(34, 90, 0, null) || {}).label === 'Frost');
+  t('frost: 34°F in dry air (60%) forms none', getFrost(34, 60, 0, null) === null);
+  t('frost: 34°F at 95% with 15 mph wind forms none', getFrost(34, 95, 15, null) === null);
+  t('frost: no humidity, no frost', getFrost(34, null, 0, null) === null);
+  t('frost: 45°F is too warm even saturated', getFrost(45, 100, 0, 'sunny') === null);
+  t('frost: 34°F saturated under clear sky is Hoarfrost', (getFrost(34, 100, 0, 'sunny') || {}).label === 'Hoarfrost');
+  t('frost: overcast keeps 36°F at 95% frost-free', getFrost(36, 95, 0, 'cloudy') === null);
+  const tulsaDry = getImpact(0, 9, true, 34, 0, 0, 0, 36.15, null, 1, null);
+  const tulsaFrost = getImpact(0, 9, true, 34, 0, 0, 0, 36.15, null, 1, null, 92, null);
+  t('frost: dry 34°F Tulsa has no frost without humidity', !tulsaDry.frost && tulsaDry.coldDriven);
+  t('frost: 92% RH frosts over and outranks the chill', tulsaFrost.effective > tulsaDry.effective && tulsaFrost.frostDriven && !tulsaFrost.coldDriven);
+  t('frost: heavy frost in Houston is Moderate', getImpact(0, 0.1, true, 34, 0, 0, 0, 29.76, null, 1, null, 95, 'sunny').level === 'Moderate');
+  t('frost: never lowers a snow result', getImpact(6, 9, true, 30, 6, 0, 0, 36.15, null, 1, null, 95, 'sunny').level
+    === getImpact(6, 9, true, 30, 6, 0, 0, 36.15, null, 1, null).level);
+  t('melt: humidity factor neutral when unset', rhMeltFactor(null) === 1 && rhMeltFactor(60) === 1);
+  t('melt: humid air melts faster, dry air slower', approx(rhMeltFactor(95), 1.15) && approx(rhMeltFactor(20), 0.85));
+  const base = { phases: [{ type: 'snowball', amount: 6 }], lat: 36.15, lon: -95.99, annualSnow: 9, region: null,
+    hasStormTemp: true, stormTemp: 28, warming: { short: 'auto', medium: 'auto', long: 'auto' }, sky: null };
+  const end = new Date(2027, 0, 15);
+  const mo = c => (simulateMelt(c, end) || {}).meltOutDays;
+  t('melt: 95% RH melts out sooner, 20% later', mo({ ...base, rh: 95 }) < mo(base) && mo({ ...base, rh: 20 }) > mo(base));
+  const dryT = T => getImpact(0, 9, true, T, 0, 0, 0, 36.15, null, 1, null);
+  t('chill: a plain 40°F day in Tulsa is Very Light or Minimal', ['Very Light', 'Minimal'].includes(dryT(40).level) && dryT(40).coldDriven);
+  t('chill: 55°F is None', dryT(55).level === 'None');
+  let mono = true;
+  for (let T = 10; T < 60; T += 0.5) if (dryT(T + 0.5).effective > dryT(T).effective + 1e-12) mono = false;
+  t('chill: cold impact never rises as it warms', mono);
+  t('humidity field is on the Detailed card', !!document.querySelector('#detailedCard #rhInput'));
+});
+
+// FROST-2 Frost/freeze alerts by growing season, and the flash freeze.
+window.__snowTests.push((t) => {
+  const D = (y, m, d) => new Date(y, m - 1, d);
+  t('season: Tulsa in May is growing season', inGrowingSeason(36.15, D(2027, 5, 1)));
+  t('season: Tulsa in January is not', !inGrowingSeason(36.15, D(2027, 1, 15)));
+  t('season: Minneapolis in mid-April is not, mid-May is', !inGrowingSeason(44.98, D(2027, 4, 15)) && inGrowingSeason(44.98, D(2027, 5, 20)));
+  t('season: Miami is year-round', inGrowingSeason(25.76, D(2027, 1, 15)));
+  t('season: Southern Hemisphere flips (Buenos Aires in July is not)', !inGrowingSeason(-34.6, D(2027, 7, 15)) && inGrowingSeason(-34.6, D(2027, 1, 15)));
+  t('season: no date or no latitude always issues', inGrowingSeason(36.15, null) && inGrowingSeason(null, D(2027, 1, 15)));
+  const fa = (T, rh, date) => freezeProduct({ hasStormTemp: true, stormTemp: T, lat: 36.15 }, getFrost(T, rh, 0, null), date);
+  t('alerts: 34°F frost in October is a Frost Advisory', fa(34, 92, D(2027, 10, 20)) === 'Frost Advisory');
+  t('alerts: 34°F in dry air gets no Frost Advisory', fa(34, 50, D(2027, 10, 20)) === null);
+  t('alerts: 30°F is a Freeze Warning', fa(30, 50, D(2027, 10, 20)) === 'Freeze Warning');
+  t('alerts: 28°F is a Hard Freeze Warning', fa(28, 50, D(2027, 10, 20)) === 'Hard Freeze Warning');
+  t('alerts: 10°F in January gets no freeze product', fa(10, 50, D(2027, 1, 15)) === null);
+  const city = (before, T, phases, rh) => ({ tempBefore: before, hasStormTemp: true, stormTemp: T, phases, rh });
+  const rain = [{ type: 'rain', amount: 0.3 }];
+  t('flash: 50→24°F after rain is a flash freeze', !!getFlashFreeze(city(50, 24, rain, null)));
+  t('flash: dry roads, no flash freeze', getFlashFreeze(city(50, 24, [], 40)) === null);
+  t('flash: dry phases but 90% humidity counts as wet', !!getFlashFreeze(city(50, 24, [], 90)));
+  t('flash: a 10°F drop is not enough', getFlashFreeze(city(38, 28, rain, null)) === null);
+  t('flash: must start above freezing', getFlashFreeze(city(33, 10, rain, null)) === null);
+  t('flash: must end at 30°F or colder', getFlashFreeze(city(50, 31, rain, null)) === null);
+  t('flash: no before-temp, no flash freeze', getFlashFreeze(city(null, 10, rain, null)) === null);
+  const ff = getFlashFreeze(city(50, 24, rain, null));
+  const d = computeDerivedPrecip(rain);
+  const plain = getImpact(d.snow, 9, true, 24, d.snowEquivalent, 0, 0, 36.15, null, 1, null);
+  const flash = getImpact(d.snow, 9, true, 24, d.snowEquivalent, 0, 0, 36.15, null, 1, null, null, null, ff);
+  t('flash: raises the impact well above the dry cold and drives it', flash.effective >= plain.effective * 1.5 && flash.flashDriven);
+  t('flash: bigger drops hit harder', getFlashFreeze(city(60, 10, rain, null)).score > ff.score);
+  t('temp-before field is on the Detailed card', !!document.querySelector('#detailedCard #beforeInput'));
+  const dry = T => { const c = { name: 'Wichita, KS', phases: [], hasStormTemp: true, stormTemp: T, lat: null, region: null, windSpeed: null, gustSpeed: null };
+    return hazardAlerts(c, getImpact(0, 15, true, T, 0, 0, 0, null, null, 1, null)); };
+  const SNOWY = /Special Weather Statement|Winter Weather Advisory|Winter Storm|Blizzard|travel ban|winter warnings/i;
+  t('dry day: 27°F keeps the Hard Freeze Warning, drops snow alerts', /Hard Freeze Warning/.test(dry(27)) && !SNOWY.test(dry(27)));
+  t('dry day: 40°F chill has no snow alerts', !SNOWY.test(dry(40)));
+  t('dry day: calm deep cold gets an Extreme Cold Warning, no snow alerts', (a => /Extreme Cold Warning/.test(a) && /State of Emergency/.test(a) && !SNOWY.test(a))(dry(-35)));
+  t('snow day still gets its Winter Storm Warning', /Winter Storm Warning/.test(hazardAlerts({ phases: [{ type: 'snowball', amount: 8 }], hasStormTemp: false, lat: 36.15 },
+    getImpact(8, 9, false, null, 8, 0, 0, 36.15, null, 1, null))));
+});
 
 window.addEventListener('load', () => {
   if (!/(\?|&)selftest\b/.test(location.search)) return;
