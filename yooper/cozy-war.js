@@ -824,7 +824,7 @@ window.YOOPER.COZY_WAR_TIERS = Object.assign(window.YOOPER.COZY_WAR_TIERS || {},
  },
  "The Mega-Shelter Merger": {
   "label": "Da Mega-Shelter Merger",
-  "desc": "Da levees go an’ a stadium complex opens up as da regional mega-shelter, 12,000 cots on da field, da concourses an’ 4 practice gyms. Folks come in from towns along 400 miles of river, every bunch bringin’ its own pillow war, an’ da wars bump into each udder an’ turn into one. Nobody can name every side, da count’s at 19 an’ still goin’ up, an’ some families get counted on 2 sides at once. Total folks in it runs about 11,000, countin’ grown-ups who say dey’re just holdin’ a pillow for somebody, eh."
+  "desc": "Da levees go an’ a stadium complex opens up as da regional mega-shelter, 12,000 cots on da field, da concourses an’ 4 practice gyms. Folks come in from towns along 400 miles of river, every bunch bringin’ its own pillow war, an’ da wars bump into each udder an’ turn into one. Nobody can name every side, da count’s at 19 an’ still goin’ up, an’ some families get counted on 2 sides at once. Total folks in it, every shelter on da river, runs about 400,000, countin’ grown-ups who say dey’re just holdin’ a pillow for somebody, eh."
  },
  "Catapult Doctrine": {
   "label": "Catapult Doctrine, Eh",

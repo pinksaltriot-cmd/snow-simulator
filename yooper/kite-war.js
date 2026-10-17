@@ -825,7 +825,7 @@ window.YOOPER.KITE_WAR_TIERS = Object.assign(window.YOOPER.KITE_WAR_TIERS || {},
  },
  "The Plains War": {
   "label": "Da Plains War",
-  "desc": "Separate cities’ kite wars run into each udder along da same storm track and merge into one fight spannin’ 400 miles of open plain. Nobody in it can name every side; da count’s at 19 and still climbin’, and some get counted on 2 sides at once ’cause dere kites came down on da udder side of da line and stayed put. Total folks in it run an estimated 11,000, every one of ’em behind a fence, eh."
+  "desc": "Separate cities’ kite wars run into each udder along da same storm track and merge into one fight spannin’ 400 miles of open plain. Nobody in it can name every side; da count’s at 19 and still climbin’, and some get counted on 2 sides at once ’cause dere kites came down on da udder side of da line and stayed put. Total folks in it run an estimated 400,000, every one of ’em behind a fence, eh."
  },
  "Winch Doctrine": {
   "label": "Winch Doctrine",

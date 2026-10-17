@@ -825,7 +825,7 @@ window.YOOPER.PARTY_WAR_TIERS = Object.assign(window.YOOPER.PARTY_WAR_TIERS || {
  },
  "The Coastal War": {
   "label": "Da Coastal War",
-  "desc": "Separate cities’ party wars run into each udder along da same fogged-in coast and merge into one fight spannin’ 400 miles. Nobody in it can name every side; da count’s at 19 and still climbin’, and some get counted on 2 sides at once ’cause nobody could see which way dey were facin’ when dey honked. Total folks in it run an estimated 11,000, eh."
+  "desc": "Separate cities’ party wars run into each udder along da same fogged-in coast and merge into one fight spannin’ 400 miles. Nobody in it can name every side; da count’s at 19 and still climbin’, and some get counted on 2 sides at once ’cause nobody could see which way dey were facin’ when dey honked. Total folks in it run an estimated 400,000, eh."
  },
  "Plank Doctrine": {
   "label": "Plank Doctrine, Eh",
