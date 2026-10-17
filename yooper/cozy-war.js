@@ -1,4 +1,4 @@
-/* Yoopanese display strings for the Cozy War ladder (323 tiers), keyed by the exact
+/* Yoopanese display strings for the Cozy War ladder (327 tiers), keyed by the exact
  * English label in COZY_WAR_TIERS. Display-only: scoring always uses the English tiers. */
 window.YOOPER = window.YOOPER || {};
 window.YOOPER.COZY_WAR_TIERS = Object.assign(window.YOOPER.COZY_WAR_TIERS || {}, {
@@ -1299,4 +1299,23 @@ window.YOOPER.COZY_WAR_BANDS = Object.assign(window.YOOPER.COZY_WAR_BANDS || {},
  "Rainy Day": "Rainy Day at Camp",
  "High Water": "High Water, Eh",
  "Beyond the Weather": "Holy Wah, Past Da Weather"
+});
+// Multi-story fort tiers (two-story, three-story, hundred-story, to orbit).
+window.YOOPER.COZY_WAR_TIERS = Object.assign(window.YOOPER.COZY_WAR_TIERS || {}, {
+ "The Bunk Cot Fort": {
+  "label": "Da Bunk Cot Fort",
+  "desc": "Da Cot Citadel gets a second floor: 12 cots get stacked into bunks on da frames of 6 more, lashed wit’ 40 feet of laundry line an’ roofed wit’ 4 tumblin’ mats laid across at 5 feet. Da upper deck holds 9, firin’ pillows down t’rough 4 gaps in da blanket walls, an’ da lower deck gets told to quit t’rowin’ up. On night 3 a mat sags over da doorway, an’ da upper deck gets re-lashed before lights-out, eh."
+ },
+ "The Bleacher Keep": {
+  "label": "Da Bleacher Keep",
+  "desc": "Da pull-out bleachers along da gym’s east wall get taken as a 3-story keep: rows 1 to 4, 5 to 8 an’ 9 to 12, every floor walled wit’ folded blankets, da top deck 11 feet up under da scoreboard. A flight of 31 steps hooks up da 3 floors, an’ a volunteer tapes a rope beside ’em after da first fall. Da top deck sees every cot in da buildin’ an’ holds 1 spotter, 1 pillow an’ a clipboard. It takes 11 kids 5 days an’ every spare blanket in da supply closet, ya know."
+ },
+ "The Hundred-Bunk Tower": {
+  "label": "Da Hunnert-Bunk Tower",
+  "desc": "A blanket fort gets built 100 stories high, cot frame on cot frame across a footprint 300 feet square, every floor 10 feet tall an’ laid out like da bunk cot fort in da gym: a sleepin’ deck in front, a pillow store in back, a ladder up da back. Da ladder stays, all 100 flights of it, next to 40 elevators, ’cause da drawin’ has a ladder. Da top floor sits 1,000 feet up, an’ da garrison of 6,000 has never once all been asleep at da same time, eh."
+ },
+ "The Bunk to Orbit": {
+  "label": "Da Bunk Clear Up to Orbit",
+  "desc": "Bunks keep stackin’ till dere’s no up left: a blanket fort climbs from da equator clear up to geostationary orbit, 22,236 miles, on a tether of braided felt, wit’ a bunk every 10 feet, about 11.7 million floors. Da elevators take 9 days to da top. Up near da top, where da tower’s spin cancels out its weight, blankets don’t lay on nobody no more an’ gotta get tucked in wit’ straps. A kid of 7 still gets sent up every night to read da bedtime story on da top floor, ya know."
+ }
 });

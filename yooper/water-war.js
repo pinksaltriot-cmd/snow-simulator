@@ -334,3 +334,22 @@ window.YOOPER.WATER_WAR_BANDS = {
   "Continental": "Da Whole Continent",
   "Fiction": "Holy Wah, Dat’s Made Up"
 };
+// Multi-story fort tiers (two-story, three-story, hundred-story, to orbit).
+window.YOOPER.WATER_WAR_TIERS = Object.assign(window.YOOPER.WATER_WAR_TIERS || {}, {
+ "The Gallery Deck": {
+  "label": "Da Gallery Deck",
+  "desc": "Da natatorium gets a second floor: da spectator gallery, 12 feet over da pool deck, 60 feet long an’ 9 feet deep, wit’ 4 rows of bleachers. It gets fortified wit’ 30 kickboards lashed along da rail an’ 4 notches cut for hose nozzles, fed by a 50-foot line run up da stairwell from da pool. Water poured off da gallery lands at about 19 mph, an’ da deck down below quits bein’ someplace anybody walks. Da gallery garrison runs 9, an’ on day 3 a bleacher bolt shears off an’ da bottom row gets roped off, eh."
+ },
+ "The Dive Tower Keep": {
+  "label": "Da Dive Tower Keep",
+  "desc": "Da natatorium’s dive tower gets fortified as a 3-story keep: platforms at 3, 5 an’ 7.5 meters, each one walled wit’ lane-rope floats an’ kickboards an’ hooked togedder by 41 steel steps. Da top platform, 25 feet over da water, sees every pool in da whole place an’ holds 1 spotter, 1 whistle an’ 1 launcher. A balloon dropped off it hits da water at about 27 mph, an’ a rope gets strung up beside da steps after da first wet fall. It takes 11 kids to hold it for 5 days, ya know."
+ },
+ "The Hundred-Story Natatorium": {
+  "label": "Da Hunnert-Story Natatorium",
+  "desc": "At 17,000°F, about da surface temperature of da star Vega, a natatorium gets built 100 stories high, every floor a pool hall wit’ a gallery over it, 300 feet square an’ 10 feet a story. Every floor’s got a pool 4 feet deep, about 2.7 million gallons, kept from fallin’ into da one underneat’ by a policy everybody’s read. Da top pool sits 1,000 feet up an’ its dive tower goes to 1,025. Da garrison of 6,000 has never once all been dry at da same time, eh."
+ },
+ "The Natatorium to Orbit": {
+  "label": "Da Natatorium Clear Up to Orbit",
+  "desc": "At 70,000°F, about da surface temperature of da star Zeta Puppis, da pool hall quits havin’ a ceilin’: a natatorium climbs from da equator clear up to geostationary orbit, 22,236 miles, a pool an’ gallery every 10 feet, about 11.7 million floors. Water gets pumped up da whole way by standard pumps in relay at 2.6 ounces a stroke an’ gets to da top 9 years after it leaves da bottom. Up near da top, where da tower’s spin cancels out its weight, da water quits layin’ in da pools an’ just hangs dere, an’ da lifeguards up dere have never seen a splash, ya know."
+ }
+});

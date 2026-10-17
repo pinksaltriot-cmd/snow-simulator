@@ -46,3 +46,22 @@ window.YOOPER.SNOW_WAR_TIERS = Object.assign(window.YOOPER.SNOW_WAR_TIERS || {},
   "Trenches": { label: "Trenches", desc: "Connected firin' spots get dug between da forts, two feet deep an' sixty to ninety feet total run. Movin' under cover becomes possible an' da whole fight, not just a foxhole or a fort floor, goes below da snow line, at da cost of every flat-thrown gadget, none of which ya can swing from two feet down. Gettin' between positions goes from an exposed ten seconds to a covered thirty." },
   "The Keep": { label: "Da Keep", desc: "A central stronghold built as walled works around a domed core: a room seven feet long by six wide an' four feet at da ceiling, inside two-foot walls dat make da outside footprint eleven by ten. Where a quinzhee or an igloo covers one fort, dere's one keep per alliance, both allied walls facin' out from it; it's cold, dark, drippin' about a drop a second, an' big enough for four guys sittin' down — kinda like camp in March. Inside temperature holds near twenty-eight degrees no matter what it reads outside." }
 });
+// Multi-story fort tiers (two-story, three-story, hundred-story, to orbit).
+window.YOOPER.SNOW_WAR_TIERS = Object.assign(window.YOOPER.SNOW_WAR_TIERS || {}, {
+ "Two-Story Fort": {
+  "label": "Two-Story Fort, Eh",
+  "desc": "Da citadel’s roof gets built to hold weight: sled slats an’ fence boards laid across da walls at six feet, packed over eight inches deep an’ left a night to set up, an’ a second floor goes right on top of it. Da upstairs room is fourteen feet by ten an’ five feet high, wit’ four firin’ notches dat clear da downstairs wall by a whole story, an’ ya get up dere on a ramp of packed steps out da back. It holds nine, an’ da guys downstairs get told to quit t’rowin’ up. Da t’ird day a crack opens over da doorway, an’ da floor gets re-slatted dat same night, eh."
+ },
+ "Three-Story Fort": {
+  "label": "T’ree-Story Fort",
+  "desc": "A t’ird floor goes on, an’ da fort’s gotta be rebuilt from da ground up to carry it: downstairs walls four feet t’ick under two stories of slatted floor at six feet an’ eleven. Da top room’s eight feet square an’ four feet high, wit’ one spotter, one sling, an’ a view over every roof on da block dat ain’t a house. T’irty-one steps get cut into da outside wall instead of a ramp, an’ a rope goes up beside ’em after da first guy falls. It takes eleven kids five days an’ two loads of fence boards, an’ it’s da tallest t’ing on da block anybody built on purpose, ya know."
+ },
+ "Hundred-Story Fort": {
+  "label": "Hunnert-Story Fort",
+  "desc": "A fort gets built a hunnert stories high, ice slab on ice slab across a footprint t’ree hunnert feet square, every floor ten feet tall an’ laid out exactly like da two-story one: a firin’ room in front, a store in back, a ramp up da back. Da ramp stays, all hunnert flights of it, right next to forty elevators, ’cause da drawin’ has a ramp. Da top floor sits a t’ousand feet up an’ can see da curve of da front. Da downstairs walls are ninety feet t’ick, an’ da garrison of six t’ousand has never once all been home at da same time, eh."
+ },
+ "Fort to Orbit": {
+  "label": "Fort Clear Up to Orbit",
+  "desc": "Da stories keep goin’ till dere’s no up left to build into: a fort climbs from da equator clear up to geostationary orbit, twenty-two t’ousand two hunnert t’irty-six miles, on a tether of woven ice an’ copolymer, wit’ a floor every ten feet da whole way. Dat’s about eleven million seven hunnert t’ousand floors, an’ da bottom floor an’ da top one are bot’ still a firin’ room in front an’ a store in back. Da elevators take nine days to da top. Every floor files its own ammo report, so da fort’s census gets taken one year an’ reported da next, ya know."
+ }
+});
