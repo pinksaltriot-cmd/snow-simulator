@@ -1611,3 +1611,9 @@ window.YOOPER.UI_CTX = Object.assign(window.YOOPER.UI_CTX || {}, {
  }
 });
 Object.assign(window.YOOPER.UI_CTX['.mode-toggle'] || {}, { 'Kite War Tiers': 'Kite Fights', 'Wind': 'Wind Off Da Lake' });
+
+// Kessler Court Story mode (the story itself ships in both languages in stories/kessler-court.js).
+window.YOOPER.UI = Object.assign(window.YOOPER.UI || {}, {
+  "Kessler Court Story": "Kessler Court Story, Eh",
+  "The invented origin of the Snow War on Kessler Court, Tulsa: from a snowball nobody can prove was thrown to Continental War (tier 208) in the Great Storm of 2028. Press 🗣️ Yoopanese at the top for the Yooper telling.": "Da made-up start of da Snow War on Kessler Court, Tulsa: from a snowball nobody can prove got thrown to Continental War (tier 208) in da Great Storm of 2028. Da Yooper tellin' is down below, ya know."
+});
