@@ -1610,4 +1610,4 @@ window.YOOPER.UI_CTX = Object.assign(window.YOOPER.UI_CTX || {}, {
  "Total Blowdown": "Whole Woods Blown Down"
  }
 });
-Object.assign(window.YOOPER.UI_CTX['.mode-toggle'] || {}, { 'Kite War Tiers': 'Kite Fights', 'Wind': 'Wind Off Da Lake' });
+Object.assign(window.YOOPER.UI_CTX['.mode-toggle'] || {}, { 'Kite War Tiers': 'Kite Fights', 'Wind': 'Wind Off Da Lake', 'Fort Complex': 'Da Whole Dang Fort' });
