@@ -812,7 +812,7 @@
 <div class="container">
   <div style="text-align:right;margin-bottom:-6px"><span id="grandBadge" class="grand-badge" style="display:none" title="Beat all five Storm Architect levels">🏅 Grand Architect of Storms</span> <button type="button" id="challengeBtn" class="btn-clear">🏆 Challenge</button> <button type="button" id="langToggle" class="btn-clear" data-noyoop>🗣️ Yoopanese</button></div>
   <h1 id="appTitle">Snow Event Profile Maker 3.9.0</h1>
-  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">16996 lines of code</p>
+  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">17159 lines of code</p>
   <p class="subtitle">Powered by real NOAA RSI methodology with location-based impact scaling</p>
 
   <div class="card">
@@ -1350,6 +1350,9 @@
       <div class="heat-num"><label for="fogTemp">Temp (&deg;F) <span class="heat-opt">optional</span></label><input type="number" id="fogTemp" placeholder="&mdash;"></div>
       <div class="heat-num"><label for="fogDew">Dewpoint <span class="heat-opt">optional</span></label><input type="number" id="fogDew" placeholder="&mdash;"></div>
       <div class="heat-num"><label for="fogWind">Wind (mph) <span class="heat-opt">optional</span></label><input type="number" id="fogWind" placeholder="&mdash;" min="0"></div>
+      <div class="heat-num"><label for="fogRh">Humidity (%) <span class="heat-opt">optional</span></label><input type="number" id="fogRh" placeholder="&mdash;" min="0" max="100"></div>
+      <div class="heat-num"><label for="fogPressure">Pressure (mb) <span class="heat-opt">optional</span></label><input type="number" id="fogPressure" placeholder="&mdash;" step="0.1"></div>
+      <div class="heat-num"><label for="fogT850">850mb temp (&deg;C) <span class="heat-opt">optional</span></label><input type="number" id="fogT850" placeholder="&mdash;" step="0.1"></div>
       <button type="button" class="btn-add" id="fogAddBtn">Add City</button>
     </div>
     <div class="error-msg" id="fogError"></div>
@@ -1504,6 +1507,14 @@
       </div>
       <div class="cold-field visible">
         <div>
+          <label for="dewInput">Dewpoint</label>
+          <input type="number" id="dewInput" placeholder="e.g. 28">
+        </div>
+        <span class="unit">&deg;F</span>
+        <span class="help-text">Optional. With a storm temp and no humidity, the humidity is worked out from the dewpoint.</span>
+      </div>
+      <div class="cold-field visible">
+        <div>
           <label for="beforeInput">Temp before the front</label>
           <input type="number" id="beforeInput" placeholder="e.g. 50">
         </div>
@@ -1552,6 +1563,14 @@
         </div>
         <span class="unit">mb</span>
         <span class="help-text">Sea-level. Normal ~1013 mb. Lower = stronger storm = higher impact. Bomb cyclones &lt;980 mb. Hurricanes &lt;960 mb.</span>
+      </div>
+      <div class="pressure-field">
+        <div>
+          <label for="t850Input">850mb temp</label>
+          <input type="number" id="t850Input" placeholder="e.g. -8" step="0.1">
+        </div>
+        <span class="unit">&deg;C</span>
+        <span class="help-text">Optional. About 5,000 ft up. Above 0&deg;C aloft the snow mixes and compacts (lower impact); arctic air below &minus;10&deg;C keeps it dry, blowing and lingering (higher impact).</span>
       </div>
     </div>
     <div class="pressure-row">
@@ -3551,9 +3570,10 @@ const SNOW_WAR_TIERS = [
 
 // Resolve a city's phases to its snow war tier. The first tier is reserved for
 // literally zero packable material; everything else falls through by depth.
-function getSnowWar(phases) {
-  const p = packableInches(phases);
-  const score = snowWarScore(phases);
+// Frost adds a scrapeable layer: a windshield of hoarfrost makes a handful.
+function getSnowWar(phases, frost) {
+  const p = packableInches(phases) + (frost && frost.warInches ? frost.warInches : 0);
+  const score = roundPrecip(6 * p * p);
   const tier = p <= 0 ? SNOW_WAR_TIERS[0] : (SNOW_WAR_TIERS.find(t => p <= t.maxP) || SNOW_WAR_TIERS[SNOW_WAR_TIERS.length - 1]);
   return { ...tier, packable: roundPrecip(p), score };
 }
@@ -3799,6 +3819,25 @@ function getPeakRateMultiplier(rate) {
   if (rate >= 3) return 1.1;
   return 1.05;
 }
+/* 850mb temperature (°C), about 5,000 ft up. Above freezing aloft is a warm
+   nose: the snow partly melts on the way down, mixes and compacts. Colder than
+   about -5°C the column is all snow; arctic air below -10°C keeps the snow dry,
+   drifting and slow to melt. The peak is the dendritic growth zone, -12 to
+   -18°C, where big stellar dendrites grow fastest and pile up at the highest
+   snow ratios. Only scales the snow side of the impact. */
+const DGZ_850 = { warm: -12, cold: -18 };
+function in850DGZ(t850) { return t850 !== null && t850 !== undefined && !isNaN(t850) && t850 <= DGZ_850.warm && t850 >= DGZ_850.cold; }
+function get850Multiplier(t850) {
+  if (t850 === null || t850 === undefined || isNaN(t850)) return 1.0;
+  if (t850 >= 3)   return 0.85;  // Warm nose: sleet, freezing rain, wet compacting snow
+  if (t850 > 0)    return 0.93;  // Marginal aloft: some melting on the way down
+  if (t850 > -5)   return 1.00;  // The neutral case
+  if (t850 > -10)  return 1.05;  // Cold column: nothing melts on the way down
+  if (t850 > DGZ_850.warm) return 1.10;  // Arctic air: dry, blowing snow
+  if (t850 >= DGZ_850.cold) return 1.30; // Dendritic growth zone: stellar dendrites, fastest piling
+  if (t850 > -20)  return 1.15;  // Deep arctic air: drifting, lasting cold
+  return 1.20;                   // Polar vortex air
+}
 function capMultiplierStack(m, plausible) {
   if (!plausible || m <= STACK_KNEE) return m;
   return Math.min(STACK_MAX, STACK_KNEE + (m - STACK_KNEE) * STACK_SLOPE);
@@ -3813,11 +3852,29 @@ function capMultiplierStack(m, plausible) {
    storms without one are unchanged. */
 const FROST_SKY_COOLING = { sunny: 5, partly: 3, cloudy: 1 };
 const FROST_TIERS = [
-  { maxMargin: 1,   label: 'Light frost', score: 0.08, what: 'a thin film on rooftops and windshields' },
-  { maxMargin: 2.5, label: 'Frost',       score: 0.15, what: 'white lawns, iced windshields, slick bridge decks' },
-  { maxMargin: 4.5, label: 'Heavy frost', score: 0.30, what: 'scraping every windshield, glazed bridges and overpasses, tender plants killed' },
-  { maxMargin: Infinity, label: 'Hoarfrost', score: 0.45, what: 'feathery ice crystals on every surface, treacherous bridges, crops and plants lost' },
+  { maxMargin: 1,   label: 'Light frost', score: 0.08, warInches: 0.05, burnHours: 1, what: 'a thin film on rooftops and windshields' },
+  { maxMargin: 2.5, label: 'Frost',       score: 0.15, warInches: 0.125, burnHours: 1.5, what: 'white lawns, iced windshields, slick bridge decks' },
+  { maxMargin: 4.5, label: 'Heavy frost', score: 0.30, warInches: 0.26, burnHours: 2.5, what: 'scraping every windshield, glazed bridges and overpasses, tender plants killed' },
+  { maxMargin: Infinity, label: 'Hoarfrost', score: 0.45, warInches: 0.4, burnHours: 4, what: 'feathery ice crystals on every surface, treacherous bridges, crops and plants lost' },
 ];
+/* Frost burn-off. Frost forms overnight and goes after sunrise: an hour for a
+   light film, about 4 for hoarfrost under a clear sky, longer under cloud. If
+   the next days stay at or below 30°F it survives the day in the shade and
+   goes the morning after. */
+const FROST_SKY_BURN = { sunny: 1, partly: 1.4, cloudy: 2 };
+function frostMelt(c, frost, stormDate) {
+  if (!frost || !stormDate || isNaN(stormDate.getTime())) return null;
+  const sunrise = fogSunrise(c.lat, stormDate);
+  const morning = new Date(stormDate);
+  morning.setHours(Math.floor(sunrise), Math.round((sunrise % 1) * 60), 0, 0);
+  if (morning <= stormDate) morning.setDate(morning.getDate() + 1);
+  let hours = frost.burnHours * (FROST_SKY_BURN[c.sky] || 1.2);
+  const temps = resolveWindowTemps(c, stormDate);
+  const lingers = temps && temps.short <= 30;
+  if (lingers) hours += 24;
+  const meltOutDate = new Date(morning.getTime() + hours * 3600e3);
+  return { meltOutDate, meltOutDays: (meltOutDate - stormDate) / 864e5, lingers };
+}
 function frostPointF(T, rh) {
   const tc = (T - 32) * 5 / 9;
   const e = (rh / 100) * 6.112 * Math.exp(17.62 * tc / (243.12 + tc));
@@ -3878,7 +3935,7 @@ function freezeProduct(c, frost, date) {
   return frost ? 'Frost Advisory' : null;
 }
 
-function getImpact(snow, annualSnow, hasStormTemp, stormTemp, snowEquivalent, windSpeed, gustSpeed, lat, pressure, persistenceMult, peakRate, rh, sky, flashFreeze) {
+function getImpact(snow, annualSnow, hasStormTemp, stormTemp, snowEquivalent, windSpeed, gustSpeed, lat, pressure, persistenceMult, peakRate, rh, sky, flashFreeze, t850) {
   const persistMult = (persistenceMult === undefined || persistenceMult === null) ? 1.0 : persistenceMult;
   const factor = getResilienceFactor(annualSnow, lat);
   const coldMult = hasStormTemp ? getColdMultiplier(stormTemp) : 1.0;
@@ -3901,7 +3958,8 @@ function getImpact(snow, annualSnow, hasStormTemp, stormTemp, snowEquivalent, wi
   }
 
   const rateMult = getPeakRateMultiplier(peakRate);
-  const stackMult = capMultiplierStack(coldMult * windMult * pressureMult * persistMult * rateMult,
+  const t850Mult = get850Multiplier(t850);
+  const stackMult = capMultiplierStack(coldMult * windMult * pressureMult * persistMult * rateMult * t850Mult,
     impactInputsPlausible(stormTemp, windSpeed, gustSpeed, pressure));
   const snowEffective = (effectiveSnow / factor) * stackMult;
   const frost = hasStormTemp ? getFrost(stormTemp, rh, windSpeed, sky) : null;
@@ -3966,6 +4024,7 @@ function getImpact(snow, annualSnow, hasStormTemp, stormTemp, snowEquivalent, wi
   result.pressureMult = pressureMult;
   result.persistenceMult = persistMult;
   result.rateMult = rateMult;
+  result.t850Mult = t850Mult;
   result.coldDriven = !frostDriven && !flashDriven && coldBaseline > 0 && coldBaseline >= snowEffective;
   result.flashFreeze = flashFreeze || null;
   result.flashDriven = flashDriven;
@@ -6282,6 +6341,8 @@ const warmLong = document.getElementById('warmLong');
 const windInput = document.getElementById('windInput');
 const gustInput = document.getElementById('gustInput');
 const pressureInput = document.getElementById('pressureInput');
+const t850Input = document.getElementById('t850Input');
+const dewInput = document.getElementById('dewInput');
 const peakRateInput = document.getElementById('peakRateInput');
 const skyInput = document.getElementById('skyInput');
 const rhInput = document.getElementById('rhInput');
@@ -6614,14 +6675,21 @@ function addCity() {
   const peakRate = peakRateInput.value ? parseFloat(peakRateInput.value) : null;
   if (peakRate !== null && (isNaN(peakRate) || peakRate < 0)) { inputError.textContent = 'Enter a valid peak rate (inches per hour).'; return; }
   const sky = skyInput.value || null;
-  const rh = rhInput.value ? parseFloat(rhInput.value) : null;
+  let rh = rhInput.value ? parseFloat(rhInput.value) : null;
   if (rh !== null && (isNaN(rh) || rh < 0 || rh > 100)) { inputError.textContent = 'Enter a humidity from 0 to 100%.'; return; }
+  const dew = dewInput.value ? parseFloat(dewInput.value) : null;
+  if (dew !== null && isNaN(dew)) { inputError.textContent = 'Enter a valid dewpoint.'; return; }
+  const t850 = t850Input.value ? parseFloat(t850Input.value) : null;
+  if (t850 !== null && (isNaN(t850) || t850 < -80 || t850 > 50)) { inputError.textContent = 'Enter an 850mb temp from -80 to 50\u00b0C.'; return; }
   const tempBefore = beforeInput.value ? parseFloat(beforeInput.value) : null;
   if (tempBefore !== null && isNaN(tempBefore)) { inputError.textContent = 'Enter a valid temperature before the front.'; return; }
   const db = lookupCity(name);
   const hasStormTemp = coldCheck.checked;
   const stormTemp = hasStormTemp ? parseFloat(coldInput.value) : null;
   if (hasStormTemp && isNaN(stormTemp)) { inputError.textContent = 'Enter a valid storm temperature.'; return; }
+  if (dew !== null && hasStormTemp && dew > stormTemp) { inputError.textContent = "Dewpoint can't be higher than the temperature."; return; }
+  // A dewpoint with a storm temp fills in a blank humidity.
+  if (rh === null && dew !== null && hasStormTemp) rh = Math.round(heatRH(stormTemp, dew));
   const windSpeed = windInput.value ? parseFloat(windInput.value) : null;
   const gustSpeedVal = gustInput.value ? parseFloat(gustInput.value) : null;
   if (windSpeed !== null && isNaN(windSpeed)) { inputError.textContent = 'Enter a valid wind speed.'; return; }
@@ -6636,9 +6704,9 @@ function addCity() {
     hasStormTemp, stormTemp,
     warming: { short: warmShort.value, medium: warmMedium.value, long: warmLong.value },
     windSpeed, gustSpeed: gustSpeedVal,
-    pressure, peakRate, sky, rh, tempBefore
+    pressure, peakRate, sky, rh, dew, t850, tempBefore
   });
-  cityInput.value = ''; clearPhaseBuilder(); coldCheck.checked = false; coldField.classList.remove('visible'); coldInput.value = ''; windInput.value = ''; gustInput.value = ''; pressureInput.value = ''; peakRateInput.value = ''; skyInput.value = ''; rhInput.value = ''; beforeInput.value = ''; cityInput.focus();
+  cityInput.value = ''; clearPhaseBuilder(); coldCheck.checked = false; coldField.classList.remove('visible'); coldInput.value = ''; windInput.value = ''; gustInput.value = ''; pressureInput.value = ''; peakRateInput.value = ''; skyInput.value = ''; rhInput.value = ''; dewInput.value = ''; t850Input.value = ''; beforeInput.value = ''; cityInput.focus();
   warmShort.value = 'auto'; warmMedium.value = 'auto'; warmLong.value = 'auto';
   acList.classList.remove('open');
   renderCityList();
@@ -6664,6 +6732,8 @@ function renderCityList() {
     const windTag = c.windSpeed ? ` <span style="color:#a5b4fc;font-size:0.8rem">\u{1F4A8} ${c.windSpeed}${c.gustSpeed ? '/G'+c.gustSpeed : ''} mph</span>` : '';
     const pressTag = (c.pressure !== null && c.pressure !== undefined) ? ` <span style="color:#fbbf24;font-size:0.8rem">\u{1F32A}\ufe0f ${c.pressure} mb</span>` : '';
     const rhTag = (c.rh !== null && c.rh !== undefined) ? ` <span style="color:#7dd3fc;font-size:0.8rem">\u{1F4A7} ${c.rh}% RH</span>` : '';
+    const dewTag = (c.dew !== null && c.dew !== undefined) ? ` <span style="color:#7dd3fc;font-size:0.8rem">\u{1F4A7} dewpoint ${c.dew}\u00b0F</span>` : '';
+    const t850Tag = (c.t850 !== null && c.t850 !== undefined) ? ` <span style="color:#c4b5fd;font-size:0.8rem">\u{1F388} 850mb ${c.t850}\u00b0C</span>` : '';
     const beforeTag = (c.tempBefore !== null && c.tempBefore !== undefined) ? ` <span style="color:#93c5fd;font-size:0.8rem">\u2B07\uFE0F from ${c.tempBefore}\u00b0F</span>` : '';
     const wp = c.warming || {};
     const warmPicks = ['short','medium','long'].map(k => wp[k]).filter(v => v && v !== 'auto');
@@ -6672,7 +6742,7 @@ function renderCityList() {
       : '';
     const phaseSummary = formatPhasesSummary(c.phases);
     return `<div class="city-item">
-      <span>${esc(c.name)} &mdash; ${phaseSummary}${coldTag}${beforeTag}${rhTag}${windTag}${pressTag}${warmTag} <span class="city-meta">${meta}</span></span>
+      <span>${esc(c.name)} &mdash; ${phaseSummary}${coldTag}${beforeTag}${rhTag}${dewTag}${windTag}${pressTag}${t850Tag}${warmTag} <span class="city-meta">${meta}</span></span>
       <button class="btn-remove" onclick="removeCity(${i})">&times;</button>
     </div>`;
   }).join('');
@@ -7158,11 +7228,11 @@ function generateProfile(rsiOverride) {
     const rainOnly = isRainOnly(c.phases) && !getFlashFreeze(c);
     const imp = rainOnly
       ? getRainImpact(totalRainInchesRated(c.phases), c.lat, c.windSpeed, c.gustSpeed, c.pressure)
-      : getImpact(c.snow, c.annualSnow, c.hasStormTemp, c.stormTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure, c.persistenceMult, c.peakRate, c.rh, c.sky, getFlashFreeze(c));
+      : getImpact(c.snow, c.annualSnow, c.hasStormTemp, c.stormTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure, c.persistenceMult, c.peakRate, c.rh, c.sky, getFlashFreeze(c), c.t850);
     const res = rainOnly
       ? getRainResilienceLabel(estimateAnnualRain(c.lat, c.lon, c.region), c.lat)
       : getResilienceLabel(c.annualSnow, c.lat);
-    const war = getSnowWar(c.phases);
+    const war = getSnowWar(c.phases, imp.frost);
     const rn = regionName(c.region);
     const locTag = rn ? `<span style="opacity:0.35;font-size:0.7rem;margin-left:3px">${rn}</span>` : '';
 
@@ -7244,6 +7314,13 @@ function generateProfile(rsiOverride) {
           detail += ` <em style="color:#fdba74">\u{1F321}\ufe0f ${(tl && tl.label) || 'Storm'} storm temp of ${c.stormTemp}\u00b0F reduces impact (\u00d7${imp.coldMult.toFixed(2)}) \u2014 marginal surfaces, wet snow, early melt</em>`;
         }
       }
+      if (imp.t850Mult && imp.t850Mult !== 1.0 && c.snowEquivalent > 0) {
+        detail += in850DGZ(c.t850)
+          ? ` <em style="color:#c4b5fd">\u{1F388} 850mb temp of ${c.t850}\u00b0C is in the dendritic growth zone (\u00d7${imp.t850Mult.toFixed(2)}) \u2014 big stellar flakes pile up fast and fluffy</em>`
+          : imp.t850Mult > 1.0
+          ? ` <em style="color:#c4b5fd">\u{1F388} 850mb temp of ${c.t850}\u00b0C amplifies impact (\u00d7${imp.t850Mult.toFixed(2)}) \u2014 cold air aloft keeps the snow dry, blowing and slow to melt</em>`
+          : ` <em style="color:#fdba74">\u{1F388} 850mb temp of ${c.t850}\u00b0C reduces impact (\u00d7${imp.t850Mult.toFixed(2)}) \u2014 warm air aloft, the snow mixes and compacts</em>`;
+      }
       if (c.persistenceMult && c.persistenceMult !== 1.0 && c.melt) {
         const exp = simulateMelt({ ...c, lat: c.meltLat, annualSnow: c.meltSnow, warming: null }, c.melt.stormEnd);
         const times = (exp && isFinite(exp.meltOutDays) && isFinite(c.melt.meltOutDays) && exp.meltOutDays > 0)
@@ -7283,6 +7360,9 @@ function generateProfile(rsiOverride) {
       const when = c.melt.permanent ? 'Permanent' : formatMeltMoment(c.melt.meltOutDate, c.melt.meltOutDays);
       const how = formatMeltDuration(c.melt.meltOutDays);
       meltCell = `<td class="timeline-cell"><div class="tl-melt">\u{1F4A7} ${when}</div><div style="opacity:0.6">${how}</div></td>`;
+    } else if (imp.frost) {
+      const fm = frostMelt(c, imp.frost, getStormDate());
+      if (fm) meltCell = `<td class="timeline-cell"><div class="tl-melt">\u2744\uFE0F Frost gone ${formatMeltMoment(fm.meltOutDate, fm.meltOutDays)}</div><div style="opacity:0.6">${formatMeltDuration(fm.meltOutDays)}${fm.lingers ? ' \u00b7 lingers in the shade' : ''}</div></td>`;
     }
 
     return `<tr>
@@ -7303,7 +7383,7 @@ function generateProfile(rsiOverride) {
   const peakCity = sorted.reduce((best, c) => {
     const imp = (isRainOnly(c.phases) && !getFlashFreeze(c))
       ? getRainImpact(totalRainInchesRated(c.phases), c.lat, c.windSpeed, c.gustSpeed, c.pressure)
-      : getImpact(c.snow, c.annualSnow, c.hasStormTemp, c.stormTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure, c.persistenceMult, c.peakRate, c.rh, c.sky, getFlashFreeze(c));
+      : getImpact(c.snow, c.annualSnow, c.hasStormTemp, c.stormTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure, c.persistenceMult, c.peakRate, c.rh, c.sky, getFlashFreeze(c), c.t850);
     return imp.effective > best.eff ? { eff: imp.effective, level: imp.level, name: c.name } : best;
   }, { eff: 0, level: 'None', name: '' });
   const peakEffective = peakCity.eff;
@@ -12570,11 +12650,33 @@ function fogTypeMult(type, sev, temp) {
   if (type === 'freezing') return (temp !== null && temp !== undefined && temp <= -20) ? 2.4 : 2.0;
   return 1;
 }
+// Dewpoint (°F) from temperature (°F) and relative humidity (%), Magnus form.
+function fogDewFromRH(T, rh) {
+  const tc = (T - 32) * 5 / 9;
+  const g = Math.log(Math.min(100, rh) / 100) + 17.62 * tc / (243.12 + tc);
+  return (243.12 * g / (17.62 - g)) * 9 / 5 + 32;
+}
+// High pressure traps fog under a still sky; a falling barometer stirs it out.
+function fogPressureMult(p) {
+  if (p === null || p === undefined || isNaN(p)) return 1;
+  if (p >= 1030) return 1.2;
+  if (p >= 1022) return 1.1;
+  if (p <= 1005) return 0.85;
+  return 1;
+}
+// Warm air at 850mb over a cold surface is an inversion lid: the fog cannot mix out.
+function fogInversionMult(temp, t850) {
+  if (temp === null || temp === undefined || t850 === null || t850 === undefined || isNaN(t850)) return 1;
+  const inv = (t850 * 9 / 5 + 32) - temp;
+  return inv > 0 ? 1 + Math.min(0.3, inv / 40) : 1;
+}
 function fogEffectiveHours(x) {
   let h = x.hours;
   if (x.wind !== null && x.wind !== undefined && x.wind > 3) h /= 1 + (x.wind - 3) / 12;
-  if (x.temp !== null && x.temp !== undefined && x.dew !== null && x.dew !== undefined && x.temp - x.dew <= 1) h *= 1.25;
-  return h;
+  const saturated = (x.temp !== null && x.temp !== undefined && x.dew !== null && x.dew !== undefined)
+    ? x.temp - x.dew <= 1 : (x.rh !== null && x.rh !== undefined && x.rh >= 97);
+  if (saturated) h *= 1.25;
+  return h * fogPressureMult(x.pressure) * fogInversionMult(x.temp, x.t850);
 }
 // x: { vis (mi), type, hours, start, temp?, dew?, wind? }
 function fogScore(x) {
@@ -12730,10 +12832,14 @@ function evaluateFogCity(entry, cityOverride, opts) {
   const db = cityOverride || CITY_DB.find(c => c.n.toLowerCase() === String(entry.n).toLowerCase())
     || { n: entry.n, lat: null, lon: null, r: null, pop: null };
   const nul = v => (v === undefined || v === '' ? null : v);
-  const temp = nul(entry.temp), dew = nul(entry.dew), wind = nul(entry.wind);
+  const temp = nul(entry.temp), wind = nul(entry.wind), pressure = nul(entry.pressure), t850 = nul(entry.t850);
+  let dew = nul(entry.dew), rh = nul(entry.rh);
+  // Humidity and dewpoint fill each other in when there is a temperature.
+  if (temp !== null && dew === null && rh !== null && rh > 0) dew = Math.round(fogDewFromRH(temp, rh) * 10) / 10;
+  if (temp !== null && dew !== null && rh === null) rh = Math.round(heatRH(temp, Math.min(dew, temp)));
   const type = fogEffectiveType(entry.type, temp);
   const x = { vis: Math.max(0, entry.vis), type, hazeSrc: entry.hazeSrc || 'smoke', hours: entry.hours,
-    start: entry.start || 0, temp, dew, wind };
+    start: entry.start || 0, temp, dew, wind, rh, pressure, t850 };
   const score = fogScore(x);
   const { tier, index } = fogTierFor(score);
   const r = Object.assign({ n: entry.n, db, entry, typeAuto: type !== entry.type, score, tier, tierIndex: index,
@@ -12917,6 +13023,9 @@ function fogValidate(e) {
   if (e.start === null || isNaN(e.start) || e.start < 0 || e.start > 23 || Math.floor(e.start) !== e.start) return 'Start hour must be a whole number from 0 to 23.';
   if (e.dew !== null && e.temp !== null && e.dew > e.temp) return "Dewpoint can't be higher than the temperature.";
   if (e.wind !== null && (isNaN(e.wind) || e.wind < 0)) return 'Wind must be 0 or more.';
+  if (e.rh !== null && e.rh !== undefined && (isNaN(e.rh) || e.rh < 0 || e.rh > 100)) return 'Enter a humidity from 0 to 100%.';
+  if (e.pressure !== null && e.pressure !== undefined && (isNaN(e.pressure) || e.pressure < 850 || e.pressure > 1090)) return 'Pressure must be between 850 and 1090 mb.';
+  if (e.t850 !== null && e.t850 !== undefined && (isNaN(e.t850) || e.t850 < -80 || e.t850 > 50)) return 'Enter an 850mb temp from -80 to 50\u00b0C.';
   return null;
 }
 function fogAddCity() {
@@ -12925,12 +13034,13 @@ function fogAddCity() {
   const db = CITY_DB.find(c => c.n.toLowerCase() === name.toLowerCase());
   const e = { n: db ? db.n : name, vis: parseVisibility(fogEl('fogVis').value), type: fogEl('fogType').value,
     hazeSrc: fogEl('fogHazeSrc').value, hours: fogNum('fogHours'), start: fogNum('fogStart'),
-    temp: fogNum('fogTemp'), dew: fogNum('fogDew'), wind: fogNum('fogWind') };
+    temp: fogNum('fogTemp'), dew: fogNum('fogDew'), wind: fogNum('fogWind'),
+    rh: fogNum('fogRh'), pressure: fogNum('fogPressure'), t850: fogNum('fogT850') };
   if (e.start === null) e.start = 5;
   const err = fogValidate(e);
   if (err) { fogEl('fogError').textContent = err; return; }
   fogCities.push(e);
-  ['fogCityInput', 'fogVis', 'fogHours', 'fogStart', 'fogTemp', 'fogDew', 'fogWind'].forEach(id => { fogEl(id).value = ''; });
+  ['fogCityInput', 'fogVis', 'fogHours', 'fogStart', 'fogTemp', 'fogDew', 'fogWind', 'fogRh', 'fogPressure', 'fogT850'].forEach(id => { fogEl(id).value = ''; });
   fogEl('fogCityInput').focus();
   fogRenderList();
 }
@@ -14329,7 +14439,7 @@ SNOWSIM.CHALLENGE = (function () {
   }
   // A storm city already through prepareCityMelt; the same read as the results table.
   C.snowTier = c => (isRainOnly(c.phases) && !getFlashFreeze(c)) ? 'None'
-    : getImpact(c.snow, c.annualSnow, c.hasStormTemp, c.stormTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure, c.persistenceMult, c.peakRate, c.rh, c.sky, getFlashFreeze(c)).level;
+    : getImpact(c.snow, c.annualSnow, c.hasStormTemp, c.stormTemp, c.snowEquivalent, c.windSpeed, c.gustSpeed, c.lat, c.pressure, c.persistenceMult, c.peakRate, c.rh, c.sky, getFlashFreeze(c), c.t850).level;
   function snowResults() {
     return { cities: cities.map(c => ({ city: c.name, tier: C.snowTier(c) })), rsi: calculateRSI().totalRSI };
   }
@@ -16973,6 +17083,59 @@ window.__snowTests.push((t) => {
   });
   const missing = strings.filter(x => !ok(x));
   t('every frost/flash/humidity string has a Yooper version, numbers kept (' + missing.length + ' missing)', missing.length === 0);
+  if (missing.length) console.warn('Yooper missing:', missing);
+});
+
+// INPUTS-1 850mb temp, dewpoint, frost on the snow war ladder and its burn-off, fog inputs.
+window.__snowTests.push((t) => {
+  t('850: blank is neutral', get850Multiplier(null) === 1 && get850Multiplier(-3) === 1);
+  t('850: a warm nose lowers impact', get850Multiplier(4) < get850Multiplier(1) && get850Multiplier(1) < 1);
+  t('850: the dendritic growth zone is the peak', [-12, -15, -18].every(v => get850Multiplier(v) === 1.3)
+    && [-25, -19, -11, -8, 2].every(v => get850Multiplier(v) < 1.3));
+  const base = getImpact(6, 9, true, 26, 6, 0, 0, 36.15, null, 1, null);
+  const dgz = getImpact(6, 9, true, 26, 6, 0, 0, 36.15, null, 1, null, null, null, null, -15);
+  const warm = getImpact(6, 9, true, 26, 6, 0, 0, 36.15, null, 1, null, null, null, null, 4);
+  t('850: DGZ raises a snow impact, a warm nose lowers it', dgz.effective > base.effective && warm.effective < base.effective);
+  t('850: no effect on a dry cold day', getImpact(0, 9, true, 20, 0, 0, 0, 36.15, null, 1, null, null, null, null, -15).effective
+    === getImpact(0, 9, true, 20, 0, 0, 0, 36.15, null, 1, null).effective);
+  const war = f => getSnowWar([], FROST_TIERS.find(x => x.label === f)).label;
+  t('frost: snow war tiers', war('Light frost') === 'A Pinch' && war('Frost') === 'Sweepings'
+    && war('Heavy frost') === 'One Good Snowball' && war('Hoarfrost') === 'Handful');
+  t('frost: no frost, no ammo', getSnowWar([]).label === 'No Ammo' && getSnowWar([], null).label === 'No Ammo');
+  const city = sky => ({ lat: 36.15, lon: -95.99, annualSnow: 9, sky, hasStormTemp: true, stormTemp: 34, phases: [] });
+  const night = new Date(2027, 9, 20, 22, 0);
+  const fr = FROST_TIERS.find(x => x.label === 'Frost');
+  const sun = frostMelt(city('sunny'), fr, night), cloud = frostMelt(city('cloudy'), fr, night);
+  t('frost: burns off the next morning', sun && sun.meltOutDate.getDate() === 21 && sun.meltOutDate.getHours() >= 7 && sun.meltOutDate.getHours() <= 10);
+  t('frost: cloud slows the burn-off', cloud.meltOutDate > sun.meltOutDate);
+  t('frost: hoarfrost outlasts light frost', frostMelt(city('sunny'), FROST_TIERS[3], night).meltOutDate > frostMelt(city('sunny'), FROST_TIERS[0], night).meltOutDate);
+  const fx = { vis: 0.25, type: 'fog', hours: 6, start: 2, temp: 30, dew: 28, wind: 0 };
+  t('fog: strong high pressure deepens fog', fogScore({ ...fx, pressure: 1032 }) > fogScore(fx));
+  t('fog: a low barometer thins it', fogScore({ ...fx, pressure: 998 }) < fogScore(fx));
+  t('fog: warm air aloft (inversion) deepens it', fogScore({ ...fx, t850: 8 }) > fogScore(fx) && fogScore({ ...fx, t850: -10 }) === fogScore(fx));
+  const ev = evaluateFogCity({ n: 'Fresno, CA', vis: 0.25, type: 'fog', hours: 4, start: 5, temp: 40, rh: 100 });
+  t('fog: humidity fills in the dewpoint', Math.abs(ev.dew - 40) < 0.2);
+  t('fog: dewpoint fills in the humidity', evaluateFogCity({ n: 'Fresno, CA', vis: 0.25, type: 'fog', hours: 4, start: 5, temp: 40, dew: 40 }).rh === 100);
+  t('fog: saturated humidity without a temp counts as saturated', fogScore({ vis: 0.25, type: 'fog', hours: 6, start: 2, rh: 99 })
+    > fogScore({ vis: 0.25, type: 'fog', hours: 6, start: 2 }));
+  t('new inputs are on their cards', !!document.querySelector('#detailedCard #dewInput') && !!document.querySelector('#detailedCard #t850Input')
+    && ['fogRh', 'fogPressure', 'fogT850'].every(id => !!document.getElementById(id)));
+  const yp = x => YOOP.withLang('yooper', () => YOOP.L(x));
+  const nums = x => (x.match(/\d+(?:[.,]\d+)*/g) || []).join('|');
+  const ok = x => { const y = yp(x); return y !== x && nums(y) === nums(x); };
+  const strings = [
+    'Optional. With a storm temp and no humidity, the humidity is worked out from the dewpoint.',
+    '850mb temp', '850mb temp (°C)', 'Pressure (mb)', 'Enter a valid dewpoint.', 'Enter an 850mb temp from -80 to 50°C.',
+    'Pressure must be between 850 and 1090 mb.',
+    'Optional. About 5,000 ft up. Above 0°C aloft the snow mixes and compacts (lower impact); arctic air below −10°C keeps it dry, blowing and lingering (higher impact).',
+    '\u{1F4A7} dewpoint 28°F', '\u{1F388} 850mb -8°C',
+    '\u{1F388} 850mb temp of -15°C is in the dendritic growth zone (×1.30) — big stellar flakes pile up fast and fluffy',
+    '\u{1F388} 850mb temp of -8°C amplifies impact (×1.05) — cold air aloft keeps the snow dry, blowing and slow to melt',
+    '\u{1F388} 850mb temp of 4°C reduces impact (×0.85) — warm air aloft, the snow mixes and compacts',
+    '❄️ Frost gone Thu 8:50 AM', '11h · lingers in the shade',
+  ];
+  const missing = strings.filter(x => !ok(x));
+  t('every new input string has a Yooper version, numbers kept (' + missing.length + ' missing)', missing.length === 0);
   if (missing.length) console.warn('Yooper missing:', missing);
 });
 
