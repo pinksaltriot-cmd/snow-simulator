@@ -470,6 +470,10 @@
   .tl-slush { color: #38bdf8; }
   .tl-ice { color: #c084fc; }
   .tl-sleet { color: #fbbf24; }
+  .tl-rainsleet { color: #bef264; }
+  .tl-rainsnow { color: #7dd3fc; }
+  .tl-sleetsnow { color: #fde68a; }
+  .tl-rainsleetsnow { color: #f9a8d4; }
   .tl-rain { color: #6ee7b7; }
   .tl-snowgrains { color: #bfdbfe; }
   .tl-hail { color: #e5e7eb; }
@@ -812,7 +816,7 @@
 <div class="container">
   <div style="text-align:right;margin-bottom:-6px"><span id="grandBadge" class="grand-badge" style="display:none" title="Beat all five Storm Architect levels">🏅 Grand Architect of Storms</span> <button type="button" id="challengeBtn" class="btn-clear">🏆 Challenge</button> <button type="button" id="langToggle" class="btn-clear" data-noyoop>🗣️ Yoopanese</button></div>
   <h1 id="appTitle">Snow Event Profile Maker 3.9.0</h1>
-  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">17587 lines of code</p>
+  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">17645 lines of code</p>
   <p class="subtitle">Powered by real NOAA RSI methodology with location-based impact scaling</p>
 
   <div class="card">
@@ -2698,22 +2702,26 @@ function getResilienceLabel(annualSnow, lat) {
 // content and crystal structure: powder (dry, fluffy, won't pack), snowball
 // (classic near-freezing packing snow), and slush (wet, heavy, half-melted).
 const PRECIP_TYPES = ['snowball', 'powder', 'slush', 'ice', 'sleet', 'rain',
+  'rainsleet', 'rainsnow', 'sleetsnow', 'rainsleetsnow',
   'snowgrains', 'hail', 'thunderstorm', 'thundersnow', 'fog', 'haze', 'mist', 'drizzle', 'tornado'];
 const PRECIP_LABELS = {
   snowball: 'Snowball Snow', powder: 'Powder', slush: 'Slush',
   ice: 'Ice / Freezing Rain', sleet: 'Sleet', rain: 'Rain',
+  rainsleet: 'Rain-Sleet Mix', rainsnow: 'Rain-Snow Mix', sleetsnow: 'Sleet-Snow Mix', rainsleetsnow: 'Rain-Sleet-Snow Mix',
   snowgrains: 'Snow Grains', hail: 'Hail', thunderstorm: 'Thunderstorm', thundersnow: 'Thundersnow',
   fog: 'Fog', haze: 'Haze', mist: 'Mist', drizzle: 'Drizzle', tornado: 'Tornado'
 };
 const PRECIP_ICONS  = {
   snowball: '\u2603\uFE0F', powder: '\u2744\uFE0F', slush: '\u2744\uFE0F\u{1F4A7}',
   ice: '\u{1F9CA}', sleet: '\u26C8\uFE0F', rain: '\u{1F327}\uFE0F',
+  rainsleet: '\u{1F327}\uFE0F\u26C8\uFE0F', rainsnow: '\u{1F327}\uFE0F\u2744\uFE0F', sleetsnow: '\u26C8\uFE0F\u2744\uFE0F', rainsleetsnow: '\u{1F327}\uFE0F\u26C8\uFE0F\u2744\uFE0F',
   snowgrains: '\u{1F328}\uFE0F', hail: '\u26AA', thunderstorm: '\u{1F329}\uFE0F', thundersnow: '\u26A1\u2744\uFE0F',
   fog: '\u{1F32B}\uFE0F', haze: '\u{1F301}', mist: '\u{1F4A7}', drizzle: '\u{1F326}\uFE0F', tornado: '\u{1F32A}\uFE0F'
 };
 const PRECIP_COLORS = {
   snowball: '#93c5fd', powder: '#e0f2fe', slush: '#38bdf8',
   ice: '#c084fc', sleet: '#fbbf24', rain: '#6ee7b7',
+  rainsleet: '#bef264', rainsnow: '#7dd3fc', sleetsnow: '#fde68a', rainsleetsnow: '#f9a8d4',
   snowgrains: '#bfdbfe', hail: '#e5e7eb', thunderstorm: '#f87171', thundersnow: '#f0abfc',
   fog: '#9ca3af', haze: '#d6d3d1', mist: '#a5f3fc', drizzle: '#5eead4', tornado: '#c026d3'
 };
@@ -2721,6 +2729,18 @@ const PRECIP_COLORS = {
 // The three snow varieties, so impact / timeline / interpolation code can ask
 // "is this snow?" without spelling them out every time.
 const SNOW_VARIETIES = ['snowball', 'powder', 'slush'];
+
+// Mixed precipitation: one phase that fell as two or three types at once. The
+// amount is inches on the ground. MIX_PARTS splits a mix back into its parts
+// wherever code tallies by kind (composition, "is there snow here?").
+const MIX_TYPES = ['rainsleet', 'rainsnow', 'sleetsnow', 'rainsleetsnow'];
+const MIX_PARTS = {
+  rainsleet:     { rain: 0.5, sleet: 0.5 },
+  rainsnow:      { rain: 0.5, snowball: 0.5 },
+  sleetsnow:     { sleet: 0.5, snowball: 0.5 },
+  rainsleetsnow: { rain: 1 / 3, sleet: 1 / 3, snowball: 1 / 3 }
+};
+const SNOWY_MIXES = MIX_TYPES.filter(t => MIX_PARTS[t].snowball);
 
 // Aliases for retired type names. The old generic 'snow' becomes snowball snow,
 // which is what people mean when they just say "snow". Applied wherever a type
@@ -2743,6 +2763,8 @@ function isMphType(type) { return MPH_TYPES.includes(type); }
 const PRECIP_MULTIPLIERS = {
   snowball: 1.1, powder: 0.6, slush: 0.85,
   ice: 8.0, sleet: 2.5, rain: 0.0,
+  // Mixes blend their parts: rain washes impact out, sleet sets snow into a crust.
+  rainsnow: 0.6, rainsleet: 1.0, sleetsnow: 1.8, rainsleetsnow: 1.2,
   snowgrains: 0.3, hail: 0.0, thunderstorm: 0.0, thundersnow: 3.0,
   fog: 0.0, haze: 0.0, mist: 0.0, drizzle: 0.0, tornado: 0.0  // tornado impact is exponential (see tornadoEquiv), not linear per unit
 };
@@ -2802,9 +2824,9 @@ function rainEquivInches(type, amount) {
 // inch, not how the pack reacts to rain or ice laid over it.
 const SEQUENCE_MODIFIERS = [
   // Rain after wintry precip melts it — reduces preceding phase impact
-  { prev: [...SNOW_VARIETIES,'ice','sleet'], next: 'rain', target: 'prev', factor: 0.4 },
+  { prev: [...SNOW_VARIETIES,'ice','sleet',...MIX_TYPES], next: 'rain', target: 'prev', factor: 0.4 },
   // Wintry precip after rain — wet surfaces refreeze, amplifies
-  { prev: 'rain', next: [...SNOW_VARIETIES,'ice','sleet'], target: 'next', factor: 1.3 },
+  { prev: 'rain', next: [...SNOW_VARIETIES,'ice','sleet',...MIX_TYPES], target: 'next', factor: 1.3 },
   // Ice on top of snow pack is worse
   { prev: SNOW_VARIETIES, next: 'ice',               target: 'next', factor: 1.2 },
   // Snow on slippery ice base
@@ -2884,6 +2906,10 @@ const PACKABILITY = {
   slush:       0.35,   // packs, but you are making wet sloppy ice balls
   ice:         0.25,   // hopeless as ammo, superb as fortification armor
   sleet:       0.20,   // brutal ammunition, structurally worthless
+  sleetsnow:   0.60,   // snow bound with pellets: packs, but crunchy
+  rainsnow:    0.40,   // waterlogged, sloppy like slush
+  rainsleetsnow: 0.30, // a wet mess with grit in it
+  rainsleet:   0.10,   // soaked pellets; barely holds a shape
   powder:      0.10,   // too dry to bind; falls apart in the hand
   snowgrains:  0.08,   // tiny dry pellets that barely hold together
   hail:        0.00, rain: 0.00, thunderstorm: 0.00, drizzle: 0.00,
@@ -4261,7 +4287,8 @@ function getFrost(T, rh, windSpeed, sky) {
    warmer, the storm temp at 30°F or colder, a drop of 15°F or more, and wet
    surfaces (rain, drizzle, freezing rain, sleet or slush, or 85%+ humidity).
    Bigger drops lock the water in faster and hit harder. */
-const FLASH_WET_TYPES = ['rain', 'drizzle', 'thunderstorm', 'ice', 'sleet', 'slush', 'mist'];
+const FLASH_WET_TYPES = ['rain', 'drizzle', 'thunderstorm', 'ice', 'sleet', 'slush', 'mist',
+  'rainsleet', 'rainsnow', 'rainsleetsnow'];
 function getFlashFreeze(c) {
   const before = c.tempBefore, T = c.hasStormTemp ? c.stormTemp : null;
   if (before === null || before === undefined || isNaN(before) || T === null || T === undefined || isNaN(T)) return null;
@@ -7202,6 +7229,12 @@ function classifyStormType(cityList) {
     if (c.phases) c.phases.forEach(p => {
       if (p.type === 'ice') totalIceAmt += p.amount;
       else if (SNOW_VARIETIES.includes(p.type)) totalSnowAmt += p.amount;
+      else if (MIX_PARTS[p.type]) {
+        const m = MIX_PARTS[p.type];
+        totalSnowAmt += p.amount * (m.snowball || 0);
+        totalSleetAmt += p.amount * (m.sleet || 0);
+        totalRainAmt += p.amount * (m.rain || 0);
+      }
       else if (p.type === 'sleet') totalSleetAmt += p.amount;
       else if (LIQUID_PRECIP_TYPES.includes(p.type)) totalRainAmt += p.amount;
     });
@@ -7393,7 +7426,7 @@ function coldProduct(wc, region, lat) {
 function iceDescription(c) {
   const ice = phaseSum(c.phases, ['ice']);
   const sleet = phaseSum(c.phases, ['sleet']);
-  const snowy = phaseSum(c.phases, SNOW_VARIETIES);
+  const snowy = phaseSum(c.phases, [...SNOW_VARIETIES, ...SNOWY_MIXES]);
   if (ice <= 0 || snowy > ice * 4) return null;
   let d;
   if (ice < 0.05)      d = 'Thin glaze: bridges, overpasses and untreated roads turn to black ice; crashes and falls spike even though roads look merely wet.';
@@ -7409,7 +7442,7 @@ function hazardAlerts(c, imp) {
   const phases = c.phases || [];
   const ws = c.windSpeed || 0, gs = c.gustSpeed || 0, peakWind = Math.max(ws, gs);
   const ice = phaseSum(phases, ['ice']);
-  const snowy = phaseSum(phases, [...SNOW_VARIETIES, 'snowgrains']);
+  const snowy = phaseSum(phases, [...SNOW_VARIETIES, 'snowgrains', ...SNOWY_MIXES]);
   const hail = phaseSum(phases, ['hail']);
   const convective = phases.some(p => ['thunderstorm', 'hail', 'thundersnow'].includes(p.type));
   const tornado = phases.some(p => p.type === 'tornado');
@@ -7465,7 +7498,7 @@ function totalRainInchesRated(phases) {
 // Badge for events with no frozen accumulation, and for ice-dominant events.
 function eventBadge(cityList, snowBadge) {
   const all = cityList.flatMap(c => c.phases || []);
-  const frozenSnow = phaseSum(all, [...SNOW_VARIETIES, 'snowgrains', 'sleet', 'hail']);
+  const frozenSnow = phaseSum(all, [...SNOW_VARIETIES, 'snowgrains', 'sleet', 'hail', ...MIX_TYPES]);
   const maxIce = Math.max(0, ...cityList.map(c => phaseSum(c.phases, ['ice'])));
   if (maxIce > 0 && frozenSnow <= maxIce * 4) {
     if (maxIce >= 0.5) return { label: 'Major Ice Storm', css: 'major' };
@@ -8651,7 +8684,8 @@ function seasonalNormalTemp(lat, lon, annualSnow, date) {
 // speed, hail and fog leave nothing behind.
 const SWE_RATIO = {
   powder: 15, snowgrains: 12, snowball: 10, thundersnow: 8,
-  slush: 5, sleet: 3, ice: 1.5
+  slush: 5, sleet: 3, ice: 1.5,
+  rainsnow: 6, sleetsnow: 5, rainsleetsnow: 4, rainsleet: 2.5
 };
 
 // Melt clock per type, as a fraction of real time. Slush is a ripe pack —
@@ -8660,7 +8694,8 @@ const SWE_RATIO = {
 // little mass and a huge surface, so it goes a bit early too. A rate
 // multiplier cannot do this: a pack waiting out a cold spell melts on the day
 // it warms whatever its rate, so the clock itself has to run faster.
-const MELT_CLOCK = { powder: 0.8, slush: 0.5 };
+// Mixes with rain in them are wet, ripe packs too; sleet-snow sets hard and keeps.
+const MELT_CLOCK = { powder: 0.8, slush: 0.5, rainsnow: 0.6, rainsleet: 0.6, rainsleetsnow: 0.7 };
 // For melt only, slush carries the water of snowball snow (10:1), not its
 // physical 5:1 — otherwise half the clock still loses to snowball snow.
 const MELT_SWE_RATIO = Object.assign({}, SWE_RATIO, { slush: 10 });
@@ -8765,7 +8800,8 @@ const TIER_HORIZON = {
 // no Storm Temp was entered.
 const PHASE_TEMP_BIAS = {
   powder: -8, snowgrains: -6, thundersnow: -2, snowball: -2,
-  ice: 0, sleet: 3, slush: 5, rain: 8
+  ice: 0, sleet: 3, slush: 5, rain: 8,
+  sleetsnow: 1, rainsleetsnow: 3, rainsnow: 4, rainsleet: 5
 };
 
 function phaseTempBias(phases) {
@@ -17565,6 +17601,28 @@ window.__snowTests.push((t, approx) => {
     const sl = simulateMelt(city('slush'), d).meltOutDays;
     t('slush melts in half the snowball time or sooner (' + lat + ', ' + d.getMonth() + ')', sl <= sb * 0.5 + 1e-9);
   });
+});
+
+// The four mixed-precipitation types: fully wired, valued as agreed 2026-11-15.
+window.__snowTests.push((t, approx) => {
+  MIX_TYPES.forEach(m => {
+    t(m + ' is offered and labelled', PRECIP_TYPES.includes(m) && !!PRECIP_LABELS[m] && !!PRECIP_ICONS[m] && !!PRECIP_COLORS[m]);
+    t(m + ' has impact, pack, depth and temp values', m in PRECIP_MULTIPLIERS && m in PACKABILITY && m in SWE_RATIO && m in PHASE_TEMP_BIAS);
+    t(m + ' counts as frozen accumulation', !NON_FROZEN_TYPES.includes(m) && !isRainScaleType(m));
+  });
+  const M = PRECIP_MULTIPLIERS;
+  t('mix impacts per inch', M.rainsnow === 0.6 && M.rainsleet === 1.0 && M.sleetsnow === 1.8 && M.rainsleetsnow === 1.2);
+  t('rain-snow scores below slush; sleet-snow between snowball and sleet', M.rainsnow < M.slush && M.sleetsnow > M.snowball && M.sleetsnow < M.sleet);
+  t('mix packability', PACKABILITY.sleetsnow === 0.6 && PACKABILITY.rainsnow === 0.4 && PACKABILITY.rainsleetsnow === 0.3 && PACKABILITY.rainsleet === 0.1);
+  t('rain mixes wet the roads for flash freeze; sleet-snow does not',
+    ['rainsleet', 'rainsnow', 'rainsleetsnow'].every(m => FLASH_WET_TYPES.includes(m)) && !FLASH_WET_TYPES.includes('sleetsnow'));
+  t('rain after a mix washes it out', computeDerivedPrecip([{ type: 'sleetsnow', amount: 4 }, { type: 'rain', amount: 1 }]).snowEquivalent
+    < computeDerivedPrecip([{ type: 'sleetsnow', amount: 4 }]).snowEquivalent);
+  const city = type => ({ lat: 36.15, lon: -95.99, annualSnow: 9, phases: [{ type, amount: 4 }] });
+  const jan = new Date(2027, 0, 15);
+  t('rain-snow melts faster than sleet-snow', simulateMelt(city('rainsnow'), jan).meltOutDays < simulateMelt(city('sleetsnow'), jan).meltOutDays);
+  t('a snowy mix makes the snow-war pack', getSnowWar([{ type: 'sleetsnow', amount: 2 }]).packable === roundPrecip(1.2));
+  t('Yooper names the mixes', YOOP.withLang('yooper', () => YOOP.L('Rain-Sleet-Snow Mix')) !== 'Rain-Sleet-Snow Mix');
 });
 
 window.addEventListener('load', () => {
