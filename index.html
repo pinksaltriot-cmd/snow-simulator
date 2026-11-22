@@ -772,6 +772,24 @@
   .wind-v0 { background: #e0f2fe; color: #0f172a; } .wind-v1 { background: #7dd3fc; color: #0f172a; }
   .wind-v2 { background: #fbbf24; color: #0f172a; } .wind-v3 { background: #ea580c; color: #fff7ed; }
   .wind-v4 { background: #991b1b; color: #fef2f2; }
+  .impact-front0  { background: #0f172a; color: #475569; }
+  .impact-front1  { background: #1e293b; color: #cbd5e1; }
+  .impact-front2  { background: #164e63; color: #cffafe; }
+  .impact-front3  { background: #1e40af; color: #dbeafe; }
+  .impact-front4  { background: #4338ca; color: #e0e7ff; }
+  .impact-front5  { background: #0369a1; color: #f0f9ff; box-shadow: 0 0 6px rgba(56,189,248,0.4); }
+  .impact-front6  { background: #075985; color: #e0f2fe; box-shadow: 0 0 8px rgba(125,211,252,0.5); }
+  .impact-front7  { background: #581c87; color: #f3e8ff; }
+  .impact-front8  { background: #701a75; color: #fae8ff; }
+  .impact-front9  { background: #4c0519; color: #fda4af; }
+  .impact-front10 { background: #3b0764; color: #e9d5ff; }
+  .impact-front11 { background: #1e1b4b; color: #c7d2fe; box-shadow: 0 0 8px rgba(165,180,252,0.5); }
+  .impact-front12 { background: #f8fafc; color: #64748b; box-shadow: 0 0 10px rgba(248,250,252,0.6); }
+  .front-hr { min-width: 58px; }
+  .front-t0 { background: #e0e7ff; color: #1e1b4b; } .front-t1 { background: #bfdbfe; color: #0f172a; }
+  .front-t2 { background: #7dd3fc; color: #0f172a; } .front-t3 { background: #a5f3fc; color: #0f172a; }
+  .front-t4 { background: #bbf7d0; color: #0f172a; } .front-t5 { background: #fde68a; color: #0f172a; }
+  .front-t6 { background: #fdba74; color: #0f172a; }
   .cozy-band-head { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; opacity: 0.55; margin: 14px 0 6px; font-weight: 600; }
   .cozy-band-head:first-child { margin-top: 0; }
   /* Heat Wave 2b */
@@ -816,7 +834,7 @@
 <div class="container">
   <div style="text-align:right;margin-bottom:-6px"><span id="grandBadge" class="grand-badge" style="display:none" title="Beat all five Storm Architect levels">🏅 Grand Architect of Storms</span> <button type="button" id="challengeBtn" class="btn-clear">🏆 Challenge</button> <button type="button" id="langToggle" class="btn-clear" data-noyoop>🗣️ Yoopanese</button></div>
   <h1 id="appTitle">Snow Event Profile Maker 3.9.0</h1>
-  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">17093 lines of code</p>
+  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">17834 lines of code</p>
   <p class="subtitle">Powered by real NOAA RSI methodology with location-based impact scaling</p>
 
   <div class="card">
@@ -841,6 +859,7 @@
       <button type="button" class="mode-btn" data-mode="severe">Severe Storm</button>
       <button type="button" class="mode-btn" data-mode="fog">Fog / Haze / Mist</button>
       <button type="button" class="mode-btn" data-mode="wind">Wind</button>
+      <button type="button" class="mode-btn" data-mode="front">Front</button>
       <button type="button" class="mode-btn" data-mode="fortcomplex">Fort Complex</button>
     </div>
   </div>
@@ -1417,6 +1436,50 @@
     <div id="windCityList" style="margin-top:12px"></div>
     <button class="btn-generate" id="windGenerateBtn" disabled>Generate Wind Profile</button>
   </div>
+  <div class="card" id="frontCard" style="display:none">
+    <h2>Add Cities &mdash; Front</h2>
+    <div class="row">
+      <div class="city-field">
+        <label for="frontCityInput">City</label>
+        <input type="text" id="frontCityInput" placeholder="e.g. Tulsa, OK" autocomplete="off">
+        <div class="autocomplete-list" id="frontAcList"></div>
+      </div>
+      <div class="heat-num"><label for="frontType">Front type</label>
+        <select id="frontType"><option value="cold">Cold front</option><option value="arctic">Arctic front</option><option value="backdoor">Backdoor cold front</option><option value="warm">Warm front</option><option value="occluded">Occluded front</option><option value="stationary">Stationary front</option><option value="dryline">Dryline</option></select></div>
+      <div class="heat-num"><label for="frontHours">Transition (h) <span class="heat-opt">held, for occluded / stationary</span></label><input type="number" id="frontHours" placeholder="6" min="0.25" step="0.25"></div>
+      <div class="heat-num"><label for="frontStart">Front arrives <span class="heat-opt">date sets the normals</span></label><input type="datetime-local" id="frontStart" style="max-width:220px;color-scheme:dark"></div>
+    </div>
+    <div class="warming-label" style="margin-top:6px">Before the front</div>
+    <div class="row">
+      <div class="heat-num"><label for="frontBTemp">Temp (&deg;F)</label><input type="number" id="frontBTemp" placeholder="78"></div>
+      <div class="heat-num"><label for="frontBRh">Humidity (%) <span class="heat-opt">optional</span></label><input type="number" id="frontBRh" placeholder="auto" min="0" max="100"></div>
+      <div class="heat-num"><label for="frontBDew">Dewpoint <span class="heat-opt">optional</span></label><input type="number" id="frontBDew" placeholder="auto"></div>
+      <div class="heat-num"><label for="frontBSky">Sky</label><select id="frontBSky"><option value="">Not set</option><option value="sunny">&#9728;&#65039; Sunny</option><option value="partly">&#9925; Partly cloudy</option><option value="cloudy">&#9729;&#65039; Cloudy</option></select></div>
+      <div class="heat-num"><label for="frontBWind">Wind (mph) <span class="heat-opt">optional</span></label><input type="number" id="frontBWind" placeholder="auto" min="0"></div>
+      <div class="heat-num"><label for="frontBDir">Direction</label><select id="frontBDir"><option value="">Auto</option><option>N</option><option>NE</option><option>E</option><option>SE</option><option>S</option><option>SW</option><option>W</option><option>NW</option></select></div>
+      <div class="heat-num"><label for="frontBP">Pressure (mb) <span class="heat-opt">optional</span></label><input type="number" id="frontBP" placeholder="auto" step="0.1"></div>
+    </div>
+    <div class="warming-label" style="margin-top:6px">After the front</div>
+    <div class="row">
+      <div class="heat-num"><label for="frontATemp">Temp (&deg;F)</label><input type="number" id="frontATemp" placeholder="55"></div>
+      <div class="heat-num"><label for="frontARh">Humidity (%) <span class="heat-opt">optional</span></label><input type="number" id="frontARh" placeholder="auto" min="0" max="100"></div>
+      <div class="heat-num"><label for="frontADew">Dewpoint <span class="heat-opt">optional</span></label><input type="number" id="frontADew" placeholder="auto"></div>
+      <div class="heat-num"><label for="frontASky">Sky</label><select id="frontASky"><option value="">Not set</option><option value="sunny">&#9728;&#65039; Sunny</option><option value="partly">&#9925; Partly cloudy</option><option value="cloudy">&#9729;&#65039; Cloudy</option></select></div>
+      <div class="heat-num"><label for="frontAWind">Wind (mph) <span class="heat-opt">optional</span></label><input type="number" id="frontAWind" placeholder="auto" min="0"></div>
+      <div class="heat-num"><label for="frontAGust">Gust (mph) <span class="heat-opt">optional</span></label><input type="number" id="frontAGust" placeholder="auto" min="0"></div>
+      <div class="heat-num"><label for="frontADir">Direction</label><select id="frontADir"><option value="">Auto</option><option>N</option><option>NE</option><option>E</option><option>SE</option><option>S</option><option>SW</option><option>W</option><option>NW</option></select></div>
+      <div class="heat-num"><label for="frontAP">Pressure (mb) <span class="heat-opt">optional</span></label><input type="number" id="frontAP" placeholder="auto" step="0.1"></div>
+      <div class="heat-num"><label for="frontT850">850mb temp (&deg;C) <span class="heat-opt">optional, cold side</span></label><input type="number" id="frontT850" placeholder="auto"></div>
+      <button type="button" class="btn-add" id="frontAddBtn">Add City</button>
+    </div>
+    <p class="paragraph-hint" style="margin-top:6px">Blank humidity, wind, direction and pressure are estimated for the front type. For an occluded or stationary front, the transition is how long the front holds conditions steady.</p>
+    <div class="error-msg" id="frontError"></div>
+    <div id="frontCityList" style="margin-top:12px"></div>
+    <button class="btn-generate" id="frontGenerateBtn" disabled>Generate Front Profile</button>
+  </div>
+  <div class="card" id="frontProfileCard" style="display:none"></div>
+  <div class="card" id="frontTraceCard" style="display:none"></div>
+  <div class="card" id="frontEntryCard" style="display:none"></div>
   <div class="card" id="windProfileCard" style="display:none"></div>
   <div class="card" id="windDownCard" style="display:none"></div>
   <div class="card" id="windRwiCard" style="display:none"></div>
@@ -10386,6 +10449,10 @@ function setInputMode(mode) {
   const windProfile = document.getElementById('windProfileCard');
   windProfile.style.display = (mode === 'wind' && windProfile.innerHTML.trim()) ? '' : 'none';
   WIND_EXTRA_CARDS.forEach(id => { document.getElementById(id).style.display = (mode === 'wind' && windLastResults.length) ? '' : 'none'; });
+  document.getElementById('frontCard').style.display = (mode === 'front') ? '' : 'none';
+  const frontProfile = document.getElementById('frontProfileCard');
+  frontProfile.style.display = (mode === 'front' && frontProfile.innerHTML.trim()) ? '' : 'none';
+  FRONT_EXTRA_CARDS.forEach(id => { document.getElementById(id).style.display = (mode === 'front' && frontLastResults.length) ? '' : 'none'; });
 }
 document.querySelectorAll('.mode-btn').forEach(b => {
   b.addEventListener('click', () => setInputMode(b.dataset.mode));
@@ -13664,6 +13731,634 @@ windEl('windGapResults').addEventListener('click', e => {
 windEl('windGapBtn').addEventListener('click', windGapOne);
 windEl('windGapAllBtn').addEventListener('click', windGapAll);
 windEl('windGapAddAllBtn').addEventListener('click', () => windGapAdd(windGapResults.filter(g => g.entry)));
+
+/* ---- Front Mode: engine ----
+   A front is a change from one air mass to another over a transition time, so every city
+   gets a before state, an after state and the hours between. One front impact score per
+   city, in degree-equivalents: the temperature change weighted by its rate, plus the after
+   temp's departure below the date's normal high (a little for a warm rise above it), the
+   dewpoint swing (a rise weighs more: muggy air and the severe setup), the post-frontal
+   gust and a bonus for falling through 32°F, all x a type multiplier. Occluded and
+   stationary fronts hold conditions, so they add a term for how long they hold.
+   Calibrated to the spec anchors: Oct 1 78 -> 55°F in 6 h = First Fall Front, May 2
+   55 -> 78°F = Warm Surge, Nov 20 60 -> 32°F in 4.5 h = Arctic Front, the 1911 Great
+   Blue Norther and Browning 1916 at their own tiers. Severe weather and snow are not
+   scored here: their cards go to Severe Storm mode and Detailed Input, so nothing counts
+   twice. */
+const FRONT_TYPES = {
+  cold:       { label: 'Cold front',          mult: 1.0,  wind: 1.0, dirs: ['SW', 'NW'], warmSide: 'before', spread: 15 },
+  arctic:     { label: 'Arctic front',        mult: 1.15, wind: 1.2, dirs: ['SW', 'N'],  warmSide: 'before', spread: 20 },
+  backdoor:   { label: 'Backdoor cold front', mult: 0.95, wind: 0.9, dirs: ['SW', 'NE'], warmSide: 'before', spread: 6 },
+  warm:       { label: 'Warm front',          mult: 0.95, wind: 0.6, dirs: ['SE', 'SW'], warmSide: 'after',  spread: 5 },
+  occluded:   { label: 'Occluded front',      mult: 1.0,  wind: 1.1, dirs: ['SE', 'NW'], warmSide: 'before', spread: 3, held: true },
+  stationary: { label: 'Stationary front',    mult: 0.9,  wind: 0.3, dirs: ['E', 'E'],   warmSide: 'warmer', spread: 5, held: true },
+  dryline:    { label: 'Dryline',             mult: 0.95, wind: 1.0, dirs: ['SE', 'SW'], warmSide: 'before', spread: 35 }
+};
+const FRONT_COLD_TYPES = ['cold', 'arctic', 'backdoor'];
+const FRONT_DIR_DEG = { N: 0, NE: 45, E: 90, SE: 135, S: 180, SW: 225, W: 270, NW: 315 };
+function frontType(type) { return FRONT_TYPES[type] ? type : 'cold'; }
+function frontNum(v) { return v === undefined || v === null || v === '' || Number.isNaN(v) ? null : v; }
+// Dewpoint (°F) from temperature and humidity, the inverse of heatRH (Magnus).
+function frontDewFromRH(T, rh) {
+  const tc = heatFtoC(T);
+  const g = Math.log(Math.max(1, rh) / 100) + 17.62 * tc / (243.12 + tc);
+  return (243.12 * g / (17.62 - g)) * 9 / 5 + 32;
+}
+const FRONT_SKY_LABEL = { sunny: 'Sunny', partly: 'Partly cloudy', cloudy: 'Cloudy' };
+
+// Fills one side's humidity and dewpoint. A blank side is estimated: the warm sector gets
+// the date's typical dewpoint, the cold side sits the type's spread below its temperature.
+function frontSide(s, warm, type, db, date) {
+  const t = s.t, out = { t, sky: s.sky || null, est: false };
+  if (frontNum(s.dew) !== null) { out.dew = Math.min(t, s.dew); out.rh = Math.round(heatRH(t, out.dew)); }
+  else if (frontNum(s.rh) !== null) { out.rh = s.rh; out.dew = frontDewFromRH(t, s.rh); }
+  else {
+    out.est = true;
+    out.dew = warm ? Math.min(t - 3, heatSeasonalDewpoint(db, date)) : t - FRONT_TYPES[type].spread;
+    out.rh = Math.round(heatRH(t, out.dew));
+  }
+  return out;
+}
+function frontWarmCold(x) {
+  const ws = FRONT_TYPES[x.type].warmSide;
+  const warmKey = ws === 'warmer' ? (x.after.t >= x.before.t ? 'after' : 'before') : ws;
+  return { warm: x[warmKey], cold: x[warmKey === 'after' ? 'before' : 'after'] };
+}
+
+/* ---- Wind, pressure and direction: every front type. Overrides win; blanks are typical
+   values for the type, scaled by the temperature contrast and the rate. */
+function frontWind(x) {
+  const T = FRONT_TYPES[x.type], o = x.over;
+  const dT = Math.abs(x.after.t - x.before.t), rate = dT / Math.max(0.25, x.hours);
+  const wk = T.wind;
+  const bDir = o.dirBefore || T.dirs[0], aDir = o.dirAfter || T.dirs[1];
+  const bSust = frontNum(o.windBefore) !== null ? o.windBefore : Math.round(x.type === 'stationary' ? 5 : 8 + 0.1 * dT * wk);
+  const aSust = frontNum(o.windAfter) !== null ? o.windAfter
+    : Math.round(x.type === 'stationary' ? 5 : Math.min(35, 6 + 0.25 * dT * wk + rate * wk));
+  const aGust = frontNum(o.gustAfter) !== null ? Math.max(o.gustAfter, aSust) : Math.round(Math.min(65, aSust * 1.5 + 2 * rate * wk));
+  // Cold-type fronts spike at passage; warm and held fronts peak at their after wind.
+  const peak = FRONT_COLD_TYPES.includes(x.type) || x.type === 'dryline' ? Math.round(aGust * 1.15) : aGust;
+  let shift = (FRONT_DIR_DEG[aDir] - FRONT_DIR_DEG[bDir] + 360) % 360;
+  const veer = shift <= 180;
+  if (!veer) shift = 360 - shift;
+  return { before: { dir: bDir, deg: FRONT_DIR_DEG[bDir], sust: bSust },
+    after: { dir: aDir, deg: FRONT_DIR_DEG[aDir], sust: aSust, gust: aGust }, peak, shift, veer };
+}
+function frontPressure(x) {
+  const o = x.over, dT = Math.abs(x.after.t - x.before.t), H = x.hours;
+  const typical = {
+    cold:       () => { const b = 1010, m = b - (1 + 0.08 * dT); return [b, m, m + 0.3 * dT]; },
+    arctic:     () => { const b = 1010, m = b - (1 + 0.08 * dT); return [b, m, m + 0.48 * dT]; },
+    backdoor:   () => { const b = 1014, m = b - 1; return [b, m, m + 0.15 * dT]; },
+    warm:       () => { const b = 1016, m = b - (2 + 0.1 * dT); return [b, m, m + 0.5]; },
+    occluded:   () => { const b = 1006, m = b - (4 + 0.3 * H); return [b, m, m + 3]; },
+    stationary: () => [1014, 1013.5, 1014],
+    dryline:    () => [1006, 1004, 1005]
+  }[x.type]();
+  const DIP = { cold: 1, arctic: 1, backdoor: 0.5, warm: 0, occluded: 2, stationary: 0.5, dryline: 1 };
+  const before = frontNum(o.pBefore) !== null ? o.pBefore : typical[0];
+  const after = frontNum(o.pAfter) !== null ? o.pAfter : typical[2];
+  const min = (frontNum(o.pBefore) !== null || frontNum(o.pAfter) !== null)
+    ? Math.min(before, after) - DIP[x.type] : Math.min(typical[1], before, after);
+  const r1 = v => Math.round(v * 10) / 10;
+  return { before: r1(before), min: r1(min), after: r1(after), change: r1(after - before) };
+}
+
+/* ---- Front impact score ---- */
+function frontScore(x) {
+  const T = FRONT_TYPES[x.type];
+  const dT = Math.abs(x.after.t - x.before.t);
+  const rate = dT / Math.max(0.25, x.hours);
+  const r = Math.min(2, Math.max(0.6, Math.pow(rate / 3, 0.3)));
+  const falling = x.after.t < x.before.t;
+  const dep = falling || dT === 0 ? 0.35 * Math.max(0, x.normal - x.after.t) : 0.2 * Math.max(0, x.after.t - x.normal);
+  const dd = x.after.dew - x.before.dew;
+  const humid = dd > 0 ? 0.6 * dd : 0.2 * -dd;
+  const wind = 0.3 * Math.max(0, x.wind.peak - 15);
+  const freeze = x.before.t > 32 && x.after.t <= 32 ? 8 : 0;
+  const hold = T.held ? 2 * Math.sqrt(x.hours) : 0;
+  return Math.max(0, (dT * r + dep + humid + wind + freeze + hold) * T.mult);
+}
+
+/* ---- Front impact ladder: 45 tiers. Realistic through Browning 1916-Class (#27);
+   fiction from #28. Rises and drops share the ladder. */
+const FRONT_TIERS = [
+  { maxS: 0.5,  level: 'No Front',                         css: 'front0' },
+  { maxS: 2,    level: 'Wind Shift',                       css: 'front1' },
+  { maxS: 4,    level: 'Weak Front',                       css: 'front1' },
+  { maxS: 8,    level: 'Noticeable Front',                 css: 'front1' },
+  { maxS: 14,   level: 'Sweater Front',                    css: 'front2' },
+  { maxS: 22,   level: 'Jacket Front',                     css: 'front2' },
+  { maxS: 30,   level: 'Clean Sweep',                      css: 'front2' },
+  { maxS: 40,   level: 'Sharp Front',                      css: 'front3' },
+  { maxS: 48,   level: 'First Fall Front',                 css: 'front3' },
+  { maxS: 54,   level: 'Warm Surge',                       css: 'front3' },
+  { maxS: 60,   level: 'Strong Front',                     css: 'front4' },
+  { maxS: 66,   level: 'Temperature Cliff',                css: 'front4' },
+  { maxS: 72,   level: 'Blue Norther',                     css: 'front4' },
+  { maxS: 80,   level: 'Arctic Front',                     css: 'front5' },
+  { maxS: 86,   level: 'Hard Arctic Front',                css: 'front5' },
+  { maxS: 92,   level: 'Flash-Freeze Front',               css: 'front5' },
+  { maxS: 98,   level: 'Arctic Plunge',                    css: 'front6' },
+  { maxS: 104,  level: 'Arctic Outbreak',                  css: 'front6' },
+  { maxS: 110,  level: 'Cross-Polar Flow',                 css: 'front6' },
+  { maxS: 116,  level: 'Armistice Day 1940–Class',         css: 'front7' },
+  { maxS: 122,  level: 'Groundhog Day 2011–Class',         css: 'front7' },
+  { maxS: 128,  level: 'Christmas 1983–Class',             css: 'front7' },
+  { maxS: 134,  level: 'Uri 2021–Class',                   css: 'front8' },
+  { maxS: 138,  level: 'Elliott 2022–Class',               css: 'front8' },
+  { maxS: 142,  level: 'Great Arctic Outbreak 1899–Class', css: 'front8' },
+  { maxS: 165,  level: 'Great Blue Norther 1911–Class',    css: 'front9' },
+  { maxS: 240,  level: 'Browning 1916–Class',              css: 'front9' },
+  { maxS: 300,  level: 'The Hundred-and-Twenty',           css: 'front10', fiction: true },
+  { maxS: 400,  level: 'Continental Front',                css: 'front10', fiction: true },
+  { maxS: 550,  level: 'Front Without End',                css: 'front10', fiction: true },
+  { maxS: 750,  level: 'The Wall',                         css: 'front10', fiction: true },
+  { maxS: 1000, level: 'Hemisphere Front',                 css: 'front10', fiction: true },
+  { maxS: 1400, level: 'Equator Freeze',                   css: 'front10', fiction: true },
+  { maxS: 2000, level: 'Planetary Front',                  css: 'front10', fiction: true },
+  { maxS: 3000, level: 'Cryogenian Front',                 css: 'front11', fiction: true },
+  { maxS: 4500, level: 'Mars-Class',                       css: 'front11', fiction: true },
+  { maxS: 8000, level: 'Moon-Class',                       css: 'front11', fiction: true },
+  { maxS: 15000, level: 'Mercury-Class',                   css: 'front11', fiction: true },
+  { maxS: 30000, level: 'Terminator Line',                 css: 'front11', fiction: true },
+  { maxS: 1e5,  level: 'Stellar Front',                    css: 'front11', fiction: true },
+  { maxS: 1e6,  level: 'Supernova Front',                  css: 'front11', fiction: true },
+  { maxS: 1e7,  level: 'Absolute Zero Front',              css: 'front11', fiction: true },
+  { maxS: 1e9,  level: 'Heat Death Front',                 css: 'front11', fiction: true },
+  { maxS: 1e12, level: 'The Last Front',                   css: 'front11', fiction: true },
+  { maxS: Infinity, level: 'Perfect Equilibrium',          css: 'front12', fiction: true }
+];
+function frontTierFor(score) {
+  const s = score > 0 ? score : 0;
+  const index = FRONT_TIERS.findIndex(t => s <= t.maxS);
+  return { tier: FRONT_TIERS[index], index };
+}
+
+/* ---- Hour-by-hour trace. Cold-type fronts fall fastest just after passage; warm fronts
+   rise steadily with the dewpoint leading; a dryline crashes the dewpoint in the first
+   hour; held fronts stay flat. Hour 0 is passage (the start of a warm front's rise). */
+function frontFrac(type, h, H) {
+  if (h <= 0) return 0;
+  if (h >= H) return 1;
+  const u = h / H;
+  if (FRONT_COLD_TYPES.includes(type)) return (1 - Math.exp(-3 * u)) / (1 - Math.exp(-3));
+  if (type === 'warm' || type === 'dryline') return u * u * (3 - 2 * u);
+  return u;
+}
+function frontDewFrac(type, h, H) {
+  if (type === 'dryline') return Math.min(1, Math.max(0, h));
+  if (type === 'warm') return frontFrac(type, h / 0.6, H);
+  return frontFrac(type, h, H);
+}
+function frontTrace(r) {
+  const H = r.hours, out = [];
+  const last = Math.ceil(H) + 2;
+  const startH = r.start ? r.start.getHours() : 12;
+  for (let h = -1; h <= last; h++) {
+    const f = frontFrac(r.type, h, H), fd = frontDewFrac(r.type, h, H);
+    const t = r.before.t + (r.after.t - r.before.t) * f;
+    const dew = Math.min(t, r.before.dew + (r.after.dew - r.before.dew) * fd);
+    const atPassage = h >= 0 && h < 1;
+    const cold = FRONT_COLD_TYPES.includes(r.type) || r.type === 'dryline';
+    const sust = h < 0 ? r.wind.before.sust : r.wind.before.sust + (r.wind.after.sust - r.wind.before.sust) * Math.max(f, cold ? 1 : 0);
+    const gust = atPassage && cold ? r.wind.peak : h < 0 ? Math.round(r.wind.before.sust * 1.3) : Math.round(Math.max(sust, r.wind.after.gust * (cold ? 1 : f)));
+    const dir = h < 0 || (cold ? h < 0 : f < 0.5) ? r.wind.before.dir : r.wind.after.dir;
+    const P = r.pressure;
+    let p;
+    if (r.type === 'occluded') p = h < 0 ? P.before : h <= H / 2 ? P.before + (P.min - P.before) * (h / (H / 2)) : P.min + (P.after - P.min) * Math.min(1, (h - H / 2) / (H / 2));
+    else if (r.type === 'warm') p = h < 0 ? P.before : h <= H ? P.before + (P.min - P.before) * f : P.after;
+    else p = h < 0 ? P.before : h === 0 ? P.min : P.min + (P.after - P.min) * f;
+    out.push({ h, clock: ((startH + h) % 24 + 24) % 24, t: Math.round(t), dew: Math.round(dew),
+      sust: Math.round(sust), gust: Math.max(Math.round(sust), gust), dir, p: Math.round(p * 10) / 10 });
+  }
+  return out;
+}
+
+/* ---- Severe weather card: when the warm sector can fire storms, values to enter in
+   Severe Storm mode, field for field. Moisture (dewpoint), heat, season and the front's
+   lift build an instability number; the front type sets the storm mode. */
+const FRONT_STORM_MODE = {
+  warm: 'supercell', dryline: 'supercell',
+  cold: 'squall', arctic: 'squall', backdoor: 'squall', occluded: 'squall',
+  stationary: 'training'
+};
+const FRONT_STORM_LABEL = { supercell: 'discrete supercells', squall: 'a squall line', training: 'training storms' };
+function frontSeasonK(date) {
+  if (!date) return 0.3;
+  const m = date.getMonth();
+  return m >= 2 && m <= 4 ? 0.6 : m === 5 ? 0.4 : m >= 8 && m <= 10 ? 0.2 : 0;
+}
+function frontRound(v, step) { return Math.round(v / step) * step; }
+function frontSevere(r) {
+  const w = r.warm;
+  if (w.dew < 55) return { ok: false, reason: `Too dry: the warm-sector dewpoint is ${Math.round(w.dew)}°F, and storms need about 55°F or more.` };
+  if (w.t < 65) return { ok: false, reason: `Too cool: the warm sector only reaches ${Math.round(w.t)}°F, and storms need about 65°F or more.` };
+  const dT = Math.abs(r.after.t - r.before.t), rate = dT / Math.max(0.25, r.hours);
+  const I = (w.dew - 55) / 10 + (w.t - 65) / 25 + frontSeasonK(r.start) + 0.5 * (dT / 30 + rate / 10);
+  const mode = FRONT_STORM_MODE[r.type];
+  let gust, hail, rain, rainMin, tornado = null, drop, fallMin;
+  if (mode === 'supercell') {
+    gust = 45 + 8 * I; hail = 0.5 + 0.4 * I; rain = 0.5 + 0.2 * I; rainMin = 30;
+    if (I >= 2) tornado = Math.min(200, 65 + 20 * (I - 2));
+    drop = 2 + 0.3 * I; fallMin = 40;
+  } else if (mode === 'squall') {
+    gust = 55 + 8 * I; hail = 0.25 + 0.25 * I; rain = 0.4 + 0.15 * I; rainMin = 20;
+    if (I >= 3) tornado = Math.min(120, 70 + 10 * (I - 3));
+    drop = 3 + 0.3 * I; fallMin = 20;
+  } else {
+    gust = 40 + 4 * I; hail = 0.25 + 0.1 * I; rain = 1.5 + 0.6 * I; rainMin = 180;
+    drop = 1 + 0.3 * I; fallMin = 60;
+  }
+  // Storms fire in the warm sector: behind a warm front, ahead of everything else.
+  const startMb = Math.round((r.type === 'warm' ? r.pressure.after : r.pressure.before) * 10) / 10;
+  const arrives = r.start ? new Date(r.start.getTime() + (r.type === 'warm' ? r.hours : 0) * 3600000) : null;
+  return { ok: true, mode, label: FRONT_STORM_LABEL[mode], I,
+    temp: Math.round(w.t), dew: Math.round(w.dew), gust: Math.round(gust),
+    hail: Math.max(0.25, frontRound(Math.min(6, hail), 0.25)), rain: Math.round(rain * 10) / 10, rainMin,
+    tornado: tornado === null ? null : Math.round(tornado),
+    startMb, lowMb: Math.round((startMb - drop) * 10) / 10, fallMin, arrives };
+}
+
+/* ---- Winter precipitation card: phases for Detailed Input. An hourly walk from the warm
+   air to the cold air picks each hour's type from the surface temp and the 850mb temp
+   (the warm layer aloft), then runs of the same type become phases. Behind a cold front
+   the surface cools first and the warm layer lingers aloft (rain -> mixes -> snow); ahead
+   of a winter warm front the warm air overruns aloft first (snow -> sleet -> freezing
+   rain -> rain). Snow type follows the snow-type rule: Snowball by default, Powder only
+   under 20°F. */
+const FRONT_QPF_K = { cold: 0.03, arctic: 0.025, backdoor: 0.015, warm: 0.04, occluded: 0.045, stationary: 0.04, dryline: 0.01 };
+function frontPrecipType(Ts, t850, rate) {
+  if (t850 > 1.5) {   // a real warm layer aloft
+    // A modest warm layer only half-melts the flakes, and they refreeze as sleet; a strong
+    // one melts them fully, so freezing rain, unless the cold layer below is deep.
+    if (Ts <= 32) return t850 <= 3.5 || Ts <= 24 ? 'sleet' : 'ice';
+    if (Ts <= 35) return 'rainsleet';
+    return 'rain';
+  }
+  if (t850 > 0) {     // a marginal warm layer: partial melting
+    if (Ts <= 32) return 'sleetsnow';
+    if (Ts <= 34) return 'rainsleetsnow';
+    return Ts <= 36 ? 'rainsnow' : 'rain';
+  }
+  if (Ts > 36) return 'rain';
+  if (Ts > 33) return rate * SWE_RATIO.slush >= 0.5 ? 'slush' : 'rainsnow';
+  if (Ts >= 32) return 'slush';
+  if (Ts >= 20) return 'snowball';
+  return 'powder';
+}
+function front850(t, warmAloft) { return heatFtoC(t) - (warmAloft ? -4 : 6); }
+function frontSnow(r) {
+  const w = r.warm, c = r.cold;
+  if (c.t > 38) return { ok: false, reason: `Too warm: the cold side only gets down to ${Math.round(c.t)}°F.` };
+  if (c.rh < 70) return { ok: false, reason: `No precipitation expected: the cold air is dry (${Math.round(c.rh)}% humidity).` };
+  if (w.dew < 10) return { ok: false, reason: `No precipitation expected: there's no moisture to work with (dewpoint ${Math.round(w.dew)}°F).` };
+  const T = r.type, H = r.hours;
+  const qpfH = FRONT_QPF_K[T] * Math.min(1.2, Math.max(0.05, (w.dew - 15) / 40));
+  const warmNose = T === 'warm' && w.t >= 40;
+  const c850 = r.t850 !== null ? r.t850 : front850(c.t, false);
+  const w850 = warmNose ? front850(w.t, true) : front850(w.t, false);
+  const post = FRONT_COLD_TYPES.includes(T) ? Math.min(6, H) : 0;
+  const hours = [];
+  const span = Math.max(1, Math.round(H + post));
+  for (let i = 0; i < span; i++) {
+    const h = i + 0.5;
+    let Ts, t850;
+    if (FRONT_TYPES[T].held) { Ts = c.t; t850 = c850; }
+    else if (T === 'warm') {
+      // The warm air overruns aloft first; the cold air at the ground hangs on.
+      const f = frontFrac(T, h, H);
+      Ts = c.t + (w.t - c.t) * f * f; t850 = c850 + (w850 - c850) * Math.sqrt(f);
+    } else {
+      const f = frontFrac('cold', h, H);
+      Ts = w.t + (c.t - w.t) * f; t850 = w850 + (c850 - w850) * f * f;
+    }
+    let type = frontPrecipType(Ts, t850, qpfH);
+    if (T === 'backdoor' && Ts <= 32) type = t850 > 0 ? 'ice' : 'snowgrains';
+    hours.push(type);
+  }
+  // Thundersnow: convective lift on the cold side.
+  const dT = Math.abs(r.after.t - r.before.t), rate = dT / Math.max(0.25, H);
+  const snowy = ['snowball', 'powder'];
+  let thunder = null;
+  if ((T === 'arctic' || T === 'cold') && rate >= 4 && c850 <= -8 && w.dew >= 30) thunder = { where: 'first', n: 1, why: 'a sharp front with very cold air aloft' };
+  else if (T === 'occluded' && r.pressure.min <= 1000 && c.rh >= 90 && c.t <= 32) thunder = { where: 'middle', n: 2, why: 'a deep low wrapping moisture into the cold air' };
+  else if (T === 'warm' && warmNose && w850 >= 2 && w.dew >= 40 && c.t <= 32) thunder = { where: 'first', n: 1, why: 'elevated storms riding over the cold air' };
+  let peakRate = null;
+  if (thunder) {
+    const idx = hours.map((t, i) => snowy.includes(t) ? i : -1).filter(i => i >= 0);
+    if (idx.length) {
+      const startI = thunder.where === 'middle' ? idx[Math.floor(idx.length / 2)] : idx[0];
+      for (let k = 0; k < thunder.n && startI + k < hours.length && snowy.includes(hours[startI + k]); k++) hours[startI + k] = 'thundersnow';
+      peakRate = T === 'arctic' && rate >= 6 ? 3 : 2.5;
+    } else thunder = null;
+  }
+  // Snow grains in the shallow stratus that lingers behind an Arctic front.
+  if (T === 'arctic' && c.rh >= 80 && c.t >= 15 && c.t <= 32) hours.push('snowgrains', 'snowgrains');
+  // Runs of one type become phases; a dry run of rain-only weather still counts as rain.
+  const phases = [];
+  hours.forEach(type => {
+    const last = phases[phases.length - 1];
+    const amt = type === 'thundersnow' ? (peakRate || 2.5)
+      : type === 'snowgrains' ? qpfH * 0.3 * SWE_RATIO.snowgrains
+      : qpfH * (type === 'rain' ? 1 : SWE_RATIO[type]);
+    if (last && last.type === type) { last.amount += amt; last.hours += 1; }
+    else phases.push({ type, amount: amt, hours: 1 });
+  });
+  // Under an inch to the nearest 0.05″, so 0.75″ of slush stays 0.75″; tenths above that.
+  phases.forEach(p => { p.amount = p.amount < 1 ? Math.max(0.05, Math.round(p.amount * 20) / 20) : Math.round(p.amount * 10) / 10; });
+  const winter = phases.filter(p => p.type !== 'rain');
+  if (!winter.length) return { ok: false, reason: 'Rain only: the cold air never gets cold enough for winter precipitation.', phases };
+  return { ok: true, phases, stormTemp: Math.round(c.t), peakRate, t850: Math.round(c850 * 10) / 10,
+    thunder: thunder ? thunder.why : null };
+}
+
+/* ---- Alerts and impacts ---- */
+function frontAlerts(r) {
+  const out = [];
+  const frost = getFrost(r.after.t, r.after.rh, r.wind.after.sust, r.after.sky);
+  const fp = freezeProduct({ hasStormTemp: true, stormTemp: r.after.t, lat: r.db.lat }, frost, r.start);
+  if (fp) out.push(fp);
+  r.flash = getFlashFreeze({ tempBefore: r.before.t, hasStormTemp: true, stormTemp: r.after.t,
+    phases: r.snow.phases || [], rh: r.after.rh });
+  if (r.flash) out.push('Flash freeze');
+  windAlerts({ sust: r.wind.after.sust, gust: r.wind.peak, rh: r.after.rh, type: 'general', water: 'none' })
+    .filter(a => a !== 'No wind product').forEach(a => out.push(a));
+  if (!out.includes('Red Flag Warning') && r.after.rh <= 25 && r.wind.peak >= 20) out.push('Fire Weather Watch');
+  if (['warm', 'stationary', 'occluded'].includes(r.type) && r.after.rh >= 97 && r.wind.after.sust < 8) out.push('Dense Fog Advisory');
+  const drop = r.before.t - r.after.t;
+  if (!out.length && drop >= 20 && r.hours <= 6) out.push('Special Weather Statement (rapid temperature drop)');
+  return out.length ? out : ['No front product'];
+}
+function frontPeople(r) {
+  const d = r.after.t - r.before.t, dd = r.after.dew - r.before.dew;
+  if (d <= -40) return 'Dangerous: people dressed for the warm half are caught in bitter cold, and frostbite is a risk for anyone stuck outside.';
+  if (d <= -25) return 'Big wardrobe miss: everyone out in shirtsleeves needs a winter coat by evening.';
+  if (d <= -15) return "Jackets needed: the morning's outfit doesn't work anymore.";
+  if (d <= -8) return 'Noticeably cooler; a light layer comes out.';
+  if (d >= 15) return dd >= 15 ? 'Coats come off, and the air turns muggy.' : 'Coats come off by afternoon.';
+  if (d >= 8) return 'Noticeably warmer; the jacket stays home.';
+  return 'Hardly noticed.';
+}
+function frontPipes(r) {
+  const t = r.after.t, crossed = r.before.t > 32 && t <= 32;
+  if (t <= 20 && crossed) return 'Pipes at risk: a hard freeze arrives faster than anyone can drip faucets or wrap pipes.';
+  if (t <= 20) return 'Pipes at risk: drip faucets and wrap exposed pipes.';
+  if (t <= 28) return 'Hard freeze: tender plants killed; cover outdoor faucets.';
+  if (t <= 32) return 'Freeze: frost-tender plants lost unless covered.';
+  if (t <= 36) return 'Frost possible on low ground; bring in potted plants.';
+  return 'No freeze.';
+}
+function frontRoads(r) {
+  if (r.flash) return 'Black ice: wet roads lock up as the temperature crashes.';
+  if (r.snow.ok) return 'Winter weather on the roads: see the Detailed Input card.';
+  if (r.wind.peak >= 40) return 'Crosswinds: high-profile vehicles struggle on open highways.';
+  return 'Dry roads; no front impact.';
+}
+function frontSchools(r) {
+  const chill = r.chill;
+  if (r.after.t <= 20 || (chill !== null && chill <= 0)) return 'Indoor recess; bus stops are bitterly cold.';
+  if (r.before.t - r.after.t >= 20) return 'Outdoor activities called in early; afternoon recess moves indoors.';
+  if (r.severe.ok) return 'Watch the afternoon: storms could disrupt dismissal and evening games.';
+  return 'Normal schedule.';
+}
+function frontFire(r) {
+  if (r.alerts.includes('Red Flag Warning')) return 'Critical fire weather: dry, gusty air spreads any fire fast.';
+  if (r.alerts.includes('Fire Weather Watch')) return 'Elevated fire danger in the dry, gusty air.';
+  return 'No fire concern.';
+}
+
+/* ---- Per-city pipeline ----
+   entry: { n, type, start (Date|null), hours, before: {t, rh, dew, sky}, after: {t, rh, dew, sky},
+            t850, over: { windBefore, dirBefore, pBefore, windAfter, gustAfter, dirAfter, pAfter } } */
+function evaluateFrontCity(entry, cityOverride) {
+  const db = cityOverride || CITY_DB.find(c => c.n.toLowerCase() === String(entry.n).toLowerCase())
+    || { n: entry.n, lat: null, lon: null, r: null, pop: null };
+  const type = frontType(entry.type);
+  const start = entry.start || null;
+  const ws = FRONT_TYPES[type].warmSide;
+  const warmAfter = ws === 'after' || (ws === 'warmer' && entry.after.t >= entry.before.t);
+  const x = { n: entry.n, db, entry, type, start, hours: entry.hours,
+    t850: frontNum(entry.t850), over: entry.over || {} };
+  x.before = frontSide(entry.before, !warmAfter, type, db, start);
+  x.after = frontSide(entry.after, warmAfter, type, db, start);
+  const wc = frontWarmCold(x);
+  x.warm = wc.warm; x.cold = wc.cold;
+  x.normal = Math.round(heatNormalHigh(db, start));
+  x.wind = frontWind(x);
+  x.pressure = frontPressure(x);
+  x.change = x.after.t - x.before.t;
+  x.rate = Math.abs(x.change) / Math.max(0.25, x.hours);
+  x.dewChange = Math.round(x.after.dew - x.before.dew);
+  x.score = frontScore(x);
+  const { tier, index } = frontTierFor(x.score);
+  x.tier = tier; x.tierIndex = index;
+  x.severe = frontSevere(x);
+  x.snow = frontSnow(x);
+  x.chill = windChill(x.after.t, x.wind.after.sust);
+  x.alerts = frontAlerts(x);
+  x.people = frontPeople(x);
+  x.pipes = frontPipes(x);
+  x.roads = frontRoads(x);
+  x.schools = frontSchools(x);
+  x.fire = frontFire(x);
+  x.trace = frontTrace(x);
+  return x;
+}
+
+/* ---- Front Mode: UI ---- */
+const frontCities = [];
+let frontLastResults = [];
+const FRONT_EXTRA_CARDS = ['frontTraceCard', 'frontEntryCard'];
+const frontEl = id => document.getElementById(id);
+function frontInNum(id) { const v = frontEl(id).value; return v === '' ? null : parseFloat(v); }
+function frontValidate(e) {
+  if (!e.n) return 'Please enter a city name.';
+  for (const [side, s] of [['before', e.before], ['after', e.after]]) {
+    if (s.t === null || isNaN(s.t)) return `Enter the temperature ${side} the front.`;
+    if (s.rh !== null && (isNaN(s.rh) || s.rh < 0 || s.rh > 100)) return 'Humidity must be from 0 to 100%.';
+    if (s.dew !== null && (isNaN(s.dew) || s.dew > s.t)) return "Dewpoint can't be higher than the temperature.";
+  }
+  if (e.hours === null || isNaN(e.hours) || e.hours <= 0 || e.hours > 240) return 'Transition time must be more than 0 and at most 240 hours.';
+  if (e.t850 !== null && (isNaN(e.t850) || e.t850 < -80 || e.t850 > 50)) return 'Enter an 850mb temp from -80 to 50°C.';
+  const o = e.over;
+  for (const k of ['windBefore', 'windAfter', 'gustAfter']) if (o[k] !== null && (isNaN(o[k]) || o[k] < 0)) return 'Wind speeds must be zero or more.';
+  if (o.gustAfter !== null && o.windAfter !== null && o.gustAfter < o.windAfter) return "Gust can't be lower than the sustained wind.";
+  for (const k of ['pBefore', 'pAfter']) if (o[k] !== null && (isNaN(o[k]) || o[k] < 850 || o[k] > 1090)) return 'Pressure must be from 850 to 1090 mb.';
+  return null;
+}
+function frontAddCity() {
+  frontEl('frontError').textContent = '';
+  const name = frontEl('frontCityInput').value.trim();
+  const db = CITY_DB.find(c => c.n.toLowerCase() === name.toLowerCase());
+  const sv = frontEl('frontStart').value;
+  const side = p => ({ t: frontInNum(p + 'Temp'), rh: frontInNum(p + 'Rh'), dew: frontInNum(p + 'Dew'), sky: frontEl(p + 'Sky').value || null });
+  const e = { n: db ? db.n : name, type: frontEl('frontType').value, start: sv ? new Date(sv) : null, startStr: sv,
+    hours: frontInNum('frontHours'), before: side('frontB'), after: side('frontA'), t850: frontInNum('frontT850'),
+    over: { windBefore: frontInNum('frontBWind'), dirBefore: frontEl('frontBDir').value || null, pBefore: frontInNum('frontBP'),
+      windAfter: frontInNum('frontAWind'), gustAfter: frontInNum('frontAGust'), dirAfter: frontEl('frontADir').value || null, pAfter: frontInNum('frontAP') } };
+  const err = frontValidate(e);
+  if (err) { frontEl('frontError').textContent = err; return; }
+  if (!e.start) { const d = new Date(); d.setHours(12, 0, 0, 0); e.start = d; }
+  frontCities.push(e);
+  ['frontCityInput', 'frontHours', 'frontBTemp', 'frontBRh', 'frontBDew', 'frontATemp', 'frontARh', 'frontADew', 'frontT850',
+    'frontBWind', 'frontBP', 'frontAWind', 'frontAGust', 'frontAP'].forEach(id => { frontEl(id).value = ''; });
+  ['frontBSky', 'frontASky', 'frontBDir', 'frontADir'].forEach(id => { frontEl(id).value = ''; });
+  frontEl('frontCityInput').focus();
+  frontRenderList();
+}
+function frontRemoveCity(i) { frontCities.splice(i, 1); frontRenderList(); }
+function frontRenderList() {
+  frontEl('frontGenerateBtn').disabled = !frontCities.length;
+  frontEl('frontCityList').innerHTML = frontCities.map((c, i) => `<div class="city-item">
+      <span>${esc(c.n)} &mdash; ${esc(FRONT_TYPES[frontType(c.type)].label)} · ${c.before.t}°F → ${c.after.t}°F in ${c.hours} h</span>
+      <button class="btn-remove" onclick="frontRemoveCity(${i})">&times;</button>
+    </div>`).join('');
+}
+function frontGenerate() {
+  const results = frontCities.map(c => evaluateFrontCity(c));
+  frontLastResults = results;
+  renderFrontProfile(results);
+  renderFrontTrace(results);
+  renderFrontEntries(results);
+  FRONT_EXTRA_CARDS.forEach(id => { frontEl(id).style.display = ''; });
+  frontEl('frontProfileCard').style.display = '';
+  frontEl('frontProfileCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function frontFmtScore(s) { return s >= 1e5 ? s.toExponential(1) : s < 10 ? s.toFixed(2) : Math.round(s).toLocaleString(); }
+const frontSigned = v => (v > 0 ? '+' : '') + Math.round(v);
+function frontWindCell(r) {
+  const w = r.wind, p = r.pressure;
+  const shift = w.shift ? `shifts ${w.shift}° (${w.veer ? 'veering' : 'backing'})` : 'no shift';
+  return `${w.before.dir} ${w.before.sust} → ${w.after.dir} ${w.after.sust} mph<div class="heat-sub">${shift}</div>`
+    + `<div class="heat-sub">peak gust ${w.peak} mph; gusts ${w.after.gust} mph behind</div>`
+    + `<div class="heat-sub">${p.before} → ${p.min} → ${p.after} mb (${p.change >= 0 ? 'rising' : 'falling'} ${Math.abs(p.change).toFixed(1)} mb)</div>`;
+}
+function renderFrontProfile(results) {
+  const peak = results.reduce((a, b) => (b.score > a.score ? b : a));
+  const count = re => results.filter(r => r.alerts.some(a => re.test(a))).length;
+  const rows = results.map(r => {
+    const est = r.before.est || r.after.est ? '<div class="heat-sub">humidity estimated</div>' : '';
+    return `<tr>
+      <td><strong>${esc(r.n)}</strong><div class="heat-sub">${esc(FRONT_TYPES[r.type].label)}</div></td>
+      <td style="min-width:190px">${r.before.t}°F → ${r.after.t}°F<div class="heat-sub">${FRONT_TYPES[r.type].held && Math.abs(r.change) < 1
+        ? `held for ${r.hours} h` : `${frontSigned(r.change)}°F in ${r.hours} h (${r.rate.toFixed(1)}°F/hr)`}</div>`
+      + `<div class="heat-sub">dewpoint ${Math.round(r.before.dew)} → ${Math.round(r.after.dew)}°F; humidity ${r.before.rh}% → ${r.after.rh}%</div>`
+      + `<div class="heat-sub">normal high ${r.normal}°F; after is ${frontSigned(r.after.t - r.normal)}°F from normal</div>`
+      + (r.before.sky || r.after.sky ? `<div class="heat-sub">${esc(FRONT_SKY_LABEL[r.before.sky] || '—')} → ${esc(FRONT_SKY_LABEL[r.after.sky] || '—')}</div>` : '')
+      + `${r.chill !== null ? `<div class="heat-sub">wind chill ${r.chill}°F</div>` : ''}${est}</td>
+      <td><span class="impact-pill impact-${r.tier.css}">${r.tier.level}</span><div class="heat-sub">score ${frontFmtScore(r.score)}</div></td>
+      <td>${r.alerts.map(esc).join('<br>')}</td>
+      <td style="min-width:200px">${frontWindCell(r)}</td>
+      <td>${esc(r.people)}</td>
+      <td>${esc(r.pipes)}</td>
+      <td>${esc(r.roads)}</td>
+      <td>${esc(r.schools)}</td>
+      <td>${esc(r.fire)}</td>
+    </tr>`;
+  }).join('');
+  frontEl('frontProfileCard').innerHTML = `
+    <h2>Front Profile</h2>
+    <span class="storm-badge impact-${peak.tier.css}">${peak.tier.level}</span>
+    <div class="stats-row">
+      <div class="stat-box"><div class="val">${results.length}</div><div class="lbl">${results.length === 1 ? 'City' : 'Cities'}</div></div>
+      <div class="stat-box"><div class="val">${frontSigned(peak.change)}°F</div><div class="lbl">Biggest Change</div></div>
+      <div class="stat-box"><div class="val">${Math.max(...results.map(r => r.wind.peak))} mph</div><div class="lbl">Peak Gust</div></div>
+      <div class="stat-box"><div class="val">${count(/Freeze Warning|^Flash freeze/)}</div><div class="lbl">Freeze Alerts</div></div>
+      <div class="stat-box"><div class="val">${results.filter(r => r.severe.ok).length}</div><div class="lbl">Severe Setups</div></div>
+      <div class="stat-box"><div class="val">${results.filter(r => r.snow.ok).length}</div><div class="lbl">Winter Precip</div></div>
+    </div>
+    <div class="impact-table-wrap">
+    <table class="impact-table">
+      <thead><tr><th>City</th><th>Change</th><th>Impact</th><th>NWS Alert</th><th>Wind &amp; Pressure</th><th>People Outside</th><th>Pipes &amp; Plants</th><th>Roads</th><th>Schools</th><th>Fire</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    </div>`;
+}
+function frontTempClass(t) { return t < 10 ? 'front-t0' : t < 25 ? 'front-t1' : t < 33 ? 'front-t2' : t < 45 ? 'front-t3' : t < 60 ? 'front-t4' : t < 75 ? 'front-t5' : 'front-t6'; }
+function renderFrontTrace(results) {
+  const cell = x => `<span class="fog-hr front-hr ${frontTempClass(x.t)}"><b>${String(x.clock).padStart(2, '0')}:00</b>${x.t}°<br>dp ${x.dew}°<br>${x.dir} ${x.sust}/${x.gust}<br>${x.p}</span>`;
+  const rows = results.map(r => {
+    const hs = r.trace;
+    const strip = hs.length <= 36 ? hs.map(cell).join('')
+      : hs.slice(0, 12).map(cell).join('') + `<span class="fog-hr fog-gap">… ${hs.length - 24} h …</span>` + hs.slice(-12).map(cell).join('');
+    return `<tr><td><strong>${esc(r.n)}</strong><div class="heat-sub">${esc(r.tier.level)}</div></td>
+      <td><div class="fog-hours">${strip}</div></td></tr>`;
+  }).join('');
+  frontEl('frontTraceCard').innerHTML = `<h2>Front Timeline</h2>
+    <p class="heat-sub" style="margin-bottom:8px">Hour by hour from an hour before passage: temperature, dewpoint, wind (direction, sustained / gust mph) and pressure (mb).</p>
+    <div class="impact-table-wrap"><table class="impact-table" style="min-width:720px"><thead><tr><th>City</th><th>Front by hour</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+const FRONT_LOCAL_DT = d => {
+  if (!d) return '';
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+function renderFrontEntries(results) {
+  const rows = results.map((r, i) => {
+    const s = r.severe, w = r.snow;
+    const sev = s.ok ? `<div><strong>${esc(s.label.charAt(0).toUpperCase() + s.label.slice(1))}</strong></div>
+        <div class="heat-sub">Storm arrives: ${s.arrives ? formatTimeline(s.arrives) : 'at passage'}</div>
+        <div class="heat-sub">Temp before ${s.temp}°F · dewpoint ${s.dew}°F</div>
+        <div class="heat-sub">Peak gust ${s.gust} mph · hail ${s.hail}″ · tornado ${s.tornado === null ? '—' : s.tornado + ' mph'}</div>
+        <div class="heat-sub">Rain ${s.rain}″ over ${s.rainMin} min</div>
+        <div class="heat-sub">Pressure ${s.startMb} → ${s.lowMb} mb in ${s.fallMin} min</div>
+        <button type="button" class="btn-add" style="margin:6px 0 0;padding:4px 10px" data-front-severe="${i}">Send to Severe Storm</button>`
+      : `<span class="heat-sub">No severe weather expected. ${esc(s.reason)}</span>`;
+    const snow = w.ok ? `${w.phases.map(p => `<div>${esc(PRECIP_LABELS[p.type] || p.type)} ${p.amount}″ over ${p.hours} h</div>`).join('')}
+        <div class="heat-sub">Storm temp ${w.stormTemp}°F · 850mb ${w.t850}°C${w.peakRate ? ` · peak rate ${w.peakRate}″/hr` : ''}</div>
+        ${w.thunder ? `<div class="heat-sub">Thundersnow from ${esc(w.thunder)}.</div>` : ''}
+        <button type="button" class="btn-add" style="margin:6px 0 0;padding:4px 10px" data-front-snow="${i}">Send to Detailed Input</button>`
+      : `<span class="heat-sub">${esc(w.reason)}</span>`;
+    return `<tr><td><strong>${esc(r.n)}</strong><div class="heat-sub">${esc(FRONT_TYPES[r.type].label)}</div></td>
+      <td style="min-width:260px">${sev}</td><td style="min-width:260px">${snow}</td></tr>`;
+  }).join('');
+  frontEl('frontEntryCard').innerHTML = `<h2>Severe Weather &amp; Winter Precipitation</h2>
+    <p class="heat-sub" style="margin-bottom:8px">What the front sets off, laid out field for field for Severe Storm mode and the Detailed Input phase builder. These aren't counted in the front's own score.</p>
+    <div class="impact-table-wrap"><table class="impact-table" style="min-width:720px"><thead><tr><th>City</th><th>Severe Storm mode entry</th><th>Detailed Input entry</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+// Fills Severe Storm mode with a front's severe card and switches to it.
+function frontSendSevere(r) {
+  const s = r.severe;
+  setInputMode('severe');
+  sevEl('severeCityInput').value = r.n;
+  const set = (id, v) => { sevEl(id).value = v === null || v === undefined ? '' : v; };
+  set('severeTemp', s.temp); set('severeDew', s.dew); set('severeGust', s.gust); set('severeHail', s.hail);
+  set('severeRain', s.rain); set('severeRainMin', s.rainMin); set('severeTornado', s.tornado);
+  set('severeStartMb', s.startMb); set('severeLowMb', s.lowMb); set('severeFallMin', s.fallMin);
+  if (s.arrives) sevEl('severeStartTime').value = FRONT_LOCAL_DT(s.arrives);
+  sevEl('severeCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+// Fills the Detailed Input phase builder with a front's winter card and switches to it.
+function frontSendSnow(r) {
+  const w = r.snow;
+  setInputMode('detailed');
+  cityInput.value = r.n;
+  inputPhases = w.phases.map(p => ({ type: p.type, amountStr: String(p.amount), hoursStr: String(p.hours) }));
+  renderPhaseRows();
+  coldCheck.checked = true;
+  coldCheck.dispatchEvent(new Event('change'));
+  coldInput.value = w.stormTemp;
+  beforeInput.value = r.before.t;
+  rhInput.value = r.cold.rh;
+  windInput.value = r.wind.after.sust;
+  gustInput.value = r.wind.after.gust;
+  pressureInput.value = r.pressure.after;
+  t850Input.value = w.t850;
+  peakRateInput.value = w.peakRate || '';
+  skyInput.value = r.after.sky || '';
+  if (r.start) document.getElementById('stormDate').value = FRONT_LOCAL_DT(r.start);
+  document.getElementById('detailedCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+fogWireAC(frontEl('frontCityInput'), frontEl('frontAcList'), () => frontEl('frontHours').focus());
+frontEl('frontAddBtn').addEventListener('click', frontAddCity);
+frontEl('frontGenerateBtn').addEventListener('click', frontGenerate);
+frontEl('frontEntryCard').addEventListener('click', e => {
+  const a = e.target.closest('[data-front-severe]');
+  if (a) { frontSendSevere(frontLastResults[+a.dataset.frontSevere]); return; }
+  const b = e.target.closest('[data-front-snow]');
+  if (b) frontSendSnow(frontLastResults[+b.dataset.frontSnow]);
+});
 
 /* ---- Kite War Tiers list: 327 rows grouped under the three bands ---- */
 function renderKiteWarList() {
@@ -17071,6 +17766,52 @@ window.__snowTests.push((t, approx) => {
   t('a rain mix alone starts a cozy war', getCozyWar({ phases: [{ type: 'rainsnow', amount: 4 }], lat: 36.15 }) !== null);
   t('a rain mix is still scored as winter weather', !isRainOnly([{ type: 'rainsnow', amount: 4 }]));
   t('Yooper names the mixes', YOOP.withLang('yooper', () => YOOP.L('Rain-Sleet-Snow Mix')) !== 'Rain-Sleet-Snow Mix');
+});
+
+// FRONT-1 Front mode: a before state, an after state and the hours between. Anchors from the
+// four Tulsa runs and the historic fronts; severe and winter cards; wind and pressure for all.
+window.__snowTests.push((t, approx) => {
+  const run = o => evaluateFrontCity(Object.assign({ n: 'Tulsa, OK', over: {} }, o));
+  const run1 = run({ type: 'arctic', start: new Date(2026, 10, 20, 12), hours: 4.5, before: { t: 60 }, after: { t: 32, rh: 35, sky: 'sunny' }, t850: -8, over: { windAfter: 20, gustAfter: 35, pAfter: 1036 } });
+  const run2 = run({ type: 'cold', start: new Date(2026, 9, 1, 12), hours: 6, before: { t: 78, sky: 'sunny' }, after: { t: 55, rh: 30, sky: 'cloudy' }, over: { windAfter: 18, gustAfter: 30, pAfter: 1022 } });
+  const run3 = run({ type: 'occluded', start: new Date(2026, 2, 10, 8), hours: 8, before: { t: 33, rh: 95 }, after: { t: 33, rh: 95, sky: 'cloudy' } });
+  const run4 = run({ type: 'warm', start: new Date(2026, 4, 2, 12), hours: 6, before: { t: 55, rh: 30, sky: 'cloudy' }, after: { t: 78, rh: 70, sky: 'sunny' }, over: { windAfter: 15, gustAfter: 25, pAfter: 1010 } });
+  t('front: 45 tiers, realistic through Browning 1916', FRONT_TIERS.length === 45
+    && FRONT_TIERS[26].level === 'Browning 1916–Class' && !FRONT_TIERS[26].fiction && FRONT_TIERS[27].fiction);
+  t('front: run 1 Nov 20 60 -> 32 in 4.5 h is Arctic Front', run1.tier.level === 'Arctic Front');
+  t('front: run 2 Oct 1 78 -> 55 in 6 h is First Fall Front', run2.tier.level === 'First Fall Front');
+  t('front: run 4 May 2 warm 55 -> 78 is Warm Surge', run4.tier.level === 'Warm Surge');
+  t('front: the 1911 Great Blue Norther lands on its tier', evaluateFrontCity({ n: 'Oklahoma City, OK', type: 'arctic', start: new Date(1911, 10, 11, 14), hours: 10,
+    before: { t: 83 }, after: { t: 17 }, over: { windAfter: 35, gustAfter: 50 } }).tier.level === 'Great Blue Norther 1911–Class');
+  t('front: Browning 1916 lands on its tier', evaluateFrontCity({ n: 'Browning, MT', type: 'arctic', start: new Date(1916, 0, 23, 12), hours: 24,
+    before: { t: 44 }, after: { t: -56 }, over: {} }).tier.level === 'Browning 1916–Class');
+  t('front: a faster drop outscores the same drop slowly', run({ type: 'cold', hours: 3, start: new Date(2026, 9, 1), before: { t: 70, rh: 60 }, after: { t: 45, rh: 40 } }).score
+    > run({ type: 'cold', hours: 24, start: new Date(2026, 9, 1), before: { t: 70, rh: 60 }, after: { t: 45, rh: 40 } }).score);
+  t('front: 55°F scores more on Oct 1 than in January', run({ type: 'cold', hours: 6, start: new Date(2026, 9, 1), before: { t: 70, rh: 60 }, after: { t: 55, rh: 40 } }).score
+    > run({ type: 'cold', hours: 6, start: new Date(2027, 0, 15), before: { t: 70, rh: 60 }, after: { t: 55, rh: 40 } }).score);
+  t('front: the dry Arctic front brings no snow and no storms', !run1.snow.ok && !run1.severe.ok);
+  t('front: run 4 warm front sets up storms for Severe Storm mode', run4.severe.ok && run4.severe.mode === 'supercell'
+    && run4.severe.temp === 78 && run4.severe.dew === 67 && run4.severe.gust > 0 && run4.severe.hail > 0 && run4.severe.lowMb < run4.severe.startMb);
+  t('front: run 3 occlusion holds 33°F slush, about 0.75″ over 8 h', run3.snow.ok && run3.snow.phases.length === 1
+    && run3.snow.phases[0].type === 'slush' && run3.snow.phases[0].hours === 8 && approx(run3.snow.phases[0].amount, 0.75, 0.05));
+  const ww = run({ type: 'warm', start: new Date(2027, 0, 10, 6), hours: 12, before: { t: 24, rh: 85 }, after: { t: 40, rh: 95 } }).snow.phases.map(p => p.type);
+  t('front: a winter warm front runs snow -> sleet -> freezing rain -> rain', ww[0] === 'snowball' && ww.indexOf('sleet') > 0
+    && ww.indexOf('ice') > ww.indexOf('sleet') && ww.lastIndexOf('rain') > ww.indexOf('ice'));
+  const arctic = run({ type: 'arctic', start: new Date(2027, 1, 1, 6), hours: 6, before: { t: 45, rh: 90 }, after: { t: 15, rh: 90 } }).snow;
+  t('front: a sharp Arctic front with cold air aloft brings thundersnow', arctic.phases.some(p => p.type === 'thundersnow') && arctic.peakRate >= 2);
+  t('front: snow grains linger behind an Arctic front', arctic.phases[arctic.phases.length - 1].type === 'snowgrains');
+  const P = frontPrecipType;
+  t('front: snow type by temperature (Snowball in the mid-20s, Powder under 20°F)', P(25, -5, 0.02) === 'snowball' && P(15, -8, 0.02) === 'powder' && P(32.5, -3, 0.02) === 'slush');
+  t('front: all four mixes come from the layer aloft', P(35, -3, 0.02) === 'rainsnow' && P(34, 3, 0.02) === 'rainsleet'
+    && P(33.5, 0.5, 0.02) === 'rainsleetsnow' && P(30, 0.5, 0.02) === 'sleetsnow');
+  t('front: warm layer over a shallow cold layer is freezing rain, over a deep one sleet', P(31, 5, 0.02) === 'ice' && P(22, 5, 0.02) === 'sleet');
+  t('front: every type reports wind, direction and pressure', Object.keys(FRONT_TYPES).every(type => {
+    const r = run({ type, hours: 6, start: new Date(2026, 9, 1), before: { t: 60 }, after: { t: 50 } });
+    return r.wind.before.dir && r.wind.after.dir && r.wind.after.sust >= 0 && r.pressure.min <= r.pressure.before && r.trace.length > 6;
+  }));
+  t('front: a rapid dry drop gets a Special Weather Statement', run2.alerts.includes('Special Weather Statement (rapid temperature drop)'));
+  t('front: Front mode button is after Wind', (() => { const b = [...document.querySelectorAll('.mode-btn')].map(x => x.dataset.mode); return b.indexOf('front') === b.indexOf('wind') + 1; })());
+  t('Yooper names the Front tiers', YOOP.withLang('yooper', () => YOOP.L('Front Profile')) !== 'Front Profile');
 });
 
 window.addEventListener('load', () => {
