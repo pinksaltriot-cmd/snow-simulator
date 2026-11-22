@@ -48,9 +48,9 @@ Fog score anchors (fogScore, fog type unless noted, starting 5 am):
 | 2 Gale | #40–69 | to 62,660 | hurricane force, hurricane categories, derechos, record gusts, EF3–EF5 tornadoes; realism edge at #60, fiction after |
 | 3 Beyond the Weather | #70–90 | past 62,660 | fiction |
 
-Kite thresholds come from windScore at the tier's sustained-wind anchor (general type, gust 1.35× sustained, 6 hours):
+Kite thresholds come from windScore at each tier's top wind speed V (general type, sustained V, gust 1.35·V, 6 hours). Record gusts (Mount Washington, Barrow Island) and tornado wind estimates are placed by their top speed, so they sit after the hurricanes in the approved name order. The per-tier speeds are listed in the plan. Anchors:
 
-| Sustained mph | Score | Lands on |
+| Top wind V (mph) | Score | Lands on |
 |---|---|---|
 | 0 | 0 | #1 Dead Calm |
 | 3 | 0.03 | Light Air (#4) |
@@ -65,8 +65,8 @@ Kite thresholds come from windScore at the tier's sustained-wind anchor (general
 | 59 | 265 | Storm (#33) |
 | 68 | 405 | Violent Storm (#36) |
 | 80 | 659 | Category 1 (#41) |
-| 150 (Barrow Island 1996, 253 gust) | 5,429 | Barrow Island 1996 (#57) |
-| 300 | 34,726 | El Reno 2013 (#60, realism edge) |
+| 253 (Barrow Island 1996 gust) | ≈20,850 | Barrow Island 1996 (#57) |
+| 302 (El Reno 2013, radar) | ≈35,400 | El Reno 2013 (#60, realism edge) |
 
 ## Story and voice
 
