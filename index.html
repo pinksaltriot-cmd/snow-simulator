@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Snow Event Profile Maker 3.10.0</title>
+<title>Snow Event Profile Maker 4.0.0</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -855,7 +855,7 @@
 
 <div class="container">
   <div style="text-align:right;margin-bottom:-6px"><span id="grandBadge" class="grand-badge" style="display:none" title="Beat all five Storm Architect levels">🏅 Grand Architect of Storms</span> <button type="button" id="challengeBtn" class="btn-clear">🏆 Challenge</button> <button type="button" id="holidayToggle" class="btn-clear" data-noyoop aria-pressed="false">🎄 Holiday</button> <button type="button" id="langToggle" class="btn-clear" data-noyoop>🗣️ Yoopanese</button></div>
-  <h1 id="appTitle">Snow Event Profile Maker 3.10.0</h1>
+  <h1 id="appTitle">Snow Event Profile Maker 4.0.0</h1>
   <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">17948 lines of code</p>
   <p class="subtitle">Powered by real NOAA RSI methodology with location-based impact scaling</p>
 
@@ -17171,12 +17171,12 @@ window.__snowTests.push((t) => {
   const yp = s => YOOP.withLang('yooper', () => YOOP.L(s));
   t('selftest runs in English', YOOP.lang === 'en');
   t('English passes through untouched', YOOP.L('Storm Profile') === 'Storm Profile');
-  t('title and header stay English', document.title === 'Snow Event Profile Maker 3.10.0'
-    && document.getElementById('appTitle').textContent === 'Snow Event Profile Maker 3.10.0');
+  t('title and header stay English', document.title === 'Snow Event Profile Maker 4.0.0'
+    && document.getElementById('appTitle').textContent === 'Snow Event Profile Maker 4.0.0');
   t('toggle offers Yoopanese', document.getElementById('langToggle').textContent.includes('Yoopanese'));
   t('Yooper swaps a heading', yp('Storm Profile') === 'Da Storm Profile');
   t('Yooper swaps a tier name', yp('Crippling') === 'Stuck at Camp' && yp('Omega Point Frost') === 'Heikki Lunta Himself');
-  t('Yooper keeps the version string', yp('Snow Event Profile Maker 3.10.0').includes('3.10.0'));
+  t('Yooper keeps the version string', yp('Snow Event Profile Maker 4.0.0').includes('4.0.0'));
   const heading = document.getElementById('appTitle').textContent;
   t('Yooper translates the heading at the current version', yp(heading) === heading.replace('Snow Event Profile Maker', 'Da Snow Event Profile Maker, Eh?'));
   t('Yooper heading survives any version bump', yp('Snow Event Profile Maker 4.12.3') === 'Da Snow Event Profile Maker, Eh? 4.12.3');
