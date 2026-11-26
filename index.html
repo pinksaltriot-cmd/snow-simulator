@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Snow Event Profile Maker 3.9.0</title>
+<title>Snow Event Profile Maker 3.10.0</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -825,16 +825,38 @@
   .impact-sev15 { background: #1e1b4b; color: #c7d2fe; }
   .impact-sev16 { background: #000; color: #a78bfa; }
   /* Yoopanese names run longer than the English ones: wrap them instead of clipping. */
+  /* ---- Holiday mode (🎄 toggle): a skin over the page, never the tier colors ---- */
+  .xmas-only { display: none; }
+  html.xmas .xmas-only { display: inline; }
+  html.xmas body { background: radial-gradient(ellipse at 50% -10%, #1d3f6e 0%, #0e2340 42%, #0b2a20 100%) fixed; }
+  html.xmas #appTitle { color: #fde68a; text-shadow: 0 0 18px rgba(250,204,21,0.35); }
+  html.xmas #appTitle::before, html.xmas #appTitle::after { content: '\1F384'; margin: 0 10px; text-shadow: none; }
+  html.xmas .card { border-color: rgba(250,204,21,0.25); box-shadow: inset 0 3px 0 rgba(220,38,38,0.6); }
+  html.xmas input:focus, html.xmas select:focus, html.xmas textarea:focus { border-color: #facc15; }
+  html.xmas .cold-toggle input[type="checkbox"] { accent-color: #dc2626; }
+  html.xmas .snowflake.xmas-star { color: rgba(250,204,21,0.55); }
+  #holidayToggle.on { background: rgba(220,38,38,0.35); color: #fde68a; }
+  .xmas-lights { display: none; position: fixed; top: 0; left: 0; right: 0; height: 22px; z-index: 2; pointer-events: none;
+    justify-content: space-around; background: linear-gradient(#1f2a1f, #1f2a1f) 0 3px / 100% 2px no-repeat; }
+  html.xmas .xmas-lights { display: flex; }
+  .xmas-lights i { width: 8px; height: 12px; margin-top: 4px; border-radius: 50% 50% 45% 45%; animation: twinkle 2.4s ease-in-out infinite; }
+  .xmas-lights i:nth-child(4n+1) { background: #ef4444; box-shadow: 0 2px 8px #ef4444; }
+  .xmas-lights i:nth-child(4n+2) { background: #22c55e; box-shadow: 0 2px 8px #22c55e; animation-delay: .6s; }
+  .xmas-lights i:nth-child(4n+3) { background: #facc15; box-shadow: 0 2px 8px #facc15; animation-delay: 1.2s; }
+  .xmas-lights i:nth-child(4n)   { background: #60a5fa; box-shadow: 0 2px 8px #60a5fa; animation-delay: 1.8s; }
+  @keyframes twinkle { 50% { opacity: .35; box-shadow: none; } }
+  @media (prefers-reduced-motion: reduce) { .xmas-lights i { animation: none; } }
 </style>
 </head>
 <body>
 <div class="snowflakes" id="snowflakes"></div>
+<div class="xmas-lights" id="xmasLights" aria-hidden="true"></div>
 
 
 <div class="container">
-  <div style="text-align:right;margin-bottom:-6px"><span id="grandBadge" class="grand-badge" style="display:none" title="Beat all five Storm Architect levels">🏅 Grand Architect of Storms</span> <button type="button" id="challengeBtn" class="btn-clear">🏆 Challenge</button> <button type="button" id="langToggle" class="btn-clear" data-noyoop>🗣️ Yoopanese</button></div>
-  <h1 id="appTitle">Snow Event Profile Maker 3.9.0</h1>
-  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">17834 lines of code</p>
+  <div style="text-align:right;margin-bottom:-6px"><span id="grandBadge" class="grand-badge" style="display:none" title="Beat all five Storm Architect levels">🏅 Grand Architect of Storms</span> <button type="button" id="challengeBtn" class="btn-clear">🏆 Challenge</button> <button type="button" id="holidayToggle" class="btn-clear" data-noyoop aria-pressed="false">🎄 Holiday</button> <button type="button" id="langToggle" class="btn-clear" data-noyoop>🗣️ Yoopanese</button></div>
+  <h1 id="appTitle">Snow Event Profile Maker 3.10.0</h1>
+  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">17948 lines of code</p>
   <p class="subtitle">Powered by real NOAA RSI methodology with location-based impact scaling</p>
 
   <div class="card">
@@ -7371,6 +7393,8 @@ function generateProfile(rsiOverride) {
       detail += ` <em style="color:#fca5a5">🌪️ ${ef.ef} tornado (${p.amount} mph), on the ground about ${ef.minutes} minutes: ${ef.damage}</em>`;
     });
     const wc = windChillF(c.hasStormTemp ? c.stormTemp : null, c.windSpeed);
+    const wx = whiteChristmas(c);
+    if (wx) detail += ` <em class="xmas-only" style="color:#fde68a">\u{1F384} White Christmas: ${wx.during ? 'still snowing at 7 AM Christmas morning, with ' : ''}${wx.depth.toFixed(1)}\u2033 on the ground ${wx.during ? 'already' : 'at 7 AM Dec 25'}${wx.date.getFullYear() !== (c.timeline ? c.timeline.start : wx.date).getFullYear() ? ', ' + wx.date.getFullYear() : ''} (the NWS counts 1\u2033 or more)</em>`;
     if (wc !== null && wc < c.stormTemp - 1) detail += ` <em style="color:#93c5fd">🥶 Wind chill ${Math.round(wc)}°F</em>`;
     if (!rainOnly && imp.flashFreeze) {
       const ff = imp.flashFreeze;
@@ -11189,6 +11213,73 @@ clearBtn.addEventListener('click', clearAll);
 document.getElementById('randomBtn').addEventListener('click', generateRandomStorm);
 // Phase amount inputs: Enter key adds city
 phaseBuilder.addEventListener('keydown', e => { if (e.key==='Enter' && e.target.classList.contains('phase-amt-input')) addCity(); });
+
+/* ---- White Christmas ---- */
+// The NWS definition: at least 1" of snow on the ground on the morning of
+// Dec 25. "Morning" is read as 7 AM local, the usual observation time. The
+// Christmas checked is the first one at or after the storm starts, so a pack
+// that survives a whole year can still make the next one white.
+function christmasMorningAfter(start) {
+  const d = new Date(start.getFullYear(), 11, 25, 7, 0, 0);
+  return d < start ? new Date(start.getFullYear() + 1, 11, 25, 7, 0, 0) : d;
+}
+function meltDepthAtDay(melt, day) {
+  const c = melt.curve;
+  if (day <= c[0].day) return c[0].depth;
+  for (let i = 1; i < c.length; i++) {
+    if (day <= c[i].day) {
+      const a = c[i - 1], b = c[i];
+      return a.depth + (b.depth - a.depth) * (day - a.day) / (b.day - a.day);
+    }
+  }
+  return melt.permanent ? c[c.length - 1].depth : 0;
+}
+function whiteChristmas(c) {
+  const melt = c && c.melt;
+  if (!melt || !(melt.peakDepth > 0)) return null;
+  const end = melt.stormEnd;
+  const start = (c.timeline && c.timeline.start) ? c.timeline.start : end;
+  const xm = christmasMorningAfter(start);
+  let depth, during = false;
+  if (xm < end) {
+    // Still falling: credit the pack in proportion to the storm's elapsed time.
+    during = true;
+    depth = melt.peakDepth * (xm - start) / (end - start);
+  } else {
+    depth = meltDepthAtDay(melt, (xm - end) / 86400000);
+  }
+  return depth >= 1 ? { depth, date: xm, during } : null;
+}
+
+/* ---- Holiday mode ---- */
+(function() {
+  const KEY = 'snowsim.holiday';
+  const lights = document.getElementById('xmasLights');
+  for (let i = 0; i < 48; i++) lights.appendChild(document.createElement('i'));
+  function setHoliday(on) {
+    document.documentElement.classList.toggle('xmas', on);
+    const b = document.getElementById('holidayToggle');
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    b.textContent = on ? '\u{1F384} Holiday: On' : '\u{1F384} Holiday';
+    // Every sixth flake becomes a gold star; turning it off restores the flake.
+    document.querySelectorAll('.snowflake').forEach((el, i) => {
+      if (!el.dataset.flake) el.dataset.flake = el.textContent;
+      const star = on && i % 6 === 0;
+      el.classList.toggle('xmas-star', star);
+      el.textContent = star ? '\u2605' : el.dataset.flake;
+    });
+    try { localStorage.setItem(KEY, on ? '1' : '0'); } catch (e) {}
+  }
+  window.setHoliday = setHoliday;
+  document.getElementById('holidayToggle').addEventListener('click',
+    () => setHoliday(!document.documentElement.classList.contains('xmas')));
+  window.addEventListener('load', () => {
+    let on = false;
+    try { on = localStorage.getItem(KEY) === '1'; } catch (e) {}
+    if (on && !/(\?|&)selftest\b/.test(location.search)) setHoliday(true);
+  });
+})();
 
 /* ---- Snowflakes ---- */
 (function() {
@@ -17080,12 +17171,12 @@ window.__snowTests.push((t) => {
   const yp = s => YOOP.withLang('yooper', () => YOOP.L(s));
   t('selftest runs in English', YOOP.lang === 'en');
   t('English passes through untouched', YOOP.L('Storm Profile') === 'Storm Profile');
-  t('title and header stay English', document.title === 'Snow Event Profile Maker 3.9.0'
-    && document.getElementById('appTitle').textContent === 'Snow Event Profile Maker 3.9.0');
+  t('title and header stay English', document.title === 'Snow Event Profile Maker 3.10.0'
+    && document.getElementById('appTitle').textContent === 'Snow Event Profile Maker 3.10.0');
   t('toggle offers Yoopanese', document.getElementById('langToggle').textContent.includes('Yoopanese'));
   t('Yooper swaps a heading', yp('Storm Profile') === 'Da Storm Profile');
   t('Yooper swaps a tier name', yp('Crippling') === 'Stuck at Camp' && yp('Omega Point Frost') === 'Heikki Lunta Himself');
-  t('Yooper keeps the version string', yp('Snow Event Profile Maker 3.9.0').includes('3.9.0'));
+  t('Yooper keeps the version string', yp('Snow Event Profile Maker 3.10.0').includes('3.10.0'));
   const heading = document.getElementById('appTitle').textContent;
   t('Yooper translates the heading at the current version', yp(heading) === heading.replace('Snow Event Profile Maker', 'Da Snow Event Profile Maker, Eh?'));
   t('Yooper heading survives any version bump', yp('Snow Event Profile Maker 4.12.3') === 'Da Snow Event Profile Maker, Eh? 4.12.3');
@@ -17812,6 +17903,29 @@ window.__snowTests.push((t, approx) => {
   t('front: a rapid dry drop gets a Special Weather Statement', run2.alerts.includes('Special Weather Statement (rapid temperature drop)'));
   t('front: Front mode button is after Wind', (() => { const b = [...document.querySelectorAll('.mode-btn')].map(x => x.dataset.mode); return b.indexOf('front') === b.indexOf('wind') + 1; })());
   t('Yooper names the Front tiers', YOOP.withLang('yooper', () => YOOP.L('Front Profile')) !== 'Front Profile');
+});
+
+window.__snowTests.push((t, approx) => {
+  const melt = (peak, curve, permanent) => ({ peakDepth: peak, permanent: !!permanent, stormEnd: new Date(2026, 11, 23, 18), curve });
+  const mk = (start, m) => ({ timeline: { start }, melt: m });
+  t('christmas: Dec 20 storm checks this year', christmasMorningAfter(new Date(2026, 11, 20)).getFullYear() === 2026);
+  t('christmas: Dec 26 storm checks next year', christmasMorningAfter(new Date(2026, 11, 26)).getFullYear() === 2027);
+  const fresh = melt(6, [{ day: 0, depth: 6 }, { day: 1, depth: 5 }, { day: 2, depth: 4 }, { day: 6, depth: 0 }]);
+  const wx = whiteChristmas(mk(new Date(2026, 11, 23, 6), fresh));
+  t('christmas: 6" on the 23rd is white', wx && !wx.during && approx(wx.depth, 4.47, 0.05));
+  const thin = melt(1.5, [{ day: 0, depth: 1.5 }, { day: 1, depth: 0.2 }, { day: 2, depth: 0 }]);
+  t('christmas: a melted dusting is not white', whiteChristmas(mk(new Date(2026, 11, 23, 6), thin)) === null);
+  const ongoing = { ...fresh, stormEnd: new Date(2026, 11, 25, 19) };
+  const mid = whiteChristmas(mk(new Date(2026, 11, 24, 19), ongoing));
+  t('christmas: snowing through Christmas morning counts what is down', mid && mid.during && approx(mid.depth, 3, 1e-6));
+  t('christmas: no pack, no badge', whiteChristmas({ melt: null }) === null);
+  t('holiday toggle sits beside Yoopanese', document.getElementById('holidayToggle').nextElementSibling.id === 'langToggle');
+  let hadHoliday = null; try { hadHoliday = localStorage.getItem('snowsim.holiday'); } catch (e) {}
+  window.setHoliday(true);
+  t('holiday on adds the skin and stars', document.documentElement.classList.contains('xmas') && document.querySelector('.snowflake.xmas-star') !== null);
+  window.setHoliday(false);
+  t('holiday off restores the flakes', !document.documentElement.classList.contains('xmas') && document.querySelector('.snowflake.xmas-star') === null);
+  try { if (hadHoliday === null) localStorage.removeItem('snowsim.holiday'); else localStorage.setItem('snowsim.holiday', hadHoliday); } catch (e) {}
 });
 
 window.addEventListener('load', () => {
