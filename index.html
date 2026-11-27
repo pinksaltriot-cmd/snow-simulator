@@ -856,7 +856,7 @@
 <div class="container">
   <div style="text-align:right;margin-bottom:-6px"><span id="grandBadge" class="grand-badge" style="display:none" title="Beat all five Storm Architect levels">🏅 Grand Architect of Storms</span> <button type="button" id="challengeBtn" class="btn-clear">🏆 Challenge</button> <button type="button" id="holidayToggle" class="btn-clear" data-noyoop aria-pressed="false">🎄 Holiday</button> <button type="button" id="langToggle" class="btn-clear" data-noyoop>🗣️ Yoopanese</button></div>
   <h1 id="appTitle">Snow Event Profile Maker 4.0.0</h1>
-  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">17948 lines of code</p>
+  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">17951 lines of code</p>
   <p class="subtitle">Powered by real NOAA RSI methodology with location-based impact scaling</p>
 
   <div class="card">
@@ -1397,7 +1397,7 @@
       <div class="heat-num"><label for="fogWind">Wind (mph) <span class="heat-opt">optional</span></label><input type="number" id="fogWind" placeholder="&mdash;" min="0"></div>
       <div class="heat-num"><label for="fogRh">Humidity (%) <span class="heat-opt">optional</span></label><input type="number" id="fogRh" placeholder="&mdash;" min="0" max="100"></div>
       <div class="heat-num"><label for="fogPressure">Pressure (mb) <span class="heat-opt">optional</span></label><input type="number" id="fogPressure" placeholder="&mdash;" step="0.1"></div>
-      <div class="heat-num"><label for="fogT850">850mb temp (&deg;C) <span class="heat-opt">optional</span></label><input type="number" id="fogT850" placeholder="&mdash;" step="0.1"></div>
+      <div class="heat-num"><label for="fogT850">850mb temp (&deg;F) <span class="heat-opt">optional</span></label><input type="number" id="fogT850" placeholder="&mdash;" step="0.1"></div>
       <button type="button" class="btn-add" id="fogAddBtn">Add City</button>
     </div>
     <div class="error-msg" id="fogError"></div>
@@ -1491,7 +1491,7 @@
       <div class="heat-num"><label for="frontAGust">Gust (mph) <span class="heat-opt">optional</span></label><input type="number" id="frontAGust" placeholder="auto" min="0"></div>
       <div class="heat-num"><label for="frontADir">Direction</label><select id="frontADir"><option value="">Auto</option><option>N</option><option>NE</option><option>E</option><option>SE</option><option>S</option><option>SW</option><option>W</option><option>NW</option></select></div>
       <div class="heat-num"><label for="frontAP">Pressure (mb) <span class="heat-opt">optional</span></label><input type="number" id="frontAP" placeholder="auto" step="0.1"></div>
-      <div class="heat-num"><label for="frontT850">850mb temp (&deg;C) <span class="heat-opt">optional, cold side</span></label><input type="number" id="frontT850" placeholder="auto"></div>
+      <div class="heat-num"><label for="frontT850">850mb temp (&deg;F) <span class="heat-opt">optional, cold side</span></label><input type="number" id="frontT850" placeholder="auto"></div>
       <button type="button" class="btn-add" id="frontAddBtn">Add City</button>
     </div>
     <p class="paragraph-hint" style="margin-top:6px">Blank humidity, wind, direction and pressure are estimated for the front type. For an occluded or stationary front, the transition is how long the front holds conditions steady.</p>
@@ -1656,10 +1656,10 @@
       <div class="pressure-field">
         <div>
           <label for="t850Input">850mb temp</label>
-          <input type="number" id="t850Input" placeholder="e.g. -8" step="0.1">
+          <input type="number" id="t850Input" placeholder="e.g. 18" step="0.1">
         </div>
-        <span class="unit">&deg;C</span>
-        <span class="help-text">Optional. About 5,000 ft up. Above 0&deg;C aloft the snow mixes and compacts (lower impact); arctic air below &minus;10&deg;C keeps it dry, blowing and lingering (higher impact).</span>
+        <span class="unit">&deg;F</span>
+        <span class="help-text">Optional. About 5,000 ft up. Above 32&deg;F aloft the snow mixes and compacts (lower impact); arctic air below 14&deg;F keeps it dry, blowing and lingering (higher impact). 10 to 0&deg;F is the dendritic growth zone (biggest flakes).</span>
       </div>
     </div>
     <div class="pressure-row">
@@ -4298,6 +4298,9 @@ function getPeakRateMultiplier(rate) {
    -18°C, where big stellar dendrites grow fastest and pile up at the highest
    snow ratios. Only scales the snow side of the impact. */
 const DGZ_850 = { warm: -12, cold: -18 };
+/* The 850mb inputs are entered in °F; the model works in °C. */
+function f850ToC(f) { return f === null || f === undefined || isNaN(f) ? f : (f - 32) * 5 / 9; }
+function c850ToF(c) { return c === null || c === undefined || isNaN(c) ? c : Math.round((c * 9 / 5 + 32) * 10) / 10; }
 function in850DGZ(t850) { return t850 !== null && t850 !== undefined && !isNaN(t850) && t850 <= DGZ_850.warm && t850 >= DGZ_850.cold; }
 function get850Multiplier(t850) {
   if (t850 === null || t850 === undefined || isNaN(t850)) return 1.0;
@@ -6797,8 +6800,8 @@ function addCity() {
   if (rh !== null && (isNaN(rh) || rh < 0 || rh > 100)) { inputError.textContent = 'Enter a humidity from 0 to 100%.'; return; }
   const dew = dewInput.value ? parseFloat(dewInput.value) : null;
   if (dew !== null && isNaN(dew)) { inputError.textContent = 'Enter a valid dewpoint.'; return; }
-  const t850 = t850Input.value ? parseFloat(t850Input.value) : null;
-  if (t850 !== null && (isNaN(t850) || t850 < -80 || t850 > 50)) { inputError.textContent = 'Enter an 850mb temp from -80 to 50\u00b0C.'; return; }
+  const t850 = t850Input.value ? f850ToC(parseFloat(t850Input.value)) : null;
+  if (t850 !== null && (isNaN(t850) || t850 < -80 || t850 > 50)) { inputError.textContent = 'Enter an 850mb temp from -112 to 122\u00b0F.'; return; }
   const tempBefore = beforeInput.value ? parseFloat(beforeInput.value) : null;
   if (tempBefore !== null && isNaN(tempBefore)) { inputError.textContent = 'Enter a valid temperature before the front.'; return; }
   const db = lookupCity(name);
@@ -6851,7 +6854,7 @@ function renderCityList() {
     const pressTag = (c.pressure !== null && c.pressure !== undefined) ? ` <span style="color:#fbbf24;font-size:0.8rem">\u{1F32A}\ufe0f ${c.pressure} mb</span>` : '';
     const rhTag = (c.rh !== null && c.rh !== undefined) ? ` <span style="color:#7dd3fc;font-size:0.8rem">\u{1F4A7} ${c.rh}% RH</span>` : '';
     const dewTag = (c.dew !== null && c.dew !== undefined) ? ` <span style="color:#7dd3fc;font-size:0.8rem">\u{1F4A7} dewpoint ${c.dew}\u00b0F</span>` : '';
-    const t850Tag = (c.t850 !== null && c.t850 !== undefined) ? ` <span style="color:#c4b5fd;font-size:0.8rem">\u{1F388} 850mb ${c.t850}\u00b0C</span>` : '';
+    const t850Tag = (c.t850 !== null && c.t850 !== undefined) ? ` <span style="color:#c4b5fd;font-size:0.8rem">\u{1F388} 850mb ${c850ToF(c.t850)}\u00b0F</span>` : '';
     const beforeTag = (c.tempBefore !== null && c.tempBefore !== undefined) ? ` <span style="color:#93c5fd;font-size:0.8rem">\u2B07\uFE0F from ${c.tempBefore}\u00b0F</span>` : '';
     const wp = c.warming || {};
     const warmPicks = ['short','medium','long'].map(k => wp[k]).filter(v => v && v !== 'auto');
@@ -7450,10 +7453,10 @@ function generateProfile(rsiOverride) {
       }
       if (imp.t850Mult && imp.t850Mult !== 1.0 && c.snowEquivalent > 0) {
         detail += in850DGZ(c.t850)
-          ? ` <em style="color:#c4b5fd">\u{1F388} 850mb temp of ${c.t850}\u00b0C is in the dendritic growth zone (\u00d7${imp.t850Mult.toFixed(2)}) \u2014 big stellar flakes pile up fast and fluffy</em>`
+          ? ` <em style="color:#c4b5fd">\u{1F388} 850mb temp of ${c850ToF(c.t850)}\u00b0F is in the dendritic growth zone (\u00d7${imp.t850Mult.toFixed(2)}) \u2014 big stellar flakes pile up fast and fluffy</em>`
           : imp.t850Mult > 1.0
-          ? ` <em style="color:#c4b5fd">\u{1F388} 850mb temp of ${c.t850}\u00b0C amplifies impact (\u00d7${imp.t850Mult.toFixed(2)}) \u2014 cold air aloft keeps the snow dry, blowing and slow to melt</em>`
-          : ` <em style="color:#fdba74">\u{1F388} 850mb temp of ${c.t850}\u00b0C reduces impact (\u00d7${imp.t850Mult.toFixed(2)}) \u2014 warm air aloft, the snow mixes and compacts</em>`;
+          ? ` <em style="color:#c4b5fd">\u{1F388} 850mb temp of ${c850ToF(c.t850)}\u00b0F amplifies impact (\u00d7${imp.t850Mult.toFixed(2)}) \u2014 cold air aloft keeps the snow dry, blowing and slow to melt</em>`
+          : ` <em style="color:#fdba74">\u{1F388} 850mb temp of ${c850ToF(c.t850)}\u00b0F reduces impact (\u00d7${imp.t850Mult.toFixed(2)}) \u2014 warm air aloft, the snow mixes and compacts</em>`;
       }
       if (c.persistenceMult && c.persistenceMult !== 1.0 && c.melt) {
         const exp = simulateMelt({ ...c, lat: c.meltLat, annualSnow: c.meltSnow, warming: null }, c.melt.stormEnd);
@@ -13059,7 +13062,7 @@ function fogValidate(e) {
   if (e.wind !== null && (isNaN(e.wind) || e.wind < 0)) return 'Wind must be 0 or more.';
   if (e.rh !== null && e.rh !== undefined && (isNaN(e.rh) || e.rh < 0 || e.rh > 100)) return 'Enter a humidity from 0 to 100%.';
   if (e.pressure !== null && e.pressure !== undefined && (isNaN(e.pressure) || e.pressure < 850 || e.pressure > 1090)) return 'Pressure must be between 850 and 1090 mb.';
-  if (e.t850 !== null && e.t850 !== undefined && (isNaN(e.t850) || e.t850 < -80 || e.t850 > 50)) return 'Enter an 850mb temp from -80 to 50\u00b0C.';
+  if (e.t850 !== null && e.t850 !== undefined && (isNaN(e.t850) || e.t850 < -80 || e.t850 > 50)) return 'Enter an 850mb temp from -112 to 122\u00b0F.';
   return null;
 }
 function fogAddCity() {
@@ -13069,7 +13072,7 @@ function fogAddCity() {
   const e = { n: db ? db.n : name, vis: parseVisibility(fogEl('fogVis').value), type: fogEl('fogType').value,
     hazeSrc: fogEl('fogHazeSrc').value, hours: fogNum('fogHours'), start: fogNum('fogStart'),
     temp: fogNum('fogTemp'), dew: fogNum('fogDew'), wind: fogNum('fogWind'),
-    rh: fogNum('fogRh'), pressure: fogNum('fogPressure'), t850: fogNum('fogT850') };
+    rh: fogNum('fogRh'), pressure: fogNum('fogPressure'), t850: f850ToC(fogNum('fogT850')) };
   if (e.start === null) e.start = 5;
   const err = fogValidate(e);
   if (err) { fogEl('fogError').textContent = err; return; }
@@ -14271,7 +14274,7 @@ function frontValidate(e) {
     if (s.dew !== null && (isNaN(s.dew) || s.dew > s.t)) return "Dewpoint can't be higher than the temperature.";
   }
   if (e.hours === null || isNaN(e.hours) || e.hours <= 0 || e.hours > 240) return 'Transition time must be more than 0 and at most 240 hours.';
-  if (e.t850 !== null && (isNaN(e.t850) || e.t850 < -80 || e.t850 > 50)) return 'Enter an 850mb temp from -80 to 50°C.';
+  if (e.t850 !== null && (isNaN(e.t850) || e.t850 < -80 || e.t850 > 50)) return 'Enter an 850mb temp from -112 to 122°F.';
   const o = e.over;
   for (const k of ['windBefore', 'windAfter', 'gustAfter']) if (o[k] !== null && (isNaN(o[k]) || o[k] < 0)) return 'Wind speeds must be zero or more.';
   if (o.gustAfter !== null && o.windAfter !== null && o.gustAfter < o.windAfter) return "Gust can't be lower than the sustained wind.";
@@ -14285,7 +14288,7 @@ function frontAddCity() {
   const sv = frontEl('frontStart').value;
   const side = p => ({ t: frontInNum(p + 'Temp'), rh: frontInNum(p + 'Rh'), dew: frontInNum(p + 'Dew'), sky: frontEl(p + 'Sky').value || null });
   const e = { n: db ? db.n : name, type: frontEl('frontType').value, start: sv ? new Date(sv) : null, startStr: sv,
-    hours: frontInNum('frontHours'), before: side('frontB'), after: side('frontA'), t850: frontInNum('frontT850'),
+    hours: frontInNum('frontHours'), before: side('frontB'), after: side('frontA'), t850: f850ToC(frontInNum('frontT850')),
     over: { windBefore: frontInNum('frontBWind'), dirBefore: frontEl('frontBDir').value || null, pBefore: frontInNum('frontBP'),
       windAfter: frontInNum('frontAWind'), gustAfter: frontInNum('frontAGust'), dirAfter: frontEl('frontADir').value || null, pAfter: frontInNum('frontAP') } };
   const err = frontValidate(e);
@@ -14397,7 +14400,7 @@ function renderFrontEntries(results) {
         <button type="button" class="btn-add" style="margin:6px 0 0;padding:4px 10px" data-front-severe="${i}">Send to Severe Storm</button>`
       : `<span class="heat-sub">No severe weather expected. ${esc(s.reason)}</span>`;
     const snow = w.ok ? `${w.phases.map(p => `<div>${esc(PRECIP_LABELS[p.type] || p.type)} ${p.amount}″ over ${p.hours} h</div>`).join('')}
-        <div class="heat-sub">Storm temp ${w.stormTemp}°F · 850mb ${w.t850}°C${w.peakRate ? ` · peak rate ${w.peakRate}″/hr` : ''}</div>
+        <div class="heat-sub">Storm temp ${w.stormTemp}°F · 850mb ${c850ToF(w.t850)}°F${w.peakRate ? ` · peak rate ${w.peakRate}″/hr` : ''}</div>
         ${w.thunder ? `<div class="heat-sub">Thundersnow from ${esc(w.thunder)}.</div>` : ''}
         <button type="button" class="btn-add" style="margin:6px 0 0;padding:4px 10px" data-front-snow="${i}">Send to Detailed Input</button>`
       : `<span class="heat-sub">${esc(w.reason)}</span>`;
@@ -14435,7 +14438,7 @@ function frontSendSnow(r) {
   windInput.value = r.wind.after.sust;
   gustInput.value = r.wind.after.gust;
   pressureInput.value = r.pressure.after;
-  t850Input.value = w.t850;
+  t850Input.value = c850ToF(w.t850);
   peakRateInput.value = w.peakRate || '';
   skyInput.value = r.after.sky || '';
   if (r.start) document.getElementById('stormDate').value = FRONT_LOCAL_DT(r.start);
@@ -17794,13 +17797,13 @@ window.__snowTests.push((t) => {
   const ok = x => { const y = yp(x); return y !== x && nums(y) === nums(x); };
   const strings = [
     'Optional. With a storm temp and no humidity, the humidity is worked out from the dewpoint.',
-    '850mb temp', '850mb temp (°C)', 'Pressure (mb)', 'Enter a valid dewpoint.', 'Enter an 850mb temp from -80 to 50°C.',
+    '850mb temp', '850mb temp (°F)', 'Pressure (mb)', 'Enter a valid dewpoint.', 'Enter an 850mb temp from -112 to 122°F.',
     'Pressure must be between 850 and 1090 mb.',
-    'Optional. About 5,000 ft up. Above 0°C aloft the snow mixes and compacts (lower impact); arctic air below −10°C keeps it dry, blowing and lingering (higher impact).',
-    '\u{1F4A7} dewpoint 28°F', '\u{1F388} 850mb -8°C',
-    '\u{1F388} 850mb temp of -15°C is in the dendritic growth zone (×1.30) — big stellar flakes pile up fast and fluffy',
-    '\u{1F388} 850mb temp of -8°C amplifies impact (×1.05) — cold air aloft keeps the snow dry, blowing and slow to melt',
-    '\u{1F388} 850mb temp of 4°C reduces impact (×0.85) — warm air aloft, the snow mixes and compacts',
+    'Optional. About 5,000 ft up. Above 32°F aloft the snow mixes and compacts (lower impact); arctic air below 14°F keeps it dry, blowing and lingering (higher impact). 10 to 0°F is the dendritic growth zone (biggest flakes).',
+    '\u{1F4A7} dewpoint 28°F', '\u{1F388} 850mb 17.6°F',
+    '\u{1F388} 850mb temp of 5°F is in the dendritic growth zone (×1.30) — big stellar flakes pile up fast and fluffy',
+    '\u{1F388} 850mb temp of 17.6°F amplifies impact (×1.05) — cold air aloft keeps the snow dry, blowing and slow to melt',
+    '\u{1F388} 850mb temp of 39.2°F reduces impact (×0.85) — warm air aloft, the snow mixes and compacts',
     '❄️ Frost gone Thu 8:50 AM', '11h · lingers in the shade',
   ];
   const missing = strings.filter(x => !ok(x));
