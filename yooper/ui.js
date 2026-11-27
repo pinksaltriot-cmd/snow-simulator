@@ -1761,3 +1761,10 @@ Object.assign(window.YOOPER.UI_CTX['#frontCard, #frontProfileCard, #frontTraceCa
 window.YOOPER.UI_RULES = (window.YOOPER.UI_RULES || []).concat([
  [/^held for ([\d.]+) h$/, m => `sits dere for ${m[1]} h`]
 ]);
+
+// Origin Story mode (the story itself ships in both languages in stories/origin-story.js).
+window.YOOPER.UI = Object.assign(window.YOOPER.UI || {}, {
+  "Origin Story": "How Da Whole Ting Started",
+  "The invented origin of the Snow War on a Tulsa block, three winters long: from a grass-and-grit snowball that missed on Dec 10, 2026, through the dry winter of 2027–28, to Counter-Battery (tier 187) in the 14″ storm of Feb 16, 2029. Press 🗣️ Yoopanese at the top for the Yooper telling.": "Da made-up start of da Snow War on a Tulsa block, t'ree winters long: from a grass-an'-grit snowball dat missed on Dec 10, 2026, t'rough da dry winter of 2027–28, to Counter-Battery (tier 187) in da 14″ storm of Feb 16, 2029. Da Yooper tellin' is down below, ya know."
+});
+Object.assign(window.YOOPER.UI_CTX['.mode-toggle'] || {}, { 'Origin Story': 'How Da Whole Ting Started' });

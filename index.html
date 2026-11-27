@@ -846,6 +846,21 @@
   .xmas-lights i:nth-child(4n)   { background: #60a5fa; box-shadow: 0 2px 8px #60a5fa; animation-delay: 1.8s; }
   @keyframes twinkle { 50% { opacity: .35; box-shadow: none; } }
   @media (prefers-reduced-motion: reduce) { .xmas-lights i { animation: none; } }
+  /* Origin Story: the Snow War's origin as a long read-only story, English or Yoopanese by the page language */
+  .os-lead { font-size: 0.86rem; opacity: 0.7; line-height: 1.5; margin-bottom: 14px; }
+  .os-story { line-height: 1.6; font-size: 0.92rem; max-width: 820px; }
+  .os-story .os-title { font-size: 1.35rem; font-weight: 700; margin: 4px 0 10px; }
+  .os-story h3 { font-size: 1.05rem; margin: 22px 0 8px; color: #c7d2fe; }
+  .os-story p { margin: 0 0 10px; }
+  .os-story ul, .os-story ol { margin: 0 0 10px 22px; }
+  .os-story li { margin-bottom: 6px; }
+  .os-story .os-table-wrap { overflow-x: auto; margin: 8px 0 14px; }
+  .os-story table { border-collapse: collapse; font-size: 0.84rem; min-width: 420px; }
+  .os-story th, .os-story td { text-align: left; padding: 6px 9px; border-bottom: 1px solid rgba(255,255,255,0.08); vertical-align: top; }
+  .os-story th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.8px; opacity: 0.55; }
+  .os-yp { display: none; }
+  html[data-lang="yooper"] .os-en { display: none; }
+  html[data-lang="yooper"] .os-yp { display: block; }
 </style>
 </head>
 <body>
@@ -856,7 +871,7 @@
 <div class="container">
   <div style="text-align:right;margin-bottom:-6px"><span id="grandBadge" class="grand-badge" style="display:none" title="Beat all five Storm Architect levels">🏅 Grand Architect of Storms</span> <button type="button" id="challengeBtn" class="btn-clear">🏆 Challenge</button> <button type="button" id="holidayToggle" class="btn-clear" data-noyoop aria-pressed="false">🎄 Holiday</button> <button type="button" id="langToggle" class="btn-clear" data-noyoop>🗣️ Yoopanese</button></div>
   <h1 id="appTitle">Snow Event Profile Maker 4.0.0</h1>
-  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">17951 lines of code</p>
+  <p class="subtitle" style="opacity:0.45;font-size:0.78rem;margin-bottom:6px">18006 lines of code</p>
   <p class="subtitle">Powered by real NOAA RSI methodology with location-based impact scaling</p>
 
   <div class="card">
@@ -883,6 +898,7 @@
       <button type="button" class="mode-btn" data-mode="wind">Wind</button>
       <button type="button" class="mode-btn" data-mode="front">Front</button>
       <button type="button" class="mode-btn" data-mode="fortcomplex">Fort Complex</button>
+      <button type="button" class="mode-btn" data-mode="origin">Origin Story</button>
     </div>
   </div>
 
@@ -963,6 +979,12 @@
     <h2>Kite War Tiers</h2>
     <p class="paragraph-hint">All <span id="kiteWarCount">&mdash;</span> kite war tiers, ordered by the wind impact score that reaches them &mdash; from dead calm, when there is no war at all, through the golden age of breezes, to gales nobody can fly in and wind past anything on record. The war is fought on the line.</p>
     <div class="historic-list" id="kiteWarList"></div>
+  </div>
+  <div class="card" id="originCard" style="display:none">
+    <h2>Origin Story</h2>
+    <p class="os-lead">The invented origin of the Snow War on a Tulsa block, three winters long: from a grass-and-grit snowball that missed on Dec 10, 2026, through the dry winter of 2027&ndash;28, to Counter-Battery (tier 187) in the 14&Prime; storm of Feb 16, 2029. Press 🗣️ Yoopanese at the top for the Yooper telling.</p>
+    <div class="os-story os-en" id="originStoryEn" data-noyoop></div>
+    <div class="os-story os-yp" id="originStoryYp" data-noyoop></div>
   </div>
   <div class="card" id="fortComplexCard" style="display:none">
     <style>
@@ -1781,6 +1803,7 @@
 <script src="yooper/party-war.js"></script>
 <script src="yooper/kite-war.js"></script>
 <script src="yooper/ui.js"></script>
+<script src="stories/origin-story.js"></script>
 <script>
 /* ======================================================================
    CITY DATABASE
@@ -10472,6 +10495,8 @@ function setInputMode(mode) {
   FOG_EXTRA_CARDS.forEach(id => { document.getElementById(id).style.display = (mode === 'fog' && fogLastResults.length) ? '' : 'none'; });
   document.getElementById('kiteWarCard').style.display = (mode === 'kitewar') ? '' : 'none';
   document.getElementById('fortComplexCard').style.display = (mode === 'fortcomplex') ? '' : 'none';
+  document.getElementById('originCard').style.display = (mode === 'origin') ? '' : 'none';
+  if (mode === 'origin') renderOriginStory();
   document.getElementById('windCard').style.display = (mode === 'wind') ? '' : 'none';
   const windProfile = document.getElementById('windProfileCard');
   windProfile.style.display = (mode === 'wind' && windProfile.innerHTML.trim()) ? '' : 'none';
@@ -10484,6 +10509,15 @@ function setInputMode(mode) {
 document.querySelectorAll('.mode-btn').forEach(b => {
   b.addEventListener('click', () => setInputMode(b.dataset.mode));
 });
+
+/* ---- Origin Story: the invented Snow War origin, from stories/origin-story.js ---- */
+function renderOriginStory() {
+  const S = window.ORIGIN_STORY;
+  const en = document.getElementById('originStoryEn'), yp = document.getElementById('originStoryYp');
+  if (!S || en.innerHTML) return;
+  en.innerHTML = S.en;
+  yp.innerHTML = S.yooper;
+}
 
 /* ---- Historic Replay: regenerate a profile for any storm in HISTORIC_STORMS ---- */
 const replayInput = document.getElementById('replayStormInput');
@@ -17929,6 +17963,27 @@ window.__snowTests.push((t, approx) => {
   window.setHoliday(false);
   t('holiday off restores the flakes', !document.documentElement.classList.contains('xmas') && document.querySelector('.snowflake.xmas-star') === null);
   try { if (hadHoliday === null) localStorage.removeItem('snowsim.holiday'); else localStorage.setItem('snowsim.holiday', hadHoliday); } catch (e) {}
+});
+
+// ORG-1 Origin Story mode: the 16th module shows the Snow War origin in either language.
+window.__snowTests.push((t) => {
+  const S = window.ORIGIN_STORY;
+  t('Origin story loads in both languages', !!(S && S.en && S.yooper));
+  const btns = document.querySelectorAll('.mode-btn');
+  t('Origin Story is the 16th mode', btns.length === 16 && btns[15].dataset.mode === 'origin');
+  const before = document.querySelector('.mode-btn.active').dataset.mode;
+  setInputMode('origin');
+  const en = document.getElementById('originStoryEn').textContent, yp = document.getElementById('originStoryYp').textContent;
+  t('Origin card shows only in its mode', document.getElementById('originCard').style.display === ''
+    && document.getElementById('fortComplexCard').style.display === 'none');
+  t('English story runs all three winters', en.includes('How the Snow War Started') && en.includes('Fortress & Siege')
+    && en.includes('Rumored') && en.includes('Counter-Battery') && en.includes('Thu Nov 15'));
+  t('Yoopanese story is the Yooper telling', yp.includes('How Da Whole Ting Started') && yp.includes('Heard It Down at Da Bar')
+    && yp.includes('No Ammo, Eh') && !yp.includes('How the Snow War Started'));
+  t('story text is kept out of word swapping', document.getElementById('originStoryEn').hasAttribute('data-noyoop')
+    && document.getElementById('originStoryYp').hasAttribute('data-noyoop'));
+  t('Yooper label for the Origin Story mode', YOOP.withLang('yooper', () => YOOP.L('Origin Story')) === 'How Da Whole Ting Started');
+  setInputMode(before);
 });
 
 window.addEventListener('load', () => {
